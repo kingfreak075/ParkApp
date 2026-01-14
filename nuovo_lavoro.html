@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nuovo Lavoro - ParkApp</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+</head>
+<body class="bg-app">
+    <div class="app-container">
+        <header class="app-header" style="display: flex; align-items: center; gap: 15px;">
+            <button onclick="window.history.back()" class="btn-scheda" style="height: 40px; width: 40px;">
+                <span class="material-symbols-rounded">arrow_back</span>
+            </button>
+            <h1 style="font-size: 1.1rem; font-weight: 800; margin: 0;">Nuovo Rapporto</h1>
+        </header>
+
+        <main style="padding: 1rem;">
+            <div class="section-card" style="background: var(--primary); color: white; border: none;">
+                <div style="font-size: 0.7rem; text-transform: uppercase; opacity: 0.8;">Impianto</div>
+                <div id="disp-impianto" style="font-weight: 800; font-size: 1.2rem;">-</div>
+                <div id="disp-indirizzo" style="font-size: 0.9rem; margin-top: 4px; opacity: 0.9;">-</div>
+            </div>
+
+            <form id="form-lavoro">
+                <div class="section-card">
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:5px;">Data Intervento</label>
+                        <input type="date" id="data-lavoro" required style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px;">
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:5px;">Tipo Intervento</label>
+                        <select id="tipo-intervento" required style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px;">
+                            <option value="ORDINARIA">ORDINARIA</option>
+                            <option value="REPERIBILITÀ">REPERIBILITÀ</option>
+                            <option value="MONTAGGIO">MONTAGGIO</option>
+                            <option value="CHIAMATA">CHIAMATA</option>
+                        </select>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-bottom: 1rem;">
+                        <div style="flex:1">
+                            <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:5px;">Ora Inizio</label>
+                            <input type="time" id="inizio-int" required style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px;">
+                        </div>
+                        <div style="flex:1">
+                            <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:5px;">Ora Fine</label>
+                            <input type="time" id="fine-int" required style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px;">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:5px;">Note / Descrizione</label>
+                        <textarea id="note-lavoro" rows="4" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; font-family:inherit;"></textarea>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-action">
+                    <span class="material-symbols-rounded">save</span>
+                    SALVA INTERVENTO
+                </button>
+            </form>
+        </main>
+    </div>
+    <script src="nuovo_lavoro.js"></script>
+</body>
+</html>

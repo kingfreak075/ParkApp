@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dettaglio Impianto - ParkApp</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+</head>
+<body class="bg-app">
+
+    <div class="app-container">
+        <header class="app-header" style="display: flex; align-items: center; gap: 15px;">
+            <button onclick="window.location.href='index.html'" class="btn-scheda" style="height: 40px; width: 40px;">
+                <span class="material-symbols-rounded">arrow_back</span>
+            </button>
+            <h1 style="font-size: 1.1rem; font-weight: 800; margin: 0;">Scheda Impianto</h1>
+        </header>
+
+        <main id="dettaglio-content" style="padding: 1rem; display: none;">
+            
+            <section class="section-card">
+                <h1 id="det-impianto" style="font-size: 2rem; font-weight: 900; color: var(--primary); margin: 0;">-</h1>
+                <p id="det-localita" style="font-size: 1rem; color: var(--text-muted); margin-bottom: 1rem;">-</p>
+                <div style="display: flex; gap: 8px;">
+                    <span id="badge-manut" class="badge"></span>
+                    <span id="badge-tipo" class="badge secondary"></span>
+                </div>
+            </section>
+
+            <section class="section-card">
+                <h3 class="section-title">DATI TECNICI</h3>
+                <div class="info-row"><span>Mtr.</span> <strong id="det-matricola">-</strong></div>
+                <div class="info-row"><span>Tecnico</span> <strong id="det-tecnico">-</strong></div>
+                <div class="info-row"><span>Manutentore</span> <strong id="det-giro">-</strong></div>
+                <div class="info-row"><span>Supervisore</span> <strong id="det-supervisore">-</strong></div>
+            </section>
+
+            <section class="section-card">
+                <h3 class="section-title">PIANIFICAZIONE</h3>
+                <div class="info-row"><span>Ultima Semestrale</span> <strong id="det-ult-sem">-</strong></div>
+                <div class="info-row"><span>Ultima VP</span> <strong id="det-ult-vp">-</strong></div>
+                <div class="info-row"><span>Mese Semestrale</span> <strong id="det-mese-semestre" style="color: var(--primary);">-</strong></div>
+                <div class="info-row"><span>Periodicità</span> <strong id="det-periodicita">-</strong></div>
+            </section>
+
+            <section class="section-card">
+                <h3 class="section-title">AMMINISTRAZIONE</h3>
+                <div class="info-row"><span>Cliente</span> <strong id="det-cliente">-</strong></div>
+                <div class="info-row"><span>Amministratore</span> <strong id="det-amministratore">-</strong></div>
+                <div class="info-row"><span>Venditore</span> <strong id="det-venditore">-</strong></div>
+            </section>
+
+            <section class="section-card" style="background-color: #fffef0; border-left: 4px solid #facc15;">
+                <h3 class="section-title">NOTE</h3>
+                <p id="det-note" style="font-size: 0.9rem; line-height: 1.5; white-space: pre-wrap; margin:0;">-</p>
+            </section>
+
+            <button id="btn-nuovo-lavoro" class="btn-action">
+                <span class="material-symbols-rounded">add_task</span>
+                INSERISCI LAVORO
+            </button>
+        </main>
+    </div>
+
+    <script src="dettaglio.js"></script>
+</body>
+</html>

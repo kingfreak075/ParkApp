@@ -1,0 +1,213 @@
+/* Variabili per coerenza cromatica */
+:root {
+    --primary: #2563eb;       /* Blu Blue-600 */
+    --primary-light: #eff6ff; /* Blu Blue-50; */
+    --bg-app: #f8fafc;        /* Sfondo Slate-50 */
+    --text-main: #1e293b;     /* Slate-800 */
+    --text-muted: #64748b;    /* Slate-500 */
+    --border: #e2e8f0;        /* Slate-200 */
+    --white: #ffffff;
+}
+
+/* Reset e Font */
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-app);
+    color: var(--text-main);
+    margin: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Container per Mobile */
+.app-container {
+    max-width: 450px;
+    margin: 0 auto;
+    min-height: 100 screen;
+    position: relative;
+}
+
+/* Header Professionale */
+.app-header {
+    background-color: var(--white);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+
+/* Card Impianto */
+.card-impianto {
+    background-color: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 1.25rem;
+    padding: 1.25rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    transition: transform 0.1s ease, box-shadow 0.2s ease;
+}
+
+.card-impianto:active {
+    transform: scale(0.98);
+}
+
+/* Tipografia Card */
+.id-tag {
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.giro-tag {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.indirizzo-titolo {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0.25rem 0;
+    line-height: 1.2;
+}
+
+.localita-sub {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+}
+
+/* Bottone Scheda 📄 */
+.btn-scheda {
+    height: 3rem;
+    width: 3rem;
+    border-radius: 0.75rem;
+    background-color: var(--primary-light);
+    color: var(--primary);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-scheda:hover {
+    background-color: var(--primary);
+    color: var(--white);
+}
+
+/* Campo di Ricerca */
+.search-wrapper {
+    position: relative;
+    margin-top: 1rem;
+}
+
+.search-input {
+    width: 100%;
+    padding: 0.8rem 1rem 0.8rem 2.8rem;
+    background-color: #f1f5f9;
+    border: none;
+    border-radius: 1rem;
+    font-size: 0.9rem;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.search-input:focus {
+    background-color: var(--white);
+    box-shadow: 0 0 0 2px var(--primary);
+}
+
+/* Footer Persistente */
+.app-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: var(--white);
+    border-top: 1px solid var(--border);
+    padding: 0.75rem 1rem;
+    display: flex;
+    justify-content: flex-end; /* Allinea a destra */
+    z-index: 100;
+    max-width: 450px; /* Allineato al container mobile */
+    margin: 0 auto;
+}
+
+.footer-text {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+}
+
+/* Padding extra per il main per non coprire l'ultima card con il footer */
+main {
+    padding-bottom: 4rem !important;
+}
+
+/* Stili aggiuntivi per la scheda dettaglio */
+.section-card {
+    background: var(--white);
+    border-radius: 1rem;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border);
+}
+
+.section-title {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.5rem;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+.badge {
+    background: var(--primary);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.badge.secondary {
+    background: var(--text-muted);
+}
+
+.btn-action {
+    width: 100%;
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 1rem;
+    border-radius: 1rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 1rem;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}

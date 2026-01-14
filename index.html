@@ -2,25 +2,36 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ParkApp - Parco Impianti</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ParkApp Mobile</title>
+    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
 </head>
-<body class="bg-gray-100 min-h-screen pb-20">
+<body>
 
-    <div class="bg-blue-600 p-4 shadow-lg sticky top-0 z-10">
-        <h1 class="text-white text-xl font-bold mb-4">Ricerca Parco Impianti</h1>
-        <div class="space-y-2">
-            <input type="text" id="searchImpianto" placeholder="Cerca per codice impianto..." 
-                   class="w-full p-3 rounded-lg border-none focus:ring-2 focus:ring-blue-300">
-            <input type="text" id="searchIndirizzo" placeholder="Cerca per indirizzo..." 
-                   class="w-full p-3 rounded-lg border-none focus:ring-2 focus:ring-blue-300">
-        </div>
-    </div>
+    <div class="app-container">
+        <header class="app-header">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h1 style="font-size: 1.25rem; font-weight: 800; color: var(--primary); margin: 0;">ParkApp</h1>
+                <span class="material-symbols-rounded" style="color: var(--text-muted);">account_circle</span>
+            </div>
+            
+            <div class="search-wrapper">
+                <span class="material-symbols-rounded" style="position: absolute; left: 12px; top: 10px; color: var(--text-muted); font-size: 20px;">search</span>
+                <input type="text" id="searchMain" placeholder="Cerca impianto o indirizzo..." class="search-input">
+            </div>
+        </header>
 
-    <div id="listaImpianti" class="p-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <p class="text-center text-gray-500 mt-10">Caricamento impianti...</p>
+        <main style="padding: 1rem;">
+            <div id="listaImpianti">
+                </div>
+        </main>
+
+        <footer class="app-footer">
+            <span class="footer-text">EDIT BY KINGFREAK Version 1.0</span>
+        </footer>
     </div>
 
     <script src="app.js"></script>
