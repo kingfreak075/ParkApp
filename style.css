@@ -211,3 +211,31 @@ main {
     cursor: pointer;
     box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
+
+/* Pallino Blu Standard */
+.calendar-day.has-events::after {
+    content: '';
+    position: absolute;
+    bottom: 4px;
+    width: 6px;
+    height: 6px;
+    background: #3b82f6; /* Blu */
+    border-radius: 50%;
+}
+
+/* Pallino Rosso Errore (Più grande) */
+.calendar-day.status-error::after {
+    content: '';
+    position: absolute;
+    bottom: 4px;
+    width: 10px;
+    height: 10px;
+    background: #ef4444; /* Rosso */
+    border-radius: 50%;
+    box-shadow: 0 0 4px rgba(239, 68, 68, 0.4);
+}
+
+/* Stile per evidenziare il giorno selezionato anche se ha errore */
+.calendar-day.selected.status-error::after {
+    background: white;
+}
