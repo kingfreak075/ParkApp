@@ -1,110 +1,181 @@
 const SUPABASE_URL = 'https://berlfufnmolyrmxeyqfd.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_a3USDfV7gbuauU2Kd6DuQQ_8PFVElpy'; // Usa la tua KEY
+const SUPABASE_KEY = 'sb_publishable_a3USDfV7gbuauU2Kd6DuQQ_8PFVElpy';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// Recupero dati dall'impianto selezionato nella pagina DETTAGLI
 const impiantoCorrente = JSON.parse(localStorage.getItem('selected_plant'));
 const tecnicoLoggato = localStorage.getItem('tecnico_loggato');
 
 document.addEventListener('DOMContentLoaded', () => {
     if (!tecnicoLoggato || !impiantoCorrente) {
-        window.location.href = 'index.html';
+        alert("Errore: Dati impianto mancanti. Torna alla pagina ricerca.");
+        window.location.href = 'parco.html';
         return;
     }
 
-    // Precompila dati impianto
+    // Inizializzazione UI con dati da localStorage
     document.getElementById('display-impianto').innerText = impiantoCorrente.nome;
     document.getElementById('display-indirizzo').innerText = impiantoCorrente.indirizzo;
-    document.getElementById('data-lavoro').valueAsDate = new Date();
+    document.getElementById('data-lavoro').valueAsDate = new Date(); // Default oggi
 });
 
+/**
+ * Gestisce il cambio del codice intervento
+ */
 function handleCodiceChange() {
     const cod = document.getElementById('select-codice').value;
     const boxTipo = document.getElementById('box-tipo');
     const labelStra = document.getElementById('label-stra');
     const labelRep = document.getElementById('label-rep');
     const inputCommessa = document.getElementById('input-commessa');
+    const displayImpianto = document.getElementById('display-impianto');
     const labelImpianto = document.getElementById('label-impianto');
 
     boxTipo.style.display = 'block';
     
-    // Gestione visibilità Checkbox (Radio) in base al codice
+    // 1. Visibilità Radio Buttons in base al codice
+    // 21, 13, 10 -> Ord e Stra | 22 -> Tutte e tre | 24 -> Solo Ord
     labelStra.style.display = (cod == '21' || cod == '22' || cod == '13' || cod == '10') ? 'flex' : 'none';
     labelRep.style.display = (cod == '22') ? 'flex' : 'none';
 
-    // Gestione Commessa (Codici 13 e 10)
+    // 2. Trasformazione Impianto in Commessa (Codici 13 e 10)
     if (cod == '13' || cod == '10') {
-        labelImpianto.innerText = "Numero Commessa";
-        document.getElementById('display-impianto').style.display = 'none';
+        labelImpianto.innerText = "Numero Commessa (8 caratteri)";
+        displayImpianto.style.display = 'none';
         inputCommessa.style.display = 'block';
+        // Pre-carica il codice impianto ma lascia modificare
         inputCommessa.value = impiantoCorrente.id || ''; 
     } else {
         labelImpianto.innerText = "Impianto";
-        document.getElementById('display-impianto').style.display = 'block';
+        displayImpianto.style.display = 'block';
         inputCommessa.style.display = 'none';
     }
 
-    // Reset selezione tipo alla modifica codice
+    // Reset a ORDINARIA ogni volta che cambia il codice per evitare errori
     document.querySelector('input[name="tipo"][value="ORDINARIA"]').checked = true;
     updateUI();
 }
 
+/**
+ * Mostra/Nasconde i campi in base alla tipologia scelta (Ord/Stra/Rep)
+ */
 function updateUI() {
     const tipo = document.querySelector('input[name="tipo"]:checked').value;
     const boxOreDirette = document.getElementById('box-ore-dirette');
     const boxOrari = document.getElementById('box-orari');
+    const cod = document.getElementById('select-codice').value;
 
+    // Se ORDINARIA: mostra inserimento ore diretto
     if (tipo === 'ORDINARIA') {
         boxOreDirette.style.display = 'block';
         boxOrari.style.display = 'none';
-    } else {
+        document.getElementById('preview-calcolo').style.display = 'none';
+    } 
+    // Se STRAORD o REPERIBILITA: mostra selettori orario
+    else {
         boxOreDirette.style.display = 'none';
         boxOrari.style.display = 'block';
+        calcolaOre(); // Ricalcola se c'erano già orari inseriti
     }
 }
 
+/**
+ * Calcola la durata dell'intervento e mostra la preview dello split ore
+ */
 function calcolaOre() {
     const inizio = document.getElementById('ora-inizio').value;
     const fine = document.getElementById('ora-fine').value;
     const preview = document.getElementById('preview-calcolo');
-    const splitInfo = document.getElementById('split-info');
     const tipo = document.querySelector('input[name="tipo"]:checked').value;
+    const dataVal = document.getElementById('data-lavoro').value;
 
     if (!inizio || !fine) return;
 
-    let [hIn, mIn] = inizio.split(':').map(Number);
-    let [hFi, mFi] = fine.split(':').map(Number);
-    
-    let totalMinutes = (hFi * 60 + mFi) - (hIn * 60 + mIn);
-    if (totalMinutes < 0) totalMinutes += 1440; // Gestione scavalco mezzanotte
+    const d = new Date(dataVal);
+    const results = processHours(inizio, fine, tipo, d.getDay());
 
-    const hTot = totalMinutes / 60;
     preview.style.display = 'block';
-    document.getElementById('res-calcolo').innerText = hTot.toFixed(2) + "h";
-
-    // Logica di split se Feriale e tipo STRAORDINARIO
-    const dataSelezionata = new Date(document.getElementById('data-lavoro').value);
-    const isFeriale = dataSelezionata.getDay() !== 0 && dataSelezionata.getDay() !== 6;
-
-    if (tipo === 'STRAORDINARIO' && isFeriale) {
-        // Logica semplificata: calcolo quante ore cadono in 12-13 o post-17
-        // Per semplicità qui mostriamo il totale, ma il database riceverà lo split
-        splitInfo.innerText = "Il sistema separerà automaticamente ore ordinarie e straordinarie.";
-    } else {
-        splitInfo.innerText = "Tutte le ore verranno conteggiate come " + tipo;
-    }
+    document.getElementById('res-calcolo').innerText = (results.ord + results.stra).toFixed(2) + "h totali";
+    
+    let infoText = "";
+    if (results.ord > 0) infoText += `Ordinarie: ${results.ord.toFixed(2)}h `;
+    if (results.stra > 0) infoText += `Straordinarie: ${results.stra.toFixed(2)}h`;
+    
+    document.getElementById('split-info').innerText = infoText;
 }
 
+/**
+ * LOGICA CORE: Splitta le ore tra Ordinarie e Straordinarie
+ */
+function processHours(inizio, fine, tipo, dayOfWeek) {
+    // REPERIBILITA va sempre tutto in ore_stra
+    if (tipo === 'REPERIBILITA') {
+        return { ord: 0, stra: calculateTotalDiff(inizio, fine) };
+    }
+    
+    const isFeriale = dayOfWeek !== 0 && dayOfWeek !== 6;
+    const total = calculateTotalDiff(inizio, fine);
+
+    // Sabato e Domenica -> Tutto Straordinario
+    if (!isFeriale) return { ord: 0, stra: total };
+
+    // Feriale -> Logica Split (Pausa 12-13 e Fine turno 17:00)
+    let ord = 0;
+    let stra = 0;
+    
+    let [hIn, mIn] = inizio.split(':').map(Number);
+    let [hFi, mFi] = fine.split(':').map(Number);
+    let startMin = hIn * 60 + mIn;
+    let endMin = hFi * 60 + mFi;
+    
+    if (endMin < startMin) endMin += 1440; // Gestione scavalco mezzanotte
+
+    for (let m = startMin; m < endMin; m++) {
+        let currentHour = (m / 60) % 24;
+        
+        // Regola: Straordinario se in pausa pranzo (12-13) o fuori orario (prima 8, dopo 17)
+        const isPausaPranzo = currentHour >= 12 && currentHour < 13;
+        const isFuoriOrario = currentHour < 8 || currentHour >= 17;
+
+        if (isPausaPranzo || isFuoriOrario) {
+            stra++;
+        } else {
+            ord++;
+        }
+    }
+
+    return { ord: ord / 60, stra: stra / 60 };
+}
+
+function calculateTotalDiff(i, f) {
+    let [h1, m1] = i.split(':').map(Number);
+    let [h2, m2] = f.split(':').map(Number);
+    let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
+    return (diff < 0 ? diff + 1440 : diff) / 60;
+}
+
+/**
+ * INVIO DATI A SUPABASE
+ */
 async function salvaIntervento() {
     const cod = document.getElementById('select-codice').value;
     const tipo = document.querySelector('input[name="tipo"]:checked').value;
     const dataVal = document.getElementById('data-lavoro').value;
     const oreViag = parseFloat(document.getElementById('ore-viaggio').value || 0);
     const noteVal = document.getElementById('note').value;
-    const commessaVal = document.getElementById('input-commessa').value.toUpperCase();
+    const commessaInput = document.getElementById('input-commessa');
 
-    if (!cod) { alert("Seleziona un codice!"); return; }
-    if ((cod == '13' || cod == '10') && commessaVal.length !== 8) {
-        alert("La commessa deve essere di 8 caratteri!"); return;
+    if (!cod) { alert("Seleziona un codice intervento!"); return; }
+
+    // Gestione Impianto/Commessa
+    let nomeImpiantoFinale = impiantoCorrente.nome;
+    if (cod == '13' || cod == '10') {
+        const val = commessaInput.value.trim().toUpperCase();
+        if (val.length !== 8) {
+            alert("Per i codici 13 e 10 la commessa deve essere di esattamente 8 caratteri.");
+            return;
+        }
+        nomeImpiantoFinale = val;
     }
 
     const d = new Date(dataVal);
@@ -113,26 +184,29 @@ async function salvaIntervento() {
 
     if (tipo === 'ORDINARIA') {
         oreOrd = parseFloat(document.getElementById('ore-ord-manual').value || 0);
+        if (oreOrd <= 0) { alert("Inserisci le ore lavorate!"); return; }
     } else {
-        // Logica Split Ore (Esempio 11-14)
         const inizio = document.getElementById('ora-inizio').value;
         const fine = document.getElementById('ora-fine').value;
-        const calcoli = processHours(inizio, fine, tipo, d.getDay());
-        oreOrd = calcoli.ord;
-        oreStra = calcoli.stra;
+        if (!inizio || !fine) { alert("Inserisci orario inizio e fine!"); return; }
+        
+        const res = processHours(inizio, fine, tipo, d.getDay());
+        oreOrd = res.ord;
+        oreStra = res.stra;
     }
 
+    // Inserimento su Supabase
     const { error } = await supabaseClient.from('fogliolavoro').insert([{
         tecnico: tecnicoLoggato,
         giorno: d.getDate(),
         mese: d.getMonth() + 1,
         anno: d.getFullYear(),
         codice: cod,
-        impianto: (cod == '13' || cod == '10') ? commessaVal : impiantoCorrente.nome,
+        impianto: nomeImpiantoFinale,
         indirizzo: impiantoCorrente.indirizzo,
-        ch_rep: tipo.toUpperCase(),
-        inizio_int: document.getElementById('ora-inizio').value || null,
-        fine_int: document.getElementById('ora-fine').value || null,
+        ch_rep: tipo, // ORDINARIA, STRAORDINARIO, REPERIBILITA (senza accento)
+        inizio_int: (tipo !== 'ORDINARIA') ? document.getElementById('ora-inizio').value : null,
+        fine_int: (tipo !== 'ORDINARIA') ? document.getElementById('ora-fine').value : null,
         ore_ord: oreOrd,
         ore_stra: oreStra,
         ore_viaggio: oreViag,
@@ -140,50 +214,9 @@ async function salvaIntervento() {
     }]);
 
     if (error) {
-        alert("Errore salvataggio: " + error.message);
+        alert("Errore durante il salvataggio: " + error.message);
     } else {
-        alert("Intervento salvato!");
+        alert("Intervento salvato con successo!");
         window.location.href = 'calendario.html';
     }
-}
-
-function processHours(inizio, fine, tipo, dayOfWeek) {
-    if (tipo === 'REPERIBILITA') return { ord: 0, stra: calculateTotal(inizio, fine) };
-    
-    const isFeriale = dayOfWeek !== 0 && dayOfWeek !== 6;
-    const total = calculateTotal(inizio, fine);
-
-    if (!isFeriale) return { ord: 0, stra: total };
-
-    // Logica di split per feriali (Semplificata per il tecnico)
-    // Qui puoi inserire la logica esatta per i blocchi 12-13 e post-17
-    // Per ora facciamo un calcolo basato sulla tua regola 11-14:
-    let ord = 0;
-    let stra = 0;
-    
-    // Eseguiamo un loop minuto per minuto (metodo più sicuro per gli split)
-    let [hIn, mIn] = inizio.split(':').map(Number);
-    let [hFi, mFi] = fine.split(':').map(Number);
-    let current = hIn * 60 + mIn;
-    let end = hFi * 60 + mFi;
-    if (end < current) end += 1440;
-
-    for (let m = current; m < end; m++) {
-        let hour = (m / 60) % 24;
-        // Se tra le 12 e 13 O dopo le 17 O prima delle 8
-        if (hour >= 12 && hour < 13 || hour >= 17 || hour < 8) {
-            stra += 1;
-        } else {
-            ord += 1;
-        }
-    }
-
-    return { ord: (ord / 60), stra: (stra / 60) };
-}
-
-function calculateTotal(i, f) {
-    let [h1, m1] = i.split(':').map(Number);
-    let [h2, m2] = f.split(':').map(Number);
-    let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
-    return (diff < 0 ? diff + 1440 : diff) / 60;
 }
