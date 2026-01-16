@@ -1,55 +1,79 @@
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Manutenzioni Semestrali</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Manutenzioni Semestrali</title>
+
+  <!-- Stili condivisi -->
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+
+  <!-- Supabase v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
+
 <body style="background-color: #f8fafc; margin: 0; padding-bottom: 40px;">
 
-    <div style="background: white; padding: 20px; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 10;">
-        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
-            <button onclick="window.location.href='parco.html'" style="background: none; border: none; cursor: pointer; display: flex;">
-                <span class="material-symbols-rounded" style="color: #64748b;">arrow_back</span>
-            </button>
-            <h1 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: #1e293b;">Pianificazione</h1>
-        </div>
+  <!-- Header (in linea con le altre pagine) -->
+  <div style="background: white; padding: 20px; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 10;">
+    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+      <button onclick="window.location.href='parco.html'"
+              style="background: none; border: none; cursor: pointer; display: flex;">
+        <span class="material-symbols-rounded" style="color: #64748b;">arrow_back</span>
+      </button>
+      <h1 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: #1e293b;">Pianificazione</h1>
+    </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f1f5f9; padding: 10px; border-radius: 12px;">
-    <div style="display: flex; align-items: center; gap: 5px;">
+    <!-- Barra filtri (2 colonne) -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f1f5f9; padding: 10px; border-radius: 12px;">
+
+      <!-- Mese -->
+      <div style="display: flex; align-items: center; gap: 5px;">
         <span class="material-symbols-rounded" style="color: #64748b; font-size: 18px;">calendar_month</span>
-        <select id="select-mese" onchange="caricaManutenzioni()" style="background: none; border: none; font-family: 'Inter'; font-weight: 600; color: #1e293b; outline: none; width: 100%;">
-            <option value="1">Gennaio</option>
-            <option value="2">Febbraio</option>
-            <option value="3">Marzo</option>
-            <option value="4">Aprile</option>
-            <option value="5">Maggio</option>
-            <option value="6">Giugno</option>
-            <option value="7">Luglio</option>
-            <option value="8">Agosto</option>
-            <option value="9">Settembre</option>
-            <option value="10">Ottobre</option>
-            <option value="11">Novembre</option>
-            <option value="12">Dicembre</option>
+        <label for="select-mese" style="position: absolute; left: -10000px;">Seleziona mese</label>
+        <select id="select-mese"
+                onchange="caricaManutenzioni()"
+                style="background: none; border: none; font-family: 'Inter'; font-weight: 600; color: #1e293b; outline: none; width: 100%;">
+          <option value="1">Gennaio</option>
+          <option value="2">Febbraio</option>
+          <option value="3">Marzo</option>
+          <option value="4">Aprile</option>
+          <option value="5">Maggio</option>
+          <option value="6">Giugno</option>
+          <option value="7">Luglio</option>
+          <option value="8">Agosto</option>
+          <option value="9">Settembre</option>
+          <option value="10">Ottobre</option>
+          <option value="11">Novembre</option>
+          <option value="12">Dicembre</option>
         </select>
-    </div>
+      </div>
 
-    <div style="display: flex; align-items: center; gap: 5px; border-left: 1px solid #cbd5e1; padding-left: 10px;">
+      <!-- Manutentore -->
+      <div style="display: flex; align-items: center; gap: 5px; border-left: 1px solid #cbd5e1; padding-left: 10px;">
         <span class="material-symbols-rounded" style="color: #64748b; font-size: 18px;">engineering</span>
-        <select id="select-tecnico" onchange="caricaManutenzioni()" style="background: none; border: none; font-family: 'Inter'; font-weight: 600; color: #1e293b; outline: none; width: 100%;">
-            </select>
+        <label for="select-tecnico" style="position: absolute; left: -10000px;">Seleziona manutentore</label>
+        <select id="select-tecnico"
+                onchange="caricaManutenzioni()"
+                style="background: none; border: none; font-family: 'Inter'; font-weight: 600; color: #1e293b; outline: none; width: 100%;">
+          <!-- Opzioni caricate dinamicamente da manutenzioni.js -->
+          <option value="">Caricamento manutentori...</option>
+        </select>
+      </div>
     </div>
-</div>
-    </div>
+  </div>
 
-    <div id="lista-manutenzioni" style="padding: 15px; display: flex; flex-direction: column; gap: 12px;">
-        <div style="text-align: center; color: #64748b; margin-top: 50px;">Caricamento impianti...</div>
-    </div>
+  <!-- Lista impianti -->
+  <div id="lista-manutenzioni" style="padding: 15px; display: flex; flex-direction: column; gap: 12px;">
+    <div style="text-align: center; color: #64748b; margin-top: 50px;">Caricamento impianti...</div>
+  </div>
 
-    <script src="manutenzioni.js"></script>
+  <!-- Script di pagina -->
+  <script src="manutenzioni.js"></script>
 </body>
 </html>
