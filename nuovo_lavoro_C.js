@@ -187,4 +187,5 @@ function processHours(inizio, fine, tipo, dayOfWeek) {
     if (tipo === 'REPERIBILITA' || dayOfWeek === 0 || dayOfWeek === 6) return { ord: 0, stra: total };
     if (total > 8) return { ord: 8, stra: total - 8 };
     return { ord: total, stra: 0 };
+
 }
