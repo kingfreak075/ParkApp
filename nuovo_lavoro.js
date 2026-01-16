@@ -8,23 +8,28 @@ const tecnicoLoggato = localStorage.getItem('tecnico_loggato');
 let codiceSelezionato = null;
 
 // Funzione per selezionare il codice e mostrare la sezione successiva
-function selectCodice(val, element) {
-    document.querySelectorAll('.card-codice').forEach(c => c.classList.remove('active'));
-    element.classList.add('active');
-    document.getElementById('select-codice').value = val;
-    document.getElementById('area-lavoro').style.display = 'block';
-
-    document.getElementById('label-stra').style.display = (['21','22','13','10'].includes(val)) ? 'flex' : 'none';
-    document.getElementById('label-rep').style.display = (val == '22') ? 'flex' : 'none';
-
-    const isCommessa = (val == '13' || val == '10');
-    document.getElementById('display-impianto').style.display = isCommessa ? 'none' : 'block';
-    document.getElementById('input-commessa').style.display = isCommessa ? 'block' : 'none';
+function selectCodice(codice, element) {
+    console.log("Codice selezionato:", codice); 
+    codiceSelezionato = codice;
     
-    if (isCommessa && impiantoCorrente && impiantoCorrente.id) {
-        document.getElementById('input-commessa').value = impiantoCorrente.id.toString().substring(0,8);
+    // Estetica delle card
+    document.querySelectorAll('.card-codice').forEach(c => {
+        c.style.borderColor = "#e2e8f0";
+        c.style.background = "white";
+        c.classList.remove('active');
+    });
+    
+    element.classList.add('active');
+    element.style.borderColor = "#2563eb";
+    element.style.background = "#eff6ff";
+
+    // Mostra l'area di lavoro (che nel tuo HTML si chiama 'area-lavoro')
+    const areaLavoro = document.getElementById('area-lavoro');
+    if (areaLavoro) {
+        areaLavoro.style.display = 'block';
     }
-    updateUI();
+
+    updateUI(); 
 }
 
 // Funzione per gestire la visibilità dei box ore
@@ -113,71 +118,8 @@ function validateTimeAndCalculate() {
         document.getElementById('res-stra').innerText = res.stra.toFixed(2);
     }
 }
+
 async function salvaIntervento() {
-    const cod = document.getElementById('select-codice').value;
-    const tipo = document.querySelector('input[name="tipo"]:checked').value;
-    const dataSelezionata = new Date(document.getElementById('data-lavoro').value);
-    const urlParams = new URLSearchParams(window.location.search);
-    const idDalLink = urlParams.get('id');
-
-    if (!cod) { alert("Seleziona un codice!"); return; }
-
-    let oreOrd = 0, oreStra = 0;
-    let oraInizioIntervento = "08:00"; // Default per ordinarie
-
-    if (tipo === 'ORDINARIA') {
-        oreOrd = parseFloat(document.getElementById('ore-ord-manual').value || 0);
-    } else {
-        oreOrd = parseFloat(document.getElementById('res-ord').innerText || 0);
-        oreStra = parseFloat(document.getElementById('res-stra').innerText || 0);
-        if (document.getElementById('ora-inizio').value) {
-            oraInizioIntervento = document.getElementById('ora-inizio').value;
-        }
-    }
-
-    if (oreOrd <= 0 && oreStra <= 0) {
-        alert("ERRORE: Inserire almeno un'ora di lavoro.");
-        return;
-    }
-
-    // Determiniamo il Codice Tecnico dell'Impianto (es. ASC0001)
-    const codiceImpiantoDB = idDalLink || (impiantoCorrente ? (impiantoCorrente.impianto || impiantoCorrente.codice || impiantoCorrente.nome) : "N/D");
-    const totaleOreLavoro = oreOrd + oreStra;
-    const payload = {
-        tecnico: tecnicoLoggato,
-        giorno: dataSelezionata.getDate(),
-        mese: dataSelezionata.getMonth() + 1,
-        anno: dataSelezionata.getFullYear(),
-        codice: cod,
-        // Carica il codice tecnico nella colonna 'impianto'
-        impianto: (cod == '13' || cod == '10') ? document.getElementById('input-commessa').value.toUpperCase() : codiceImpiantoDB,
-        indirizzo: impiantoCorrente ? impiantoCorrente.indirizzo : "",
-        ch_rep: tipo,
-        inizio_int: (tipo !== 'ORDINARIA') ? document.getElementById('ora-inizio').value : null,
-        fine_int: (tipo !== 'ORDINARIA') ? document.getElementById('ora-fine').value : null,
-        ore_ord: oreOrd,
-        ore_stra: oreStra,
-        ore: totaleOreLavoro, // <--- NUOVA COLONNA AGGIUNTA
-        ore_viaggio: parseFloat(document.getElementById('ore-viaggio').value || 0),
-        note: document.getElementById('note').value,
-        // NUOVE COLONNE RICHIESTE
-        data: formatDataOra(dataSelezionata, oraInizioIntervento),
-        settimana: getWeekNumber(dataSelezionata),
-        "Data/ora creazione": formatDataOra(new Date())
-        // L'ID viene gestito automaticamente da Supabase
-    };
-
-    const { error } = await supabaseClient.from('fogliolavoro').insert([payload]);
-
-    if (error) {
-        alert("Errore durante il salvataggio: " + error.message);
-    } else {
-        alert("Intervento salvato con successo!");
-        window.location.href = 'parco.html';
-    }
-}
-
-
     if (!codiceSelezionato) return alert("Seleziona un codice!");
     
     const dataInput = document.getElementById('data-lavoro').value;
@@ -187,18 +129,13 @@ async function salvaIntervento() {
     let oreOrd = 0, oreStra = 0, inizioInt = null, fineInt = null;
 
     if (tipo === 'ORDINARIA') {
-        oreOrd = parseFloat(document.getElementById('ore-ord-manual').value || 0);
+        oreOrd = parseFloat(document.getElementById('ore-ord-manual').value) || 0;
     } else {
-        oreOrd = parseFloat(document.getElementById('res-ord').innerText || 0);
-        oreStra = parseFloat(document.getElementById('res-stra').innerText || 0);
-        if (document.getElementById('ora-inizio').value) {
-            oraInizioIntervento = document.getElementById('ora-inizio').value;
-        }
-    }
-
-    if (oreOrd <= 0 && oreStra <= 0) {
-        alert("ERRORE: Inserire almeno un'ora di lavoro.");
-        return;
+        inizioInt = document.getElementById('ora-inizio').value;
+        fineInt = document.getElementById('ora-fine').value;
+        const res = processHours(inizioInt, fineInt, tipo, dataObj.getDay());
+        oreOrd = res.ord;
+        oreStra = res.stra;
     }
 
     const payload = {
@@ -235,7 +172,7 @@ async function salvaIntervento() {
     } catch (err) {
         alert("Errore: " + err.message);
     }
-
+}
 
 // UTILITY (stesse di prima)
 function calculateTotalDiff(inizio, fine) {
