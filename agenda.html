@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Agenda Tecnico</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body style="background-color: #f8fafc; margin: 0;">
+
+    <div style="background: white; padding: 20px; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 10;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <button onclick="window.location.href='menu.html'" style="background: none; border: none;">
+                <span class="material-symbols-rounded" style="color: #64748b;">arrow_back</span>
+            </button>
+            <h1 style="margin: 0; font-size: 1.2rem; font-weight: 800;">La mia Agenda</h1>
+            <button id="add-event" style="background: #2563eb; color: white; border: none; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center;">
+                <span class="material-symbols-rounded">add</span>
+            </button>
+        </div>
+        <div id="current-date-display" style="font-weight: 600; color: #3b82f6; text-transform: capitalize;">
+            </div>
+    </div>
+
+    <div id="agenda-container" style="padding: 20px;">
+        </div>
+
+    <script src="agenda.js"></script>
+</body>
+</html>

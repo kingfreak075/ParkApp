@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gestione Lavoro</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --primary: #2563eb; --primary-light: #eff6ff; --bg-app: #f1f5f9; }
+        body { background-color: var(--bg-app); font-family: 'Inter', sans-serif; margin: 0; padding-bottom: 140px; }
+        
+        .header-gestione { background: white; padding: 15px; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 100; display: flex; align-items: center; gap: 15px; }
+
+        /* Accordion */
+        .accordion-item { background: white; border-radius: 18px; margin: 12px 15px; overflow: hidden; border: 1px solid #e2e8f0; }
+        .accordion-header { padding: 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: 800; }
+        .accordion-content { display: none; padding: 0 15px 20px 15px; border-top: 1px solid #f1f5f9; }
+        .accordion-item.open .accordion-content { display: block; }
+        .accordion-item.open { border-color: var(--primary); }
+        .arrow { transition: transform 0.3s; }
+        .accordion-item.open .arrow { transform: rotate(180deg); color: var(--primary); }
+
+        /* Pulsanti e Slider */
+        .grid-codici { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .btn-modern { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px 10px; font-size: 0.85rem; font-weight: 700; cursor: pointer; text-align: center; display: flex; flex-direction: column; }
+        .btn-modern.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .btn-modern span { font-size: 0.65rem; opacity: 0.8; font-weight: 400; }
+
+        .slider-container { background: var(--primary-light); padding: 20px; border-radius: 16px; border: 1px solid #bfdbfe; margin-top: 15px; }
+        .slider-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: 800; }
+        .slider-value { font-size: 1.6rem; color: var(--primary); }
+
+        input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-runnable-track { height: 10px; background: #cbd5e1; border-radius: 5px; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; height: 26px; width: 26px; border-radius: 50%; background: var(--primary); margin-top: -8px; border: 3px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.1); }
+
+        .label-field { display: block; font-size: 0.7rem; font-weight: 800; color: #64748b; margin: 15px 0 8px 0; text-transform: uppercase; }
+        .input-modern { width: 100%; padding: 14px; border: 2px solid #f1f5f9; border-radius: 12px; font-size: 1rem; font-weight: 600; box-sizing: border-box; }
+        
+        .resume-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 15px; border-top: 1px solid #e2e8f0; }
+        #box-riepilogo { background: #f0fdf4; border: 1px dashed #22c55e; border-radius: 12px; padding: 12px; font-size: 0.85rem; color: #166534; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+    </style>
+</head>
+<body>
+    <div class="header-gestione">
+        <button onclick="window.location.href='menu.html'" style="background:none; border:none;"><span class="material-symbols-rounded">arrow_back</span></button>
+        <h1 style="margin:0; font-size:1.1rem; font-weight:800;">Gestione Lavoro</h1>
+    </div>
+
+    <div id="acc-esterni" class="accordion-item">
+        <div class="accordion-header" onclick="toggleAccordion('esterni')">
+            <span>🏢 Esterni & Filiale</span>
+            <span class="material-symbols-rounded arrow">expand_more</span>
+        </div>
+        <div class="accordion-content">
+            <div class="grid-codici">
+                <div class="btn-modern" onclick="selectCodice('21', 'Att. in Filiale', 'FILIALE', this)">21<span>Filiale</span></div>
+                <div class="btn-modern" onclick="selectCodice('21', 'Manutenzione', 'ESTERNO', this)">21<span>Manut. Esterni</span></div>
+                <div class="btn-modern" onclick="selectCodice('22', 'Chiamata', 'ESTERNO', this)">22<span>Chiam. Esterni</span></div>
+                <div class="btn-modern" onclick="selectCodice('24', 'Assistenza Enti', 'ESTERNO', this)">24<span>Assist. Enti</span></div>
+                <div class="btn-modern" onclick="selectCodice('13', 'Commessa', 'ESTERNO', this)">13<span>Comm. Esterni</span></div>
+            </div>
+            <div id="box-esterni-info" style="display:none; margin-top:10px;">
+                <input type="text" id="ext-impianto" class="input-modern" placeholder="Nome Impianto..." style="margin-bottom:10px;">
+                <input type="text" id="ext-indirizzo" class="input-modern" placeholder="Indirizzo...">
+            </div>
+        </div>
+    </div>
+
+    <div id="acc-assenze" class="accordion-item">
+        <div class="accordion-header" onclick="toggleAccordion('assenze')">
+            <span>🏖️ Assenze & Permessi</span>
+            <span class="material-symbols-rounded arrow">expand_more</span>
+        </div>
+        <div class="accordion-content">
+            <div class="grid-codici" id="grid-assenze"></div>
+            <div id="box-8h" style="display:none; margin-top:15px; background:#f1f5f9; padding:15px; border-radius:12px; justify-content:space-between; align-items:center;">
+                <span style="font-size:0.9rem; font-weight:700;">Intera giornata (8h)</span>
+                <input type="checkbox" id="check-8h" onchange="handle8h(this.checked)">
+            </div>
+        </div>
+    </div>
+
+    <div id="area-config" style="padding:0 15px; display:none;">
+        <label class="label-field">Tipo Intervento</label>
+        <div id="container-tipo-intervento" class="grid-codici"></div>
+
+        <div id="box-ore-secche" class="slider-container" style="display:none;">
+            <div class="slider-header"><span>Ore Lavorate</span><span id="valore-ore" class="slider-value">1.0</span></div>
+            <input type="range" id="slider-ore" min="0.25" max="8" step="0.25" value="1" oninput="updateSlider(this.value)">
+        </div>
+
+        <div id="box-orari-dettaglio" style="display:none; margin-top:15px;">
+            <div style="display:flex; gap:10px;">
+                <div style="flex:1;"><label class="label-field">Inizio</label><input type="time" id="ora-inizio" class="input-modern" onchange="aggiornaRiepilogo()"></div>
+                <div style="flex:1;"><label class="label-field">Fine</label><input type="time" id="ora-fine" class="input-modern" onchange="aggiornaRiepilogo()"></div>
+            </div>
+        </div>
+
+        <div id="box-viaggio" class="slider-container" style="display:none; background:#f0fdf4; border-color:#bbf7d0; margin-top:15px;">
+            <div class="slider-header"><span style="color:#166534;">🚗 Ore Viaggio</span><span id="valore-viaggio" class="slider-value" style="color:#15803d;">0.0</span></div>
+            <input type="range" id="slider-viaggio" min="0" max="4" step="0.5" value="0" oninput="updateViaggio(this.value)">
+        </div>
+
+        <label class="label-field">Data e Note</label>
+        <input type="date" id="data-lavoro" class="input-modern" style="margin-bottom:10px;">
+        <textarea id="note" class="input-modern" style="height:70px;" placeholder="Note intervento..."></textarea>
+    </div>
+
+    <div class="resume-bar">
+        <div id="box-riepilogo"><span id="testo-riepilogo">Seleziona un'attività</span></div>
+        <button onclick="salvaGestione()" class="btn-modern active" style="width:100%; padding:18px; font-size:1rem;">INVIA ATTIVITÀ</button>
+    </div>
+
+    <script src="gestione.js"></script>
+</body>
+</html>

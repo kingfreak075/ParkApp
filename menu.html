@@ -28,22 +28,26 @@
                 <span class="material-symbols-rounded">apartment</span>
                 PARCO
             </button>
-                <button onclick="window.location.href='manutenzioni.html'" class="menu-item">
+            <button onclick="window.location.href='manutenzioni.html'" class="menu-item">
                 <span class="material-symbols-rounded">build</span>
                 MANUTENZIONE
+            </button>
+            <button onclick="window.location.href='gestione.html'" class="menu-item">
+                <span class="material-symbols-rounded">schedule</span>
+                GESTIONE
             </button>
             <button class="menu-item disabled">
                 <span class="material-symbols-rounded">construction</span>
                 MONTAGGIO
             </button>
-            <button class="menu-item disabled">
+            <button onclick="window.location.href='agenda.html'" class="menu-item">
                 <span class="material-symbols-rounded">event_note</span>
                 AGENDA
             </button>
             <button onclick="window.location.href='calendario.html'" class="menu-item">
-    <span class="material-symbols-rounded">calendar_month</span>
-    CALENDARIO
-</button>
+                <span class="material-symbols-rounded">calendar_month</span>
+                CALENDARIO
+            </button>
             <button class="menu-item disabled">
                 <span class="material-symbols-rounded">directions_car</span>
                 GESTIONE AUTO
@@ -56,6 +60,10 @@
                 <span class="material-symbols-rounded">emergency</span>
                 REPERIBILITÀ
             </button>
+            <button onclick="window.location.href='config.html'" class="menu-item">
+                <span class="material-symbols-rounded">settings</span>
+                CONFIGURAZIONE
+            </button>
         </main>
 
         <footer class="app-footer">
@@ -64,14 +72,12 @@
     </div>
 
     <script>
-        // Carica il nome del tecnico all'avvio
         document.getElementById('nome-tecnico').innerText = localStorage.getItem('tecnico_loggato') || "Tecnico";
 
-        // Funzione di Logout
         function logout() {
             if(confirm("Vuoi uscire e cambiare utente?")) {
-                localStorage.removeItem('tecnico_loggato'); // Cancella solo l'utente
-                window.location.href = 'index.html'; // Torna al login
+                localStorage.removeItem('tecnico_loggato');
+                window.location.href = 'index.html';
             }
         }
     </script>
