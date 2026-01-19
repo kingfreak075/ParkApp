@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Le mie Spese - ParkApp</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <style>
+        :root {
+            --primary: #3860b2;
+            --primary-dark: #00126b;
+            --danger: #b33838;
+            --success: #22c55e;
+            --warning: #f59e0b;
+        }
+        
+        .app-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #f8fafc;
+            min-height: 100vh;
+        }
+        
+        .app-header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 20px;
+            border-radius: 0 0 20px 20px;
+            box-shadow: 0 4px 12px rgba(56, 96, 178, 0.3);
+        }
+        
+        .filters-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 1px solid #e2e8f0;
+        }
+        
+        .filter-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .filter-label {
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .filter-select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #cbd5e1;
+            border-radius: 10px;
+            font-weight: 600;
+            background: #f8fafc;
+            cursor: pointer;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            border-left: 6px solid var(--primary);
+        }
+        
+        .stat-card.vitto {
+            border-left-color: #059669;
+        }
+        
+        .stat-card.auto {
+            border-left-color: #dc2626;
+        }
+        
+        .stat-card.totale {
+            border-left-color: #7c3aed;
+            background: linear-gradient(135deg, #f8fafc, #e0e7ff);
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: #64748b;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 900;
+            color: #1e293b;
+        }
+        
+        .stat-subvalue {
+            font-size: 0.9rem;
+            color: #64748b;
+            margin-top: 5px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 2px solid transparent;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(56, 96, 178, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #475569;
+            border-color: #cbd5e1;
+        }
+        
+        .btn-secondary:hover {
+            background: #cbd5e1;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+        
+        .table-container {
+            background: white;
+            border-radius: 16px;
+            margin: 20px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 1px solid #e2e8f0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        thead {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+        }
+        
+        th {
+            padding: 16px;
+            text-align: left;
+            font-weight: 800;
+            font-size: 0.9rem;
+        }
+        
+        tbody tr {
+            border-bottom: 1px solid #e2e8f0;
+            transition: background 0.2s ease;
+        }
+        
+        tbody tr:hover {
+            background: #f8fafc;
+        }
+        
+        td {
+            padding: 14px 16px;
+            color: #334155;
+            font-weight: 500;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        
+        .badge-vitto {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .badge-auto {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .foto-cell {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        
+        .foto-thumb {
+            width: 40px;
+            height: 40px;
+            border-radius: 6px;
+            overflow: hidden;
+            cursor: pointer;
+            border: 2px solid #cbd5e1;
+        }
+        
+        .foto-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 1px solid #e2e8f0;
+        }
+        
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 800px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #64748b;
+        }
+        
+        .foto-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .foto-gallery img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 2px solid #cbd5e1;
+        }
+        
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 5px solid #e2e8f0;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #64748b;
+        }
+        
+        .empty-state .material-symbols-rounded {
+            font-size: 64px;
+            opacity: 0.3;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .filter-group {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            table {
+                display: block;
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <button onclick="window.location.href='menu.html'" class="btn-secondary" style="background: rgba(255,255,255,0.2); color: white; border-color: rgba(255,255,255,0.3);">
+                    <span class="material-symbols-rounded">arrow_back</span>
+                </button>
+                <h1 style="margin: 0; font-size: 1.5rem; font-weight: 800;">Le mie Spese</h1>
+                <button onclick="window.location.href='note_spese.html'" class="btn-secondary" style="background: rgba(255,255,255,0.2); color: white; border-color: rgba(255,255,255,0.3);">
+                    <span class="material-symbols-rounded">add</span> Nuova
+                </button>
+            </div>
+            
+            <div style="text-align: center; margin-top: 15px;">
+                <div id="tecnico-nome" style="font-size: 1.2rem; font-weight: 700;"></div>
+                <div style="font-size: 0.9rem; opacity: 0.9; margin-top: 5px;">
+                    Consulta e gestisci le tue note spese
+                </div>
+            </div>
+        </header>
+        
+        <!-- Filtri -->
+        <div class="filters-card">
+            <h3 style="margin: 0 0 20px 0; color: var(--primary-dark);">
+                <span class="material-symbols-rounded" style="vertical-align: middle;">filter_alt</span>
+                Filtri
+            </h3>
+            
+            <div class="filter-group">
+                <div>
+                    <div class="filter-label">Anno</div>
+                    <select id="filtro-anno" class="filter-select" onchange="caricaDati()">
+                        <option value="">Tutti gli anni</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <div class="filter-label">Mese</div>
+                    <select id="filtro-mese" class="filter-select" onchange="caricaDati()">
+                        <option value="">Tutti i mesi</option>
+                        <option value="1">Gennaio</option>
+                        <option value="2">Febbraio</option>
+                        <option value="3">Marzo</option>
+                        <option value="4">Aprile</option>
+                        <option value="5">Maggio</option>
+                        <option value="6">Giugno</option>
+                        <option value="7">Luglio</option>
+                        <option value="8">Agosto</option>
+                        <option value="9">Settembre</option>
+                        <option value="10">Ottobre</option>
+                        <option value="11">Novembre</option>
+                        <option value="12">Dicembre</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <div class="filter-label">Tipo Spesa</div>
+                    <select id="filtro-tipo" class="filter-select" onchange="caricaDati()">
+                        <option value="">Tutte le spese</option>
+                        <option value="vitto">Vitto/Trasporto</option>
+                        <option value="auto">Auto</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <div class="filter-label">Località</div>
+                    <select id="filtro-localita" class="filter-select" onchange="caricaDati()">
+                        <option value="">Tutte le località</option>
+                        <option value="In Sede">In Sede</option>
+                        <option value="Fuori Sede">Fuori Sede</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button onclick="caricaDati()" class="btn btn-primary">
+                    <span class="material-symbols-rounded">search</span>
+                    Applica Filtri
+                </button>
+                <button onclick="resetFiltri()" class="btn btn-secondary">
+                    <span class="material-symbols-rounded">refresh</span>
+                    Reset Filtri
+                </button>
+                <button onclick="esportaPDF()" class="btn btn-success">
+                    <span class="material-symbols-rounded">picture_as_pdf</span>
+                    Esporta PDF
+                </button>
+                <button onclick="esportaExcel()" class="btn btn-success">
+                    <span class="material-symbols-rounded">table_chart</span>
+                    Esporta Excel
+                </button>
+            </div>
+        </div>
+        
+        <!-- Statistiche -->
+        <div class="filters-card">
+            <h3 style="margin: 0 0 20px 0; color: var(--primary-dark);">
+                <span class="material-symbols-rounded" style="vertical-align: middle;">insights</span>
+                Statistiche
+            </h3>
+            
+            <div class="stats-grid">
+                <div class="stat-card totale">
+                    <div class="stat-label">TOTALE PERIODO</div>
+                    <div class="stat-value" id="stat-totale">€0.00</div>
+                    <div class="stat-subvalue" id="stat-numero-spese">0 spese</div>
+                </div>
+                
+                <div class="stat-card vitto">
+                    <div class="stat-label">VITTO/TRASPORTO</div>
+                    <div class="stat-value" id="stat-vitto">€0.00</div>
+                    <div class="stat-subvalue" id="stat-dettaglio-vitto">0 pasti • 0 pernottamenti</div>
+                </div>
+                
+                <div class="stat-card auto">
+                    <div class="stat-label">SPESE AUTO</div>
+                    <div class="stat-value" id="stat-auto">€0.00</div>
+                    <div class="stat-subvalue" id="stat-dettaglio-auto">0 km • €0 carburante</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-label">MEDIA GIORNALIERA</div>
+                    <div class="stat-value" id="stat-media">€0.00</div>
+                    <div class="stat-subvalue" id="stat-giorni">0 giorni lavorativi</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Grafico -->
+        <div class="chart-container">
+            <h3 style="margin: 0 0 20px 0; color: var(--primary-dark);">
+                <span class="material-symbols-rounded" style="vertical-align: middle;">bar_chart</span>
+                Distribuzione Spese
+            </h3>
+            <canvas id="graficoSpese"></canvas>
+        </div>
+        
+        <!-- Tabella spese -->
+        <div class="table-container">
+            <div style="padding: 20px; border-bottom: 1px solid #e2e8f0;">
+                <h3 style="margin: 0; color: var(--primary-dark); display: flex; align-items: center; gap: 10px;">
+                    <span class="material-symbols-rounded">receipt_long</span>
+                    Elenco Spese
+                    <span id="counter-spese" style="font-size: 0.9rem; color: #64748b; margin-left: auto;">0 spese</span>
+                </h3>
+            </div>
+            
+            <div id="tabella-container">
+                <!-- La tabella sarà generata dinamicamente -->
+                <div class="empty-state" id="empty-state">
+                    <span class="material-symbols-rounded">receipt_long</span>
+                    <h3 style="color: #64748b; margin: 10px 0;">Nessuna spesa trovata</h3>
+                    <p>Utilizza i filtri per cercare o inserisci una nuova spesa.</p>
+                    <button onclick="window.location.href='note_spese.html'" class="btn btn-primary" style="margin-top: 20px;">
+                        <span class="material-symbols-rounded">add</span> Inserisci Spesa
+                    </button>
+                </div>
+                
+                <table id="tabella-spese" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Località</th>
+                            <th>Tipo</th>
+                            <th>Vitto/Trasporto</th>
+                            <th>Auto</th>
+                            <th>Totale</th>
+                            <th>Foto</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabella-body">
+                        <!-- Righe generate dinamicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modale foto -->
+    <div id="modal-foto" class="modal-overlay">
+        <div class="modal-content">
+            <button class="modal-close" onclick="chiudiModaleFoto()">×</button>
+            <h3 id="modal-titolo" style="margin: 0 0 20px 0; color: var(--primary-dark);">Foto Ricevute</h3>
+            <div id="modal-foto-gallery" class="foto-gallery">
+                <!-- Foto caricate dinamicamente -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div style="font-weight: 700; color: var(--primary);">Caricamento in corso...</div>
+    </div>
+    
+    <script src="lista_spese.js"></script>
+    <script>
+        // Variabili globali
+        let chartInstance = null;
+        let tutteSpese = [];
+        
+        // Inizializzazione pagina
+        document.addEventListener('DOMContentLoaded', async () => {
+            const tecnico = localStorage.getItem('tecnico_loggato');
+            document.getElementById('tecnico-nome').textContent = tecnico || 'Tecnico';
+            
+            // Popola anni (ultimi 3 anni + anno corrente)
+            const annoSelect = document.getElementById('filtro-anno');
+            const annoCorrente = new Date().getFullYear();
+            
+            for (let anno = annoCorrente; anno >= annoCorrente - 2; anno--) {
+                const option = document.createElement('option');
+                option.value = anno;
+                option.textContent = anno;
+                if (anno === annoCorrente) option.selected = true;
+                annoSelect.appendChild(option);
+            }
+            
+            // Carica dati iniziali
+            await caricaDati();
+        });
+        
+        // Funzioni di utilità
+        function mostraLoading() {
+            document.getElementById('loading-overlay').style.display = 'flex';
+        }
+        
+        function nascondiLoading() {
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
+        
+        function formattaData(dataString) {
+            const data = new Date(dataString);
+            return data.toLocaleDateString('it-IT', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+        }
+        
+        function formattaEuro(valore) {
+            return '€' + parseFloat(valore).toFixed(2);
+        }
+        
+        function resetFiltri() {
+            document.getElementById('filtro-anno').value = new Date().getFullYear();
+            document.getElementById('filtro-mese').value = '';
+            document.getElementById('filtro-tipo').value = '';
+            document.getElementById('filtro-localita').value = '';
+            caricaDati();
+        }
+        
+        function apriModaleFoto(fotoUrls, titolo) {
+            const modal = document.getElementById('modal-foto');
+            const gallery = document.getElementById('modal-foto-gallery');
+            const titoloModal = document.getElementById('modal-titolo');
+            
+            titoloModal.textContent = titolo;
+            gallery.innerHTML = '';
+            
+            if (fotoUrls && fotoUrls.length > 0) {
+                fotoUrls.forEach(url => {
+                    const img = document.createElement('img');
+                    img.src = url;
+                    img.alt = 'Ricevuta spesa';
+                    img.onclick = () => window.open(url, '_blank');
+                    gallery.appendChild(img);
+                });
+            } else {
+                gallery.innerHTML = '<p style="color: #64748b; text-align: center; width: 100%;">Nessuna foto disponibile</p>';
+            }
+            
+            modal.style.display = 'flex';
+        }
+        
+        function chiudiModaleFoto() {
+            document.getElementById('modal-foto').style.display = 'none';
+        }
+        
+        // Chiudi modale cliccando fuori
+        document.getElementById('modal-foto').onclick = function(e) {
+            if (e.target === this) chiudiModaleFoto();
+        };
+    </script>
+</body>
+</html>

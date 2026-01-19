@@ -393,12 +393,11 @@
                 <!-- Pasti -->
                 <div class="input-group">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <label class="input-label">Pasti (€12 cad.)</label>
+                        <label class="input-label">Pasti (€)</label>
                         <span class="input-hint" id="totale-pasti">Totale: €0.00</span>
                     </div>
                     <div class="input-with-camera">
-                        <input type="number" id="pasti" class="input-field" min="0" max="999" step="1" value="0" 
-                               oninput="calcolaTotali()">
+                        <input type="number" id="pasti" class="input-field" min="0" max="9999" step="0.01" value="0.00">
                         <button class="camera-btn" onclick="scattaFoto('pasti')" title="Scatta foto ricevuta">
                             <span class="material-symbols-rounded">photo_camera</span>
                         </button>
@@ -408,12 +407,11 @@
                 <!-- Pernottamenti -->
                 <div class="input-group">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <label class="input-label">Pernottamenti (€80 cad.)</label>
+                        <label class="input-label">Pernottamenti (€)</label>
                         <span class="input-hint" id="totale-pernottamenti">Totale: €0.00</span>
                     </div>
                     <div class="input-with-camera">
-                        <input type="number" id="pernottamenti" class="input-field" min="0" max="999" step="1" value="0"
-                               oninput="calcolaTotali()">
+                        <input type="number" id="pernottamenti" class="input-field" min="0" max="9999" step="0.01" value="0.00">
                         <button class="camera-btn" onclick="scattaFoto('pernottamenti')" title="Scatta foto ricevuta">
                             <span class="material-symbols-rounded">photo_camera</span>
                         </button>
@@ -427,8 +425,7 @@
                         <span class="input-hint" id="totale-trasporto">Totale: €0.00</span>
                     </div>
                     <div class="input-with-camera">
-                        <input type="number" id="mezzi-trasporto" class="input-field" min="0" max="9999" step="0.01" value="0"
-                               oninput="calcolaTotali()">
+                        <input type="number" id="mezzi-trasporto" class="input-field" min="0" max="9999" step="0.01" value="0.00">
                         <button class="camera-btn" onclick="scattaFoto('mezzi-trasporto')" title="Scatta foto ricevuta">
                             <span class="material-symbols-rounded">photo_camera</span>
                         </button>
@@ -442,8 +439,7 @@
                         <span class="input-hint" id="totale-altre">Totale: €0.00</span>
                     </div>
                     <div class="input-with-camera">
-                        <input type="number" id="altre-spese" class="input-field" min="0" max="9999" step="0.01" value="0"
-                               oninput="calcolaTotali()">
+                        <input type="number" id="altre-spese" class="input-field" min="0" max="9999" step="0.01" value="0.00">
                         <button class="camera-btn" onclick="scattaFoto('altre-spese')" title="Scatta foto ricevuta">
                             <span class="material-symbols-rounded">photo_camera</span>
                         </button>
@@ -464,15 +460,14 @@
                     Spese Auto
                 </h3>
                 
-                <!-- KM auto propria -->
+                <!-- KM auto propria (€) -->
                 <div class="input-group">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <label class="input-label">KM Auto (€0.50/km)</label>
+                        <label class="input-label">Spese KM Auto (€)</label>
                         <span class="input-hint" id="totale-km">Totale: €0.00</span>
                     </div>
                     <div class="input-with-camera">
-                        <input type="number" id="km-auto" class="input-field" min="0" max="9999" step="1" value="0"
-                               oninput="calcolaTotali()">
+                        <input type="number" id="km-auto" class="input-field" min="0" max="9999" step="0.01" value="0.00">
                         <button class="camera-btn" onclick="scattaFoto('km-auto')" title="Scatta foto ricevuta">
                             <span class="material-symbols-rounded">photo_camera</span>
                         </button>
@@ -486,8 +481,7 @@
                         <span class="input-hint" id="totale-pedaggi">Totale: €0.00</span>
                     </div>
                     <div class="input-with-camera">
-                        <input type="number" id="pedaggi" class="input-field" min="0" max="9999" step="0.01" value="0"
-                               oninput="calcolaTotali()">
+                        <input type="number" id="pedaggi" class="input-field" min="0" max="9999" step="0.01" value="0.00">
                         <button class="camera-btn" onclick="scattaFoto('pedaggi')" title="Scatta foto ricevuta">
                             <span class="material-symbols-rounded">photo_camera</span>
                         </button>
@@ -501,8 +495,7 @@
                         <span class="input-hint" id="totale-parcheggi">Totale: €0.00</span>
                     </div>
                     <div class="input-with-camera">
-                        <input type="number" id="parcheggi" class="input-field" min="0" max="9999" step="0.01" value="0"
-                               oninput="calcolaTotali()">
+                        <input type="number" id="parcheggi" class="input-field" min="0" max="9999" step="0.01" value="0.00">
                         <button class="camera-btn" onclick="scattaFoto('parcheggi')" title="Scatta foto ricevuta">
                             <span class="material-symbols-rounded">photo_camera</span>
                         </button>
@@ -516,8 +509,7 @@
                         <span class="input-hint" id="totale-lavaggio">Totale: €0.00</span>
                     </div>
                     <div class="input-with-camera">
-                        <input type="number" id="lavaggio" class="input-field" min="0" max="9999" step="0.01" value="0"
-                               oninput="calcolaTotali()">
+                        <input type="number" id="lavaggio" class="input-field" min="0" max="9999" step="0.01" value="0.00">
                         <button class="camera-btn" onclick="scattaFoto('lavaggio')" title="Scatta foto ricevuta">
                             <span class="material-symbols-rounded">photo_camera</span>
                         </button>
@@ -531,8 +523,7 @@
                         <span class="input-hint" id="totale-carburante">Totale: €0.00</span>
                     </div>
                     <div class="input-with-camera">
-                        <input type="number" id="carburante" class="input-field" min="0" max="9999" step="0.01" value="0"
-                               oninput="calcolaTotali()">
+                        <input type="number" id="carburante" class="input-field" min="0" max="9999" step="0.01" value="0.00">
                         <button class="camera-btn" onclick="scattaFoto('carburante')" title="Scatta foto ricevuta">
                             <span class="material-symbols-rounded">photo_camera</span>
                         </button>
@@ -597,146 +588,7 @@
         </div>
     </div>
     
+    <!-- SOLO QUESTO SCRIPT -->
     <script src="note_spese.js"></script>
-    <script>
-        // Inizializzazione pagina
-        document.addEventListener('DOMContentLoaded', () => {
-            // Imposta data odierna
-            const oggi = new Date();
-            document.getElementById('data-spesa').value = oggi.toISOString().split('T')[0];
-            document.getElementById('data-corrente').textContent = oggi.toLocaleDateString('it-IT', {
-                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-            });
-            
-            // Recupera nome tecnico
-            const tecnico = localStorage.getItem('tecnico_loggato');
-            document.getElementById('tecnico-nome').textContent = tecnico || 'Tecnico';
-            
-            // Gestione toggle fuori sede
-            document.querySelectorAll('input[name="fuori-sede"]').forEach(radio => {
-                radio.addEventListener('change', (e) => {
-                    document.getElementById('localita-group').style.display = 
-                        e.target.value === 'true' ? 'block' : 'none';
-                });
-            });
-            
-            // Calcola totali iniziali
-            calcolaTotali();
-        });
-        
-        function selezionaTipo(tipo) {
-            document.querySelectorAll('.toggle-option').forEach(el => el.classList.remove('active'));
-            
-            if (tipo === 'vitto') {
-                document.getElementById('toggle-vitto').classList.add('active');
-                document.getElementById('sezione-vitto').style.display = 'block';
-                document.getElementById('sezione-auto').style.display = 'none';
-            } else {
-                document.getElementById('toggle-auto').classList.add('active');
-                document.getElementById('sezione-vitto').style.display = 'none';
-                document.getElementById('sezione-auto').style.display = 'block';
-            }
-            
-            calcolaTotali();
-        }
-        
-        function calcolaTotali() {
-            // Tariffe
-            const tariffaPasto = 12.00;
-            const tariffaPernottamento = 80.00;
-            const tariffaKm = 0.50;
-            
-            // VITTO/TRASPORTO
-            const pasti = parseFloat(document.getElementById('pasti').value) || 0;
-            const pernottamenti = parseFloat(document.getElementById('pernottamenti').value) || 0;
-            const mezziTrasporto = parseFloat(document.getElementById('mezzi-trasporto').value) || 0;
-            const altreSpese = parseFloat(document.getElementById('altre-spese').value) || 0;
-            
-            const totalePasti = pasti * tariffaPasto;
-            const totalePernottamenti = pernottamenti * tariffaPernottamento;
-            const totaleVitto = totalePasti + totalePernottamenti + mezziTrasporto + altreSpese;
-            
-            // AUTO
-            const kmAuto = parseFloat(document.getElementById('km-auto').value) || 0;
-            const pedaggi = parseFloat(document.getElementById('pedaggi').value) || 0;
-            const parcheggi = parseFloat(document.getElementById('parcheggi').value) || 0;
-            const lavaggio = parseFloat(document.getElementById('lavaggio').value) || 0;
-            const carburante = parseFloat(document.getElementById('carburante').value) || 0;
-            
-            const totaleKm = kmAuto * tariffaKm;
-            const totaleAuto = totaleKm + pedaggi + parcheggi + lavaggio + carburante;
-            
-            // Totale generale
-            const totaleGenerale = totaleVitto + totaleAuto;
-            
-            // Aggiorna display
-            document.getElementById('totale-pasti').textContent = `Totale: €${totalePasti.toFixed(2)}`;
-            document.getElementById('totale-pernottamenti').textContent = `Totale: €${totalePernottamenti.toFixed(2)}`;
-            document.getElementById('totale-trasporto').textContent = `Totale: €${mezziTrasporto.toFixed(2)}`;
-            document.getElementById('totale-altre').textContent = `Totale: €${altreSpese.toFixed(2)}`;
-            
-            document.getElementById('totale-km').textContent = `Totale: €${totaleKm.toFixed(2)}`;
-            document.getElementById('totale-pedaggi').textContent = `Totale: €${pedaggi.toFixed(2)}`;
-            document.getElementById('totale-parcheggi').textContent = `Totale: €${parcheggi.toFixed(2)}`;
-            document.getElementById('totale-lavaggio').textContent = `Totale: €${lavaggio.toFixed(2)}`;
-            document.getElementById('totale-carburante').textContent = `Totale: €${carburante.toFixed(2)}`;
-            
-            document.getElementById('totale-vitto').textContent = `Vitto/Trasporto: €${totaleVitto.toFixed(2)}`;
-            document.getElementById('totale-auto').textContent = `Auto: €${totaleAuto.toFixed(2)}`;
-            document.getElementById('totale-generale').textContent = `€${totaleGenerale.toFixed(2)}`;
-        }
-        
-        function resetForm() {
-            if (!confirm('Sei sicuro di voler cancellare tutti i dati inseriti?')) return;
-            
-            // Reset tutti gli input
-            document.querySelectorAll('input[type="number"]').forEach(input => {
-                input.value = '0';
-                input.classList.remove('error');
-            });
-            
-            document.getElementById('localita').value = '';
-            document.getElementById('note').value = '';
-            document.querySelector('input[name="fuori-sede"][value="false"]').checked = true;
-            document.getElementById('localita-group').style.display = 'none';
-            
-            // Reset foto
-            document.getElementById('foto-preview-vitto').innerHTML = '';
-            document.getElementById('foto-preview-auto').innerHTML = '';
-            fotoRicevute = { vitto: [], auto: [] };
-            
-            // Reset toggle
-            selezionaTipo('vitto');
-            
-            // Hide messages
-            hideMessages();
-            
-            calcolaTotali();
-        }
-        
-        function showError(message) {
-            document.getElementById('error-text').textContent = message;
-            document.getElementById('error-message').style.display = 'flex';
-            document.getElementById('success-message').style.display = 'none';
-        }
-        
-        function showSuccess() {
-            document.getElementById('error-message').style.display = 'none';
-            document.getElementById('success-message').style.display = 'flex';
-        }
-        
-        function hideMessages() {
-            document.getElementById('error-message').style.display = 'none';
-            document.getElementById('success-message').style.display = 'none';
-        }
-        
-        function showLoading() {
-            document.getElementById('loading-overlay').style.display = 'flex';
-        }
-        
-        function hideLoading() {
-            document.getElementById('loading-overlay').style.display = 'none';
-        }
-    </script>
 </body>
 </html>
