@@ -219,14 +219,17 @@ async function uploadFoto(foto) {
     if (!foto || !foto.file) return null;
     
     try {
-        const fileName = `ricevuta_${Date.now()}.jpg`;
+        const fileName = `ricevuta_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.jpg`;
         const filePath = `ricevute/${fileName}`;
         
         const { error } = await supabaseClient.storage
             .from('spese')
             .upload(filePath, foto.file);
         
-        if (error) throw error;
+        if (error) {
+            console.warn('Foto non salvata (ma va bene):', error.message);
+            return null; // Ritorna null senza throw
+        }
         
         const { data: urlData } = supabaseClient.storage
             .from('spese')
@@ -234,8 +237,8 @@ async function uploadFoto(foto) {
         
         return urlData?.publicUrl;
     } catch (error) {
-        console.warn('Foto non salvata:', error);
-        return null;
+        console.warn('Errore upload foto (ignorato):', error);
+        return null; // Ignora completamente
     }
 }
 

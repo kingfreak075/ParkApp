@@ -707,3 +707,1070 @@ main {
     font-weight: 600;
     color: #1e293b;
 }
+
+
+/* ================================
+   STILI PAGINA ANNOTAZIONI
+   ================================ */
+
+/* ANIMAZIONI */
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        max-height: 500px;
+        transform: translateY(0);
+    }
+}
+
+/* BADGE TIPO */
+.badge-tipo {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+}
+
+.badge-manutenzione {
+    background-color: #22c55e; /* VERDE - Tipo 0 */
+}
+
+.badge-appuntamento {
+    background-color: #a855f7; /* VIOLA - Tipo 1 */
+}
+
+.badge-nota {
+    background-color: #eab308; /* GIALLO - Tipo 2 */
+}
+
+/* FILTRI TIPO */
+.filtro-tipo {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+    background-color: white;
+    color: #475569;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    font-family: 'Inter';
+}
+
+.filtro-tipo:hover {
+    background-color: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.filtro-attivo {
+    background-color: #2563eb !important;
+    color: white !important;
+    border-color: #2563eb !important;
+}
+
+.filtro-attivo .badge-tipo {
+    background-color: white !important;
+}
+
+/* CARD ANNOTAZIONE */
+.card-annotazione {
+    background: white;
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    position: relative;
+}
+
+.card-annotazione:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-color: #d1d9f0;
+}
+
+.card-annotazione-espansa {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1) !important;
+    border-color: #cbd5e1 !important;
+}
+
+/* HEADER CARD ANNOTAZIONE */
+.annotazione-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.annotazione-data {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.annotazione-tipo-badge {
+    font-size: 0.7rem;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.annotazione-tipo-badge.manutenzione {
+    background-color: rgba(34, 197, 94, 0.1);
+    color: #16a34a;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.annotazione-tipo-badge.appuntamento {
+    background-color: rgba(168, 85, 247, 0.1);
+    color: #9333ea;
+    border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.annotazione-tipo-badge.nota {
+    background-color: rgba(234, 179, 8, 0.1);
+    color: #ca8a04;
+    border: 1px solid rgba(234, 179, 8, 0.3);
+}
+
+/* CONTENUTO CARD ANNOTAZIONE */
+.annotazione-contenuto {
+    margin-bottom: 15px;
+}
+
+.annotazione-testo {
+    font-size: 0.9rem;
+    color: #475569;
+    line-height: 1.5;
+    margin-bottom: 10px;
+    word-break: break-word;
+}
+
+.annotazione-testo-completo {
+    animation: slideDown 0.3s ease-out;
+    overflow: hidden;
+}
+
+.annotazione-tecnico {
+    font-size: 0.8rem;
+    color: #64748b;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* FOOTER CARD ANNOTAZIONE */
+.annotazione-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.annotazione-azioni {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-azione {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: #f1f5f9;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-azione:hover {
+    background: #e2e8f0;
+}
+
+.btn-azione.cancella:hover {
+    background: #fee2e2;
+    color: #ef4444;
+}
+
+/* FORM NUOVA ANNOTAZIONE */
+.btn-tipo-annotazione {
+    flex: 1;
+    min-width: 110px;
+    padding: 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    background: white;
+    color: #475569;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: 'Inter';
+}
+
+.btn-tipo-annotazione:hover {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+}
+
+.btn-tipo-annotazione.selezionato {
+    border-color: #2563eb;
+    background: #eff6ff;
+    color: #1e40af;
+}
+
+.btn-tipo-annotazione.selezionato .badge-tipo {
+    background-color: #2563eb !important;
+}
+
+/* STATO CARICAMENTO */
+.stato-caricamento {
+    text-align: center;
+    padding: 40px 20px;
+    color: #64748b;
+}
+
+.stato-caricamento .material-symbols-rounded {
+    font-size: 48px;
+    opacity: 0.3;
+    margin-bottom: 10px;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.6; }
+}
+
+/* MESSAGGIO VUOTO */
+.messaggio-vuoto {
+    text-align: center;
+    padding: 40px 20px;
+    color: #64748b;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.messaggio-vuoto .material-symbols-rounded {
+    font-size: 48px;
+    opacity: 0.3;
+    margin-bottom: 10px;
+}
+
+/* NOTIFICA */
+.notifica {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    padding: 16px 24px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 1001;
+    animation: slideDown 0.3s ease-out;
+    max-width: 90%;
+}
+
+.notifica.successo {
+    border-left: 4px solid #22c55e;
+}
+
+.notifica.errore {
+    border-left: 4px solid #ef4444;
+}
+
+.notifica.info {
+    border-left: 4px solid #2563eb;
+}
+
+/* SCROLLBAR PERSONALIZZATA */
+#lista-annotazioni::-webkit-scrollbar {
+    width: 4px;
+}
+
+#lista-annotazioni::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+#lista-annotazioni::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+#lista-annotazioni::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+    .card-annotazione {
+        padding: 16px;
+        margin-bottom: 10px;
+    }
+    
+    .annotazione-data {
+        font-size: 0.9rem;
+    }
+    
+    .annotazione-testo {
+        font-size: 0.85rem;
+    }
+    
+    .btn-tipo-annotazione {
+        min-width: 100px;
+        padding: 10px;
+        font-size: 0.8rem;
+    }
+    
+    .filtro-tipo {
+        padding: 8px 14px;
+        font-size: 0.75rem;
+    }
+}
+
+/* TOUCH OPTIMIZATIONS */
+@media (hover: none) and (pointer: coarse) {
+    .card-annotazione:active {
+        transform: scale(0.98);
+        transition: transform 0.1s ease;
+    }
+    
+    .btn-azione {
+        min-width: 44px;
+        min-height: 44px;
+    }
+    
+    .filtro-tipo,
+    .btn-tipo-annotazione {
+        padding: 12px 16px;
+    }
+}
+
+/* DARK MODE SUPPORT (opzionale) */
+@media (prefers-color-scheme: dark) {
+    .card-annotazione {
+        background: #1e293b;
+        border-color: #334155;
+        color: #e2e8f0;
+    }
+    
+    .annotazione-data {
+        color: #f1f5f9;
+    }
+    
+    .annotazione-testo {
+        color: #cbd5e1;
+    }
+    
+    .annotazione-footer {
+        border-top-color: #334155;
+    }
+    
+    .btn-azione {
+        background: #334155;
+        color: #cbd5e1;
+    }
+}
+
+
+/* PULSANTI SELEZIONE TIPO MIGLIORATI */
+.selettore-tipo-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.btn-tipo-opzione {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 16px;
+    background: white;
+    color: #475569;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    text-align: left;
+    width: 100%;
+    gap: 12px;
+}
+
+.btn-tipo-opzione:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.btn-tipo-opzione.selezionato {
+    border-width: 2px;
+    background: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Pulsante Manutenzione (Tipo 0 - VERDE) */
+.btn-tipo-opzione[data-tipo="0"] {
+    border-left: 4px solid #22c55e;
+}
+
+.btn-tipo-opzione[data-tipo="0"].selezionato {
+    border-color: #22c55e;
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.05) 0%, rgba(34, 197, 94, 0.02) 100%);
+}
+
+/* Pulsante Appuntamento (Tipo 1 - VIOLA) */
+.btn-tipo-opzione[data-tipo="1"] {
+    border-left: 4px solid #a855f7;
+}
+
+.btn-tipo-opzione[data-tipo="1"].selezionato {
+    border-color: #a855f7;
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.05) 0%, rgba(168, 85, 247, 0.02) 100%);
+}
+
+/* Pulsante Nota (Tipo 2 - GIALLO) */
+.btn-tipo-opzione[data-tipo="2"] {
+    border-left: 4px solid #eab308;
+}
+
+.btn-tipo-opzione[data-tipo="2"].selezionato {
+    border-color: #eab308;
+    background: linear-gradient(135deg, rgba(234, 179, 8, 0.05) 0%, rgba(234, 179, 8, 0.02) 100%);
+}
+
+/* Icona tipo */
+.icona-tipo {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    font-size: 16px;
+}
+
+.icona-tipo[data-tipo="0"] {
+    background: rgba(34, 197, 94, 0.1);
+    color: #16a34a;
+}
+
+.icona-tipo[data-tipo="1"] {
+    background: rgba(168, 85, 247, 0.1);
+    color: #9333ea;
+}
+
+.icona-tipo[data-tipo="2"] {
+    background: rgba(234, 179, 8, 0.1);
+    color: #ca8a04;
+}
+
+/* Testo pulsante */
+.testo-tipo {
+    flex: 1;
+}
+
+.testo-tipo .tipo-titolo {
+    font-weight: 700;
+    margin-bottom: 2px;
+}
+
+.testo-tipo .tipo-descrizione {
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 400;
+}
+
+/* Checkmark selezione */
+.checkmark-selezione {
+    opacity: 0;
+    color: #2563eb;
+    transition: opacity 0.2s ease;
+}
+
+.btn-tipo-opzione.selezionato .checkmark-selezione {
+    opacity: 1;
+}
+
+/* FILTRI TIPO - VERSIONE MIGLIORATA */
+.filtri-container {
+    margin-bottom: 20px;
+}
+
+.filtri-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.filtro-tipo-compatto {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 14px;
+    border-radius: 20px;
+    border: 1.5px solid #e2e8f0;
+    background-color: white;
+    color: #475569;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.filtro-tipo-compatto:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.filtro-tipo-compatto.attivo {
+    border-color: transparent;
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Colori specifici per ogni tipo attivo */
+.filtro-tipo-compatto[data-tipo="tutti"].attivo {
+    background-color: #2563eb;
+    color: white;
+}
+
+.filtro-tipo-compatto[data-tipo="0"].attivo {
+    background-color: #22c55e;
+    color: white;
+}
+
+.filtro-tipo-compatto[data-tipo="1"].attivo {
+    background-color: #a855f7;
+    color: white;
+}
+
+.filtro-tipo-compatto[data-tipo="2"].attivo {
+    background-color: #eab308;
+    color: #1e293b;
+}
+
+
+/* ================================
+   STILI PAGINA ANNOTAZIONI - AGGIORNATI
+   ================================ */
+
+/* ANIMAZIONI */
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        max-height: 500px;
+        transform: translateY(0);
+    }
+}
+
+/* FILTRI TIPO - VERSIONE MIGLIORATA */
+.filtri-container {
+    margin-bottom: 20px;
+}
+
+.filtri-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.filtro-tipo-compatto {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 14px;
+    border-radius: 20px;
+    border: 1.5px solid #e2e8f0;
+    background-color: white;
+    color: #475569;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.filtro-tipo-compatto:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.filtro-tipo-compatto.attivo {
+    border-color: transparent;
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Colori specifici per ogni tipo attivo */
+.filtro-tipo-compatto[data-tipo="tutti"].attivo {
+    background-color: #2563eb;
+    color: white;
+}
+
+.filtro-tipo-compatto[data-tipo="0"].attivo {
+    background-color: #22c55e;
+    color: white;
+}
+
+.filtro-tipo-compatto[data-tipo="1"].attivo {
+    background-color: #a855f7;
+    color: white;
+}
+
+.filtro-tipo-compatto[data-tipo="2"].attivo {
+    background-color: #eab308;
+    color: #1e293b;
+}
+
+/* PULSANTI SELEZIONE TIPO MIGLIORATI */
+.selettore-tipo-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.btn-tipo-opzione {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 16px;
+    background: white;
+    color: #475569;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    text-align: left;
+    width: 100%;
+    gap: 12px;
+}
+
+.btn-tipo-opzione:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.btn-tipo-opzione.selezionato {
+    border-width: 2px;
+    background: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Pulsante Manutenzione (Tipo 0 - VERDE) */
+.btn-tipo-opzione[data-tipo="0"] {
+    border-left: 4px solid #22c55e;
+}
+
+.btn-tipo-opzione[data-tipo="0"].selezionato {
+    border-color: #22c55e;
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.05) 0%, rgba(34, 197, 94, 0.02) 100%);
+}
+
+/* Pulsante Appuntamento (Tipo 1 - VIOLA) */
+.btn-tipo-opzione[data-tipo="1"] {
+    border-left: 4px solid #a855f7;
+}
+
+.btn-tipo-opzione[data-tipo="1"].selezionato {
+    border-color: #a855f7;
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.05) 0%, rgba(168, 85, 247, 0.02) 100%);
+}
+
+/* Pulsante Nota (Tipo 2 - GIALLO) */
+.btn-tipo-opzione[data-tipo="2"] {
+    border-left: 4px solid #eab308;
+}
+
+.btn-tipo-opzione[data-tipo="2"].selezionato {
+    border-color: #eab308;
+    background: linear-gradient(135deg, rgba(234, 179, 8, 0.05) 0%, rgba(234, 179, 8, 0.02) 100%);
+}
+
+/* Icona tipo */
+.icona-tipo {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    font-size: 16px;
+}
+
+.icona-tipo[data-tipo="0"] {
+    background: rgba(34, 197, 94, 0.1);
+    color: #16a34a;
+}
+
+.icona-tipo[data-tipo="1"] {
+    background: rgba(168, 85, 247, 0.1);
+    color: #9333ea;
+}
+
+.icona-tipo[data-tipo="2"] {
+    background: rgba(234, 179, 8, 0.1);
+    color: #ca8a04;
+}
+
+/* Testo pulsante */
+.testo-tipo {
+    flex: 1;
+}
+
+.testo-tipo .tipo-titolo {
+    font-weight: 700;
+    margin-bottom: 2px;
+}
+
+.testo-tipo .tipo-descrizione {
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 400;
+}
+
+/* Checkmark selezione */
+.checkmark-selezione {
+    opacity: 0;
+    color: #2563eb;
+    transition: opacity 0.2s ease;
+}
+
+.btn-tipo-opzione.selezionato .checkmark-selezione {
+    opacity: 1;
+}
+
+/* BADGE TIPO */
+.badge-tipo {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+}
+
+.badge-manutenzione {
+    background-color: #22c55e; /* VERDE - Tipo 0 */
+}
+
+.badge-appuntamento {
+    background-color: #a855f7; /* VIOLA - Tipo 1 */
+}
+
+.badge-nota {
+    background-color: #eab308; /* GIALLO - Tipo 2 */
+}
+
+/* CARD ANNOTAZIONE */
+.card-annotazione {
+    background: white;
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    position: relative;
+}
+
+.card-annotazione:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-color: #d1d9f0;
+}
+
+.card-annotazione-espansa {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1) !important;
+    border-color: #cbd5e1 !important;
+}
+
+/* HEADER CARD ANNOTAZIONE */
+.annotazione-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.annotazione-data {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.annotazione-tipo-badge {
+    font-size: 0.7rem;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.annotazione-tipo-badge.manutenzione {
+    background-color: rgba(34, 197, 94, 0.1);
+    color: #16a34a;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.annotazione-tipo-badge.appuntamento {
+    background-color: rgba(168, 85, 247, 0.1);
+    color: #9333ea;
+    border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.annotazione-tipo-badge.nota {
+    background-color: rgba(234, 179, 8, 0.1);
+    color: #ca8a04;
+    border: 1px solid rgba(234, 179, 8, 0.3);
+}
+
+/* CONTENUTO CARD ANNOTAZIONE */
+.annotazione-contenuto {
+    margin-bottom: 15px;
+}
+
+.annotazione-testo {
+    font-size: 0.9rem;
+    color: #475569;
+    line-height: 1.5;
+    margin-bottom: 10px;
+    word-break: break-word;
+}
+
+.annotazione-testo-completo {
+    animation: slideDown 0.3s ease-out;
+    overflow: hidden;
+}
+
+.annotazione-tecnico {
+    font-size: 0.8rem;
+    color: #64748b;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* FOOTER CARD ANNOTAZIONE */
+.annotazione-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.annotazione-azioni {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-azione {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: #f1f5f9;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-azione:hover {
+    background: #e2e8f0;
+}
+
+.btn-azione.cancella:hover {
+    background: #fee2e2;
+    color: #ef4444;
+}
+
+/* STATO CARICAMENTO */
+.stato-caricamento {
+    text-align: center;
+    padding: 40px 20px;
+    color: #64748b;
+}
+
+.stato-caricamento .material-symbols-rounded {
+    font-size: 48px;
+    opacity: 0.3;
+    margin-bottom: 10px;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.6; }
+}
+
+/* MESSAGGIO VUOTO */
+.messaggio-vuoto {
+    text-align: center;
+    padding: 40px 20px;
+    color: #64748b;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.messaggio-vuoto .material-symbols-rounded {
+    font-size: 48px;
+    opacity: 0.3;
+    margin-bottom: 10px;
+}
+
+/* NOTIFICA */
+.notifica {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    padding: 16px 24px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 1001;
+    animation: slideDown 0.3s ease-out;
+    max-width: 90%;
+}
+
+.notifica.successo {
+    border-left: 4px solid #22c55e;
+}
+
+.notifica.errore {
+    border-left: 4px solid #ef4444;
+}
+
+.notifica.info {
+    border-left: 4px solid #2563eb;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+    .card-annotazione {
+        padding: 16px;
+        margin-bottom: 10px;
+    }
+    
+    .annotazione-data {
+        font-size: 0.9rem;
+    }
+    
+    .annotazione-testo {
+        font-size: 0.85rem;
+    }
+    
+    .btn-tipo-opzione {
+        padding: 14px;
+        font-size: 0.85rem;
+    }
+    
+    .filtro-tipo-compatto {
+        padding: 8px 12px;
+        font-size: 0.7rem;
+    }
+}
+
+/* TOUCH OPTIMIZATIONS */
+@media (hover: none) and (pointer: coarse) {
+    .card-annotazione:active {
+        transform: scale(0.98);
+        transition: transform 0.1s ease;
+    }
+    
+    .btn-azione {
+        min-width: 44px;
+        min-height: 44px;
+    }
+    
+    .btn-tipo-opzione {
+        padding: 16px;
+    }
+}
