@@ -342,28 +342,26 @@ async function caricaManutenzioni() {
         const mappaTipi = await caricaAnnotazioniPerImpianto();
 
         // 4. FILTRO PER MESE SELEZIONATO
-        let filtrati = [];
-        
-        if (meseSelezionato === 0) {
-            // Mese 0 = NON ASSEGNATO: mostra tutti gli impianti senza mese_sem valido
-            filtrati = impianti.filter(imp => {
-                const m = parseInt(imp.mese_sem);
-                return isNaN(m) || m < 1 || m > 12 || m === 0;
-            });
-        } else {
-            // Mese 1-12: filtra in base alla periodicità
-            filtrati = impianti.filter(imp => {
-                const meseBase = parseInt(imp.mese_sem);
-                const periodicita = parseInt(imp.periodicit);
-                
-                return deveEssereFattaNelMese(meseBase, periodicita, meseSelezionato);
-            });
-        }
+let filtrati = [];
 
-        if (filtrati.length === 0) {
-            lista.innerHTML = "<div style='text-align:center; margin-top:40px; color:#64748b;'>Nessun impianto per questo mese.</div>";
-            return;
-        }
+if (meseSelezionato === 0) {
+    // Mese 0 = NON ASSEGNATO: mostra tutti gli impianti senza mese_sem valido
+    filtrati = impianti.filter(imp => {
+        const m = parseInt(imp.mese_sem);
+        return isNaN(m) || m < 1 || m > 12 || m === 0;
+    });
+} else {
+    // Mese 1-12: filtra in base alla periodicità
+    filtrati = impianti.filter(imp => {
+        const meseBase = parseInt(imp.mese_sem);
+        const periodicita = parseInt(imp.periodicit);
+        
+        return deveEssereFattaNelMese(meseBase, periodicita, meseSelezionato);
+    });
+}
+
+// 4.5 APPLICA FILTRO PERIODICITÀ (NUOVO!)
+filtrati = applicaFiltroPeriodicita(filtrati);
 
         // 5. ORDINAMENTO: per periodicità (crescente) e poi per indirizzo
         filtrati.sort((a, b) => {
@@ -534,4 +532,122 @@ function vaiAEsegui(codice, indirizzo) {
 
 function apriAnnotazioni(codiceImpianto) {
     window.location.href = `annotazioni.html?impianto=${codiceImpianto}`;
+}
+
+
+// Aggiungi all'inizio del file, dopo le altre variabili
+let filtroPeriodicitaAttivo = 'tutti';
+
+// Funzione per cambiare filtro periodicità
+function cambiaFiltroPeriodicita(tipo) {
+    // Se clicchi sul filtro già attivo, torna a TUTTI
+    if (filtroPeriodicitaAttivo === tipo) {
+        tipo = 'tutti';
+    }
+    
+    // Aggiorna stato
+    filtroPeriodicitaAttivo = tipo;
+    
+    // Aggiorna UI pulsanti
+    document.querySelectorAll('.filtro-btn').forEach(btn => {
+        btn.classList.remove('filtro-attivo');
+    });
+    
+    // Attiva pulsante corrente
+    const btnId = 'btn-' + tipo;
+    const btnAttivo = document.getElementById(btnId);
+    if (btnAttivo) {
+        btnAttivo.classList.add('filtro-attivo');
+    }
+
+
+    // Aggiorna badge
+    aggiornaBadgeFiltro();
+    
+    // Ricarica manutenzioni
+    caricaManutenzioni();
+
+
+
+}
+
+// Funzione per applicare filtro periodicità
+function applicaFiltroPeriodicita(impianti) {
+    if (filtroPeriodicitaAttivo === 'tutti') {
+        return impianti;
+    }
+    
+    const meseSelezionato = parseInt(document.getElementById('select-mese').value);
+    
+    return impianti.filter(imp => {
+        const period = parseInt(imp.periodicit) || 0;
+        const meseSem = parseInt(imp.mese_sem) || 0;
+        
+        switch (filtroPeriodicitaAttivo) {
+            case 'sem':
+                // Filtra per SEMESTRALE (180 giorni)
+                if (period !== 180) return false;
+                
+                // Se c'è mese selezionato, applica logica doppia semestre
+                if (meseSelezionato > 0) {
+                    // Calcola mese complementare
+                    const meseComp = meseSem <= 6 ? meseSem + 6 : meseSem - 6;
+                    return meseSem === meseSelezionato || meseComp === meseSelezionato;
+                }
+                return true;
+                
+            case 'tri':
+                // Filtra per TRIMESTRALE (90-179 giorni)
+                return period >= 90 && period <= 179;
+                
+            case 'bimmen':
+                // Filtra per BIMENSILE/MENSILE (0-89 giorni)
+                return period >= 0 && period <= 89;
+                
+            default:
+                return true;
+        }
+    });
+}
+
+function aggiornaBadgeFiltro() {
+    const badge = document.getElementById('filtro-attivo-badge');
+    if (!badge) return;
+    
+    const mappaTesti = {
+        'tutti': 'TUTTI',
+        'sem': 'SEM',
+        'tri': 'TRI', 
+        'bimmen': 'BIM/MEN'
+    };
+    
+    const testo = mappaTesti[filtroPeriodicitaAttivo] || 'TUTTI';
+    badge.textContent = testo;
+}
+
+
+
+// Aggiungi dopo le altre funzioni, prima della fine del file
+function resetFiltroPeriodicita() {
+    // Torna a TUTTI
+    filtroPeriodicitaAttivo = 'tutti';
+    
+    // Aggiorna UI pulsanti
+    document.querySelectorAll('.filtro-btn').forEach(btn => {
+        btn.classList.remove('filtro-attivo');
+    });
+    
+    // Attiva solo il pulsante TUTTI
+    const btnTutti = document.getElementById('btn-tutti');
+    if (btnTutti) {
+        btnTutti.classList.add('filtro-attivo');
+    }
+    
+    // Aggiorna badge se esiste
+    const badge = document.getElementById('filtro-attivo-badge');
+    if (badge) {
+        badge.textContent = 'TUTTI';
+    }
+    
+    console.log('Filtro periodicità resettato a TUTTI');
 }

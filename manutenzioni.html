@@ -36,6 +36,88 @@
         border-radius: 4px;
     }
 
+    <style>
+    /* Aggiungi agli stili esistenti */
+    .filtro-btn {
+        flex: 1;
+        padding: 10px 12px;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        background: white;
+        font-family: 'Inter', sans-serif;
+        font-weight: 800;
+        font-size: 0.9rem;
+        color: #64748b;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: center;
+    }
+    
+    .filtro-btn:hover {
+        border-color: #3b82f6;
+        color: #3b82f6;
+        background: #eff6ff;
+    }
+    
+    .filtro-attivo {
+        border-color: #3b82f6 !important;
+        background: #3b82f6 !important;
+        color: white !important;
+    }
+    
+    .filtro-btn:active {
+        transform: scale(0.98);
+    }
+
+    .filtro-btn {
+    padding: 10px 5px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    background: white;
+    font-family: 'Inter', sans-serif;
+    font-weight: 800;
+    font-size: 0.85rem;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.filtro-btn:hover {
+    border-color: #3b82f6;
+    color: #3b82f6;
+    background: #eff6ff;
+}
+
+.filtro-attivo {
+    border-color: #3b82f6 !important;
+    background: #3b82f6 !important;
+    color: white !important;
+    font-weight: 900 !important;
+}
+
+.filtro-btn:active {
+    transform: scale(0.98);
+}
+
+/* Per layout a griglia */
+.grid-2x2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+/* Per layout orizzontale */
+.flex-row {
+    display: flex;
+    gap: 8px;
+}
+</style>
+
 </style>
 <body style="background-color: #f8fafc; margin: 0;">
 
@@ -46,20 +128,25 @@
             </button>
             <!-- Modifica questa sezione -->
 <div style="flex: 1;">
-    <h1 style="margin: 0; font-size: 1.2rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
-        Piano Manutenzioni
-        <span id="report-globale" style="font-size: 0.85rem; font-weight: 600; color: #64748b; margin-left: 5px;">
-            (G: 0 | 0)
-        </span>
-        <span id="report-manutentore" style="font-size: 0.85rem; font-weight: 600; color: #3b82f6; margin-left: 5px;">
-            (M: 0 | 0)
-        </span>
-    </h1>
+    <!-- Modifica questa sezione in manutenzioni.html -->
+<h1 style="margin: 0; font-size: 1.2rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+    Piano Manutenzioni
+    <span id="report-globale" style="font-size: 0.85rem; font-weight: 600; color: #64748b; margin-left: 5px;">
+        (G: 0 | 0)
+    </span>
+    <span id="report-manutentore" style="font-size: 0.85rem; font-weight: 600; color: #3b82f6; margin-left: 5px;">
+        (M: 0 | 0)
+    </span>
+    <span id="filtro-attivo-badge" style="font-size: 0.75rem; font-weight: 800; color: #3b82f6; 
+          background: #eff6ff; padding: 2px 8px; border-radius: 12px; margin-left: 5px;">
+        TUTTI
+    </span>
+</h1>
 </div>
         </div>
 
         <div style="display: flex; gap: 10px; background: #f1f5f9; padding: 8px; border-radius: 12px;">
-            <select id="select-mese" onchange="caricaManutenzioni()" style="flex: 1; background: none; border: none; font-family: 'Inter'; font-weight: 600; outline: none; padding: 5px;">
+            <select id="select-mese" onchange="resetFiltroPeriodicita(); caricaManutenzioni()" style="flex: 1; background: none; border: none; font-family: 'Inter'; font-weight: 600; outline: none; padding: 5px;">
                 <option value="0">NON ASSEGNATO</option>
                 <option value="1">Gennaio</option>
                 <option value="2">Febbraio</option>
@@ -75,12 +162,35 @@
                 <option value="12">Dicembre</option>
             </select>
             <div style="width: 1px; background: #cbd5e1; margin: 5px 0;"></div>
-            <select id="select-manutentore" onchange="caricaManutenzioni()" style="flex: 1.5; background: none; border: none; font-family: 'Inter'; font-weight: 600; outline: none; padding: 5px;">
+            <select id="select-manutentore" onchange="resetFiltroPeriodicita();caricaManutenzioni()" style="flex: 1.5; background: none; border: none; font-family: 'Inter'; font-weight: 600; outline: none; padding: 5px;">
                 <option value="">Caricamento...</option>
             </select>
         </div>
     </div>
-
+<div style="background: white; padding: 0 20px 15px 20px;">
+    <div style="display: flex; gap: 8px; background: #f1f5f9; padding: 8px; border-radius: 12px;">
+        <button id="btn-tutti" class="filtro-btn filtro-attivo" 
+                onclick="cambiaFiltroPeriodicita('tutti')"
+                style="flex: 1; padding: 10px 5px; font-size: 0.9rem; font-weight: 800;">
+            TUTTI
+        </button>
+        <button id="btn-sem" class="filtro-btn" 
+                onclick="cambiaFiltroPeriodicita('sem')"
+                style="flex: 1; padding: 10px 5px; font-size: 0.9rem; font-weight: 800;">
+            SEM
+        </button>
+        <button id="btn-tri" class="filtro-btn" 
+                onclick="cambiaFiltroPeriodicita('tri')"
+                style="flex: 1; padding: 10px 5px; font-size: 0.9rem; font-weight: 800;">
+            TRI
+        </button>
+        <button id="btn-bimmen" class="filtro-btn" 
+                onclick="cambiaFiltroPeriodicita('bimmen')"
+                style="flex: 1; padding: 10px 5px; font-size: 0.9rem; font-weight: 800;">
+            BIM/MEN
+        </button>
+    </div>
+</div>
     <div id="lista-manutenzioni" style="padding: 15px;"></div>
 
     <script src="manutenzioni.js"></script>
