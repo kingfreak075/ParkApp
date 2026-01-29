@@ -263,22 +263,30 @@ function aggiornaReportManutentore() {
 
 function creaFooter(statistiche) {
     return `
-        <div style="position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e2e8f0; padding: 12px 20px; display: flex; justify-content: space-around; z-index: 100;">
-            <div style="text-align: center;">
-                <div style="font-size: 0.9rem; color: #64748b; margin-bottom: 2px;">Totali</div>
-                <div style="font-weight: 800; color: #1e293b;">${statistiche.totali}</div>
+        <div class="app-footer" style="display: flex; flex-direction: column; gap: 8px;">
+            <!-- Statistiche -->
+            <div style="display: flex; justify-content: space-around; width: 100%;">
+                <div style="text-align: center; flex: 1;">
+                    <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 2px;">Totali</div>
+                    <div style="font-weight: 800; color: var(--text-main);">${statistiche.totali}</div>
+                </div>
+                <div style="text-align: center; flex: 1;">
+                    <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 2px;">Nel mese</div>
+                    <div style="font-weight: 800; color: #22c55e;">${statistiche.nelMese}</div>
+                </div>
+                <div style="text-align: center; flex: 1;">
+                    <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 2px;">In Ritardo</div>
+                    <div style="font-weight: 800; color: #ef4444;">${statistiche.inRitardo}</div>
+                </div>
+                <div style="text-align: center; flex: 1;">
+                    <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 2px;">Regolari</div>
+                    <div style="font-weight: 800; color: var(--text-main);">${statistiche.regolari}</div>
+                </div>
             </div>
-            <div style="text-align: center;">
-                <div style="font-size: 0.9rem; color: #64748b; margin-bottom: 2px;">Nel mese</div>
-                <div style="font-weight: 800; color: #22c55e;">${statistiche.nelMese}</div>
-            </div>
-            <div style="text-align: center;">
-                <div style="font-size: 0.9rem; color: #64748b; margin-bottom: 2px;">In Ritardo</div>
-                <div style="font-weight: 800; color: #ef4444;">${statistiche.inRitardo}</div>
-            </div>
-            <div style="text-align: center;">
-                <div style="font-size: 0.9rem; color: #64748b; margin-bottom: 2px;">Regolari</div>
-                <div style="font-weight: 800; color: #000000;">${statistiche.regolari}</div>
+            
+            <!-- Firma -->
+            <div style="text-align: right; padding-top: 5px; border-top: 1px solid var(--border);">
+                <span class="footer-text">EDIT BY KINGFREAK Version 1.0</span>
             </div>
         </div>
     `;

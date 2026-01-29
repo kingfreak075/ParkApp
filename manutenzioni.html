@@ -124,133 +124,155 @@
 </style>
 
 </style>
-<body style="background-color: #f8fafc; margin: 0;">
+<body class="bg-app">
+    <div class="app-container">
+        <!-- Header principale -->
+        <header class="app-header">
+            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                <button onclick="window.location.href='parco.html'" 
+                        class="btn-scheda" 
+                        style="height: 40px; width: 40px; display: flex; align-items: center; justify-content: center; border: none; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <span class="material-symbols-rounded" style="color: var(--primary);">arrow_back</span>
+                </button>
+                
+                <div style="flex-grow: 1;">
+                    <h1 style="font-size: 1.25rem; font-weight: 800; color: var(--primary); margin: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        Piano Manutenzioni
+                        <span id="report-globale" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-left: 5px;">
+                            (G: 0 | 0)
+                        </span>
+                        <span id="report-manutentore" style="font-size: 0.85rem; font-weight: 600; color: var(--primary); margin-left: 5px;">
+                            (M: 0 | 0)
+                        </span>
+                        <span id="filtro-attivo-badge" style="font-size: 0.75rem; font-weight: 800; color: var(--primary); 
+                              background: var(--primary-light); padding: 2px 8px; border-radius: 12px; margin-left: 5px;">
+                            TUTTI
+                        </span>
+                    </h1>
+                </div>
+                
+                <span class="material-symbols-rounded" style="color: var(--text-muted);">account_circle</span>
+            </div>
 
-    <div style="background: white; padding: 20px; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 10;">
-        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
-            <button onclick="window.location.href='parco.html'" style="background: none; border: none; cursor: pointer;">
-                <span class="material-symbols-rounded" style="color: #64748b;">arrow_back</span>
-            </button>
-            <!-- Modifica questa sezione -->
-<div style="flex: 1;">
-    <!-- Modifica questa sezione in manutenzioni.html -->
-<h1 style="margin: 0; font-size: 1.2rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
-    Piano Manutenzioni
-    <span id="report-globale" style="font-size: 0.85rem; font-weight: 600; color: #64748b; margin-left: 5px;">
-        (G: 0 | 0)
-    </span>
-    <span id="report-manutentore" style="font-size: 0.85rem; font-weight: 600; color: #3b82f6; margin-left: 5px;">
-        (M: 0 | 0)
-    </span>
-    <span id="filtro-attivo-badge" style="font-size: 0.75rem; font-weight: 800; color: #3b82f6; 
-          background: #eff6ff; padding: 2px 8px; border-radius: 12px; margin-left: 5px;">
-        TUTTI
-    </span>
-</h1>
-</div>
-        </div>
+            <!-- Selettori mese/manutentore -->
+            <div style="display: flex; gap: 10px; background: var(--primary-light); padding: 8px; border-radius: 12px;">
+                <select id="select-mese" onchange="resetFiltroPeriodicita(); caricaManutenzioni()" 
+                        style="flex: 1; background: none; border: none; font-family: 'Inter'; font-weight: 600; outline: none; padding: 5px; color: var(--text-main);">
+                    <option value="0">NON ASSEGNATO</option>
+                    <option value="1">Gennaio</option>
+                    <option value="2">Febbraio</option>
+                    <option value="3">Marzo</option>
+                    <option value="4">Aprile</option>
+                    <option value="5">Maggio</option>
+                    <option value="6">Giugno</option>
+                    <option value="7">Luglio</option>
+                    <option value="8">Agosto</option>
+                    <option value="9">Settembre</option>
+                    <option value="10">Ottobre</option>
+                    <option value="11">Novembre</option>
+                    <option value="12">Dicembre</option>
+                </select>
+                <div style="width: 1px; background: var(--border); margin: 5px 0;"></div>
+                <select id="select-manutentore" onchange="resetFiltroPeriodicita();caricaManutenzioni()" 
+                        style="flex: 1.5; background: none; border: none; font-family: 'Inter'; font-weight: 600; outline: none; padding: 5px; color: var(--text-main);">
+                    <option value="">Caricamento...</option>
+                </select>
+            </div>
+        </header>
 
-        <div style="display: flex; gap: 10px; background: #f1f5f9; padding: 8px; border-radius: 12px;">
-            <select id="select-mese" onchange="resetFiltroPeriodicita(); caricaManutenzioni()" style="flex: 1; background: none; border: none; font-family: 'Inter'; font-weight: 600; outline: none; padding: 5px;">
-                <option value="0">NON ASSEGNATO</option>
-                <option value="1">Gennaio</option>
-                <option value="2">Febbraio</option>
-                <option value="3">Marzo</option>
-                <option value="4">Aprile</option>
-                <option value="5">Maggio</option>
-                <option value="6">Giugno</option>
-                <option value="7">Luglio</option>
-                <option value="8">Agosto</option>
-                <option value="9">Settembre</option>
-                <option value="10">Ottobre</option>
-                <option value="11">Novembre</option>
-                <option value="12">Dicembre</option>
-            </select>
-            <div style="width: 1px; background: #cbd5e1; margin: 5px 0;"></div>
-            <select id="select-manutentore" onchange="resetFiltroPeriodicita();caricaManutenzioni()" style="flex: 1.5; background: none; border: none; font-family: 'Inter'; font-weight: 600; outline: none; padding: 5px;">
-                <option value="">Caricamento...</option>
-            </select>
-        </div>
+        <!-- Main content -->
+        <main style="padding: 1rem;">
+            <!-- Filtri periodicità -->
+            <div style="margin-bottom: 20px; background: white; padding: 1rem; border-radius: 1rem; border: 1px solid var(--border);">
+                <div style="display: flex; gap: 8px; padding: 8px; border-radius: 12px;">
+                    <button id="btn-tutti" class="filtro-btn filtro-attivo" 
+                            onclick="cambiaFiltroPeriodicita('tutti')"
+                            style="flex: 1; padding: 12px 5px; font-size: 0.9rem; font-weight: 800;">
+                        TUTTI
+                    </button>
+                    <button id="btn-sem" class="filtro-btn" 
+                            onclick="cambiaFiltroPeriodicita('sem')"
+                            style="flex: 1; padding: 12px 5px; font-size: 0.9rem; font-weight: 800;">
+                        SEM
+                    </button>
+                    <button id="btn-tri" class="filtro-btn" 
+                            onclick="cambiaFiltroPeriodicita('tri')"
+                            style="flex: 1; padding: 12px 5px; font-size: 0.9rem; font-weight: 800;">
+                        TRI
+                    </button>
+                    <button id="btn-bimmen" class="filtro-btn" 
+                            onclick="cambiaFiltroPeriodicita('bimmen')"
+                            style="flex: 1; padding: 12px 5px; font-size: 0.9rem; font-weight: 800;">
+                        BIM/MEN
+                    </button>
+                </div>
+            </div>
+
+            <!-- Lista manutenzioni -->
+            <div id="lista-manutenzioni">
+                <div style="text-align: center; padding: 2rem; color: var(--text-muted);">Caricamento manutenzioni...</div>
+            </div>
+        </main>
+
+        
     </div>
-<div style="background: white; padding: 0 20px 15px 20px;">
-    <div style="display: flex; gap: 8px; background: #f1f5f9; padding: 8px; border-radius: 12px;">
-        <button id="btn-tutti" class="filtro-btn filtro-attivo" 
-                onclick="cambiaFiltroPeriodicita('tutti')"
-                style="flex: 1; padding: 10px 5px; font-size: 0.9rem; font-weight: 800;">
-            TUTTI
-        </button>
-        <button id="btn-sem" class="filtro-btn" 
-                onclick="cambiaFiltroPeriodicita('sem')"
-                style="flex: 1; padding: 10px 5px; font-size: 0.9rem; font-weight: 800;">
-            SEM
-        </button>
-        <button id="btn-tri" class="filtro-btn" 
-                onclick="cambiaFiltroPeriodicita('tri')"
-                style="flex: 1; padding: 10px 5px; font-size: 0.9rem; font-weight: 800;">
-            TRI
-        </button>
-        <button id="btn-bimmen" class="filtro-btn" 
-                onclick="cambiaFiltroPeriodicita('bimmen')"
-                style="flex: 1; padding: 10px 5px; font-size: 0.9rem; font-weight: 800;">
-            BIM/MEN
-        </button>
-    </div>
-</div>
-    <div id="lista-manutenzioni" style="padding: 15px;"></div>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        if (typeof getDbConfigInfo === 'function') {
-            const configInfo = getDbConfigInfo();
-            if (!configInfo.configured) {
-                console.warn('Database non configurato');
-                mostraIndicatoreDB(false);
+
+    <!-- Script per indicatore DB -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof getDbConfigInfo === 'function') {
+                const configInfo = getDbConfigInfo();
+                if (!configInfo.configured) {
+                    console.warn('Database non configurato');
+                    mostraIndicatoreDB(false);
+                } else {
+                    console.log('DB configurato:', configInfo.urlShort);
+                    mostraIndicatoreDB(true, configInfo);
+                }
+            }
+        });
+        
+        function mostraIndicatoreDB(isConfigured, configInfo = null) {
+            const header = document.querySelector('.app-header');
+            
+            if (!header) return;
+            
+            let indicator = document.getElementById('db-status-indicator');
+            if (!indicator) {
+                indicator = document.createElement('div');
+                indicator.id = 'db-status-indicator';
+                indicator.style.cssText = `
+                    position: absolute;
+                    top: 15px;
+                    right: 15px;
+                    width: 10px;
+                    height: 10px;
+                    border-radius: 50%;
+                    border: 2px solid white;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    cursor: pointer;
+                    z-index: 10;
+                `;
+                header.style.position = 'relative';
+                header.appendChild(indicator);
+            }
+            
+            if (isConfigured && configInfo) {
+                indicator.style.background = '#22c55e';
+                indicator.title = `DB configurato • ${configInfo.urlShort}`;
+                indicator.onclick = null;
             } else {
-                console.log('DB configurato:', configInfo.urlShort);
-                mostraIndicatoreDB(true, configInfo);
+                indicator.style.background = '#f59e0b';
+                indicator.title = 'Database non configurato - Clicca per configurare';
+                indicator.onclick = function() {
+                    if (confirm('Database non configurato. Vuoi configurare?')) {
+                        window.location.href = 'config.html';
+                    }
+                };
             }
         }
-    });
+    </script>
     
-    function mostraIndicatoreDB(isConfigured, configInfo = null) {
-        const header = document.querySelector('header') || 
-                      document.querySelector('div[style*="position: sticky"]');
-        
-        if (!header) return;
-        
-        let indicator = document.getElementById('db-status-indicator');
-        if (!indicator) {
-            indicator = document.createElement('div');
-            indicator.id = 'db-status-indicator';
-            indicator.style.cssText = `
-                position: absolute;
-                top: 15px;
-                right: 15px;
-                width: 10px;
-                height: 10px;
-                border-radius: 50%;
-                border: 2px solid white;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                cursor: pointer;
-                z-index: 10;
-            `;
-            header.style.position = 'relative';
-            header.appendChild(indicator);
-        }
-        
-        if (isConfigured && configInfo) {
-            indicator.style.background = '#22c55e';
-            indicator.title = `DB configurato • ${configInfo.urlShort}`;
-        } else {
-            indicator.style.background = '#f59e0b';
-            indicator.title = 'Database non configurato - Clicca per configurare';
-            indicator.onclick = function() {
-                if (confirm('Database non configurato. Vuoi configurare?')) {
-                    window.location.href = 'config.html';
-                }
-            };
-        }
-    }
-</script>
     <script src="manutenzioni.js"></script>
 </body>
 </html>

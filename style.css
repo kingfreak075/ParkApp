@@ -136,10 +136,15 @@ body {
     border-top: 1px solid var(--border);
     padding: 0.75rem 1rem;
     display: flex;
-    justify-content: flex-end; /* Allinea a destra */
+    justify-content: flex-end;
     z-index: 100;
-    max-width: 450px; /* Allineato al container mobile */
+    max-width: 450px;
     margin: 0 auto;
+    /* Aggiungi queste due righe: */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .footer-text {
@@ -528,7 +533,7 @@ main {
 /* Codice impianto prominente (sopra) */
 .codice-impianto {
     color: var(--primary);
-    font-size: 1.4rem;
+    font-size: 0.98rem;
     font-weight: 800;
     letter-spacing: 0.5px;
     margin: 0;
@@ -537,10 +542,10 @@ main {
 
 /* Badge stato */
 .badge-stato {
-    font-size: 0.8rem;
+    font-size: 0.56rem;
     font-weight: 800;
-    padding: 6px 14px;
-    border-radius: 20px;
+    padding: 4px 10px;
+    border-radius: 16px;
     border: 1px solid;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -653,12 +658,13 @@ main {
 
 /* 1. CODICE IMPIANTO BIANCO SU SFONDO COLORATO */
 .codice-impianto {
-    font-size: 1.4rem;
+    font-size: 0.98rem;
     font-weight: 800;
     letter-spacing: 0.5px;
-    margin: 0 0 5px 0;
+    margin: 0 0 3px 0;
     line-height: 1.2;
-    /* Rimosso color: var(--primary); e aggiunto sfondo nel JS */
+       padding: 4px 10px; /* Aggiungi padding se manca */
+    border-radius: 8px; /* Aggiungi border-radius */
 }
 
 /* 2. PULSANTE SCHEDA PIÙ LARGO */
@@ -1773,4 +1779,44 @@ main {
     .btn-tipo-opzione {
         padding: 16px;
     }
+}
+
+/* Aggiungi a style.css per uniformità */
+.bg-app {
+    background-color: var(--bg-app);
+}
+
+.filtro-btn {
+    padding: 10px 5px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    background: var(--white);
+    font-family: 'Inter', sans-serif;
+    font-weight: 800;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.filtro-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: var(--primary-light);
+}
+
+.filtro-attivo {
+    border-color: var(--primary) !important;
+    background: var(--primary) !important;
+    color: var(--white) !important;
+    font-weight: 900 !important;
+}
+
+.filtro-btn:active {
+    transform: scale(0.98);
 }

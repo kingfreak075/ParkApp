@@ -71,21 +71,18 @@
         
         if (!configInfo.configured) {
             console.warn('Database non configurato per ParkApp');
-            mostraIndicatoreDB(false);
+            mostraIndicatoreDB(false, configInfo);
         } else {
             console.log('DB configurato:', configInfo.urlShort);
-            mostraIndicatoreDB(true);
+            mostraIndicatoreDB(true, configInfo);
         }
     });
     
-    function mostraIndicatoreDB(isConfigured) {
-        const header = document.querySelector('.app-header') || 
-                      document.querySelector('header') || 
-                      document.querySelector('div[style*="position: sticky"]');
+    function mostraIndicatoreDB(isConfigured, configInfo) {
+        const header = document.querySelector('.app-header');
         
         if (!header) return;
         
-        // Crea o aggiorna indicatore
         let indicator = document.getElementById('db-status-indicator');
         if (!indicator) {
             indicator = document.createElement('div');
@@ -102,22 +99,22 @@
                 cursor: pointer;
                 z-index: 10;
             `;
+            header.style.position = 'relative';
+            header.appendChild(indicator);
+        }
+        
+        if (isConfigured && configInfo) {
+            indicator.style.background = '#22c55e';
+            indicator.title = `DB configurato • ${configInfo.urlShort}`;
+            indicator.onclick = null;
+        } else {
+            indicator.style.background = '#f59e0b';
+            indicator.title = 'Database non configurato - Clicca per configurare';
             indicator.onclick = function() {
                 if (confirm('Database non configurato. Vuoi andare alla configurazione?')) {
                     window.location.href = 'config.html';
                 }
             };
-            header.style.position = 'relative';
-            header.appendChild(indicator);
-        }
-        
-        if (isConfigured) {
-            indicator.style.background = '#22c55e'; // Verde
-            indicator.title = `DB configurato • ${configInfo.urlShort}`;
-            indicator.onclick = null;
-        } else {
-            indicator.style.background = '#f59e0b'; // Giallo/arancione
-            indicator.title = 'Database non configurato - Clicca per configurare';
         }
     }
 </script>
