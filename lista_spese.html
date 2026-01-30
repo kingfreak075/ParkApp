@@ -5,312 +5,442 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Le mie Spese - ParkApp</title>
     <link rel="stylesheet" href="style.css">
-    <!-- CON QUESTO: -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<!-- ✅ AGGIUNTO: File di configurazione DB centrale -->
-<script src="db-config.js"></script>
-<script src="check-db-config.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root {
-            --primary: #3860b2;
-            --primary-dark: #00126b;
-            --danger: #b33838;
-            --success: #22c55e;
-            --warning: #f59e0b;
-        }
+        /* ================================
+           STILI SPECIFICI MOBILE-FIRST
+           MAX WIDTH: 450px
+           ================================ */
         
+        /* CONTENITORE PRINCIPALE */
         .app-container {
-            max-width: 1200px;
+            max-width: 450px;
             margin: 0 auto;
-            background: #f8fafc;
             min-height: 100vh;
+            position: relative;
+            padding-bottom: 5rem;
         }
         
-        .app-header {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-            padding: 20px;
-            border-radius: 0 0 20px 20px;
-            box-shadow: 0 4px 12px rgba(56, 96, 178, 0.3);
+        /* HEADER COMPATTO */
+        .app-header-spese {
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
         
-        .filters-card {
-            background: white;
-            border-radius: 16px;
-            padding: 20px;
-            margin: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            border: 1px solid #e2e8f0;
+        /* SEZIONE FILTRI ESPANDIBILE */
+        .filtri-espandibili {
+            background: var(--white);
+            border-radius: 0 0 16px 16px;
+            margin: 0 1rem 1rem 1rem;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            border-top: none;
+            max-height: 0;
+            transition: max-height 0.3s ease-out;
         }
         
-        .filter-group {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
+        .filtri-espandibili.aperto {
+            max-height: 500px;
         }
         
-        .filter-label {
-            font-weight: 700;
-            color: #334155;
-            margin-bottom: 8px;
-            font-size: 0.9rem;
-        }
-        
-        .filter-select {
+        .toggle-filtri {
             width: 100%;
-            padding: 10px 12px;
-            border: 2px solid #cbd5e1;
-            border-radius: 10px;
-            font-weight: 600;
-            background: #f8fafc;
-            cursor: pointer;
-        }
-        
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin: 20px 0;
-        }
-        
-        .stat-card {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-            border-left: 6px solid var(--primary);
-        }
-        
-        .stat-card.vitto {
-            border-left-color: #059669;
-        }
-        
-        .stat-card.auto {
-            border-left-color: #dc2626;
-        }
-        
-        .stat-card.totale {
-            border-left-color: #7c3aed;
-            background: linear-gradient(135deg, #f8fafc, #e0e7ff);
-        }
-        
-        .stat-label {
-            font-size: 0.8rem;
-            color: #64748b;
-            font-weight: 700;
-            text-transform: uppercase;
-            margin-bottom: 5px;
-        }
-        
-        .stat-value {
-            font-size: 1.8rem;
-            font-weight: 900;
-            color: #1e293b;
-        }
-        
-        .stat-subvalue {
-            font-size: 0.9rem;
-            color: #64748b;
-            margin-top: 5px;
-        }
-        
-        .action-buttons {
+            padding: 1rem;
+            background: var(--primary-light);
+            color: var(--primary);
+            border: none;
             display: flex;
-            gap: 10px;
-            margin-top: 20px;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-weight: 700;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        /* CONTENITORE FILTRI COMPATTO */
+        .filtri-compact {
+            padding: 1rem;
+        }
+        
+        .filtri-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
             flex-wrap: wrap;
         }
         
-        .btn {
-            padding: 10px 20px;
+        .filtro-compact {
+            flex: 1;
+            min-width: 120px;
+            position: relative;
+        }
+        
+        .filtro-compact .material-symbols-rounded {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+        
+        .select-compact {
+            width: 100%;
+            padding: 0.625rem 0.75rem 0.625rem 2.5rem;
+            border: 2px solid var(--border);
             border-radius: 10px;
+            background: var(--white);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+        
+        /* STATS CARD MOBILE */
+        .stats-mobile {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+            padding: 0 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .stat-card-mobile {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 1rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+        }
+        
+        .stat-card-mobile.totale {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%);
+            color: var(--white);
+            border: none;
+        }
+        
+        .stat-value-mobile {
+            font-size: 1.5rem;
+            font-weight: 900;
+            line-height: 1;
+            margin: 0.25rem 0;
+        }
+        
+        .stat-label-mobile {
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.8;
+        }
+        
+        /* LISTA SPESE (CARD-BASED) - SOLO CARD, NO TABELLA */
+        .lista-spese-container {
+            padding: 0 1rem 1rem 1rem;
+        }
+        
+        .spesa-card {
+            background: var(--white);
+            border-radius: 14px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        
+        .spesa-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        
+        /* HEADER CARD SPESA */
+        .spesa-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+        
+        .spesa-data {
+            font-weight: 800;
+            color: var(--text-main);
+            font-size: 0.95rem;
+        }
+        
+        .spesa-localita {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background: var(--primary-light);
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-weight: 600;
+            display: inline-block;
+            margin-top: 0.25rem;
+        }
+        
+        /* DETTAGLI SPESA */
+        .spesa-dettagli {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .dettaglio-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        
+        .dettaglio-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
             font-weight: 700;
-            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .dettaglio-valore {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+        
+        /* FOOTER CARD SPESA */
+        .spesa-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border);
+        }
+        
+        /* ICONA FOTO IN BASSO A SINISTRA */
+        .icona-foto-container {
             display: flex;
             align-items: center;
-            gap: 8px;
-            border: 2px solid transparent;
+            gap: 0.25rem;
+        }
+        
+        .btn-foto {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.4rem 0.75rem;
+            background: var(--primary-light);
+            color: var(--primary);
+            border: none;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            cursor: pointer;
             transition: all 0.2s ease;
         }
         
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
+        .btn-foto:hover {
+            background: var(--primary);
+            color: var(--white);
+            transform: scale(1.05);
         }
         
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(56, 96, 178, 0.3);
-        }
-        
-        .btn-secondary {
-            background: #e2e8f0;
-            color: #475569;
-            border-color: #cbd5e1;
-        }
-        
-        .btn-secondary:hover {
-            background: #cbd5e1;
-        }
-        
-        .btn-success {
-            background: linear-gradient(135deg, #22c55e, #16a34a);
-            color: white;
-        }
-        
-        .btn-danger {
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-            color: white;
-        }
-        
-        .table-container {
-            background: white;
-            border-radius: 16px;
-            margin: 20px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            border: 1px solid #e2e8f0;
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        thead {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-        }
-        
-        th {
-            padding: 16px;
-            text-align: left;
+        .btn-foto .contatore-foto {
+            background: var(--primary);
+            color: var(--white);
+            padding: 0.1rem 0.35rem;
+            border-radius: 10px;
+            font-size: 0.65rem;
             font-weight: 800;
-            font-size: 0.9rem;
+            margin-left: 0.25rem;
         }
         
-        tbody tr {
-            border-bottom: 1px solid #e2e8f0;
-            transition: background 0.2s ease;
-        }
-        
-        tbody tr:hover {
-            background: #f8fafc;
-        }
-        
-        td {
-            padding: 14px 16px;
-            color: #334155;
-            font-weight: 500;
-        }
-        
-        .badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-        
-        .badge-vitto {
-            background: #dcfce7;
-            color: #166534;
-        }
-        
-        .badge-auto {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-        
-        .foto-cell {
+        /* CESTINO IN BASSO A DESTRA */
+        .spesa-azioni {
             display: flex;
-            gap: 5px;
-            flex-wrap: wrap;
+            gap: 0.5rem;
         }
         
-        .foto-thumb {
-            width: 40px;
-            height: 40px;
-            border-radius: 6px;
-            overflow: hidden;
+        .btn-icon-mobile {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            border: none;
+            background: var(--primary-light);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
             cursor: pointer;
-            border: 2px solid #cbd5e1;
+            transition: all 0.2s ease;
         }
         
-        .foto-thumb img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+        .btn-icon-mobile:hover {
+            background: var(--primary);
+            color: var(--white);
+            transform: scale(1.05);
         }
         
-        .chart-container {
-            background: white;
+        .btn-icon-mobile.elimina {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+        
+        .btn-icon-mobile.elimina:hover {
+            background: #ef4444;
+            color: white;
+        }
+        
+        /* BOTTONI AZIONE GLOBALI */
+        .azione-globale {
+            position: fixed;
+            bottom: 5rem;
+            right: 1rem;
+            z-index: 99;
+        }
+        
+        .btn-floating {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: var(--white);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+            transition: all 0.2s ease;
+        }
+        
+        .btn-floating:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+        }
+        
+        /* GRAFICO */
+        .grafico-container {
+            background: var(--white);
             border-radius: 16px;
-            padding: 20px;
-            margin: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            border: 1px solid #e2e8f0;
+            padding: 1rem;
+            margin: 0 1rem 1rem 1rem;
+            border: 1px solid var(--border);
         }
         
-        .modal-overlay {
-            display: none;
+        /* STATO VUOTO */
+        .stato-vuoto {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-muted);
+        }
+        
+        .stato-vuoto .material-symbols-rounded {
+            font-size: 3rem;
+            opacity: 0.3;
+            margin-bottom: 1rem;
+        }
+        
+        /* POPUP FOTO A SCHERMO INTERO */
+        .popup-foto-overlay {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            z-index: 1000;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 2000;
+            display: none;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: 1rem;
         }
         
-        .modal-content {
-            background: white;
-            border-radius: 16px;
-            padding: 30px;
-            max-width: 800px;
+        .popup-foto-header {
             width: 100%;
-            max-height: 90vh;
-            overflow-y: auto;
-            position: relative;
+            max-width: 450px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            color: white;
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
         }
         
-        .modal-close {
-            position: absolute;
-            top: 15px;
-            right: 15px;
+        .popup-foto-contenuto {
+            max-width: 450px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .popup-foto-img {
+            max-width: 100%;
+            max-height: 70vh;
+            border-radius: 12px;
+            object-fit: contain;
+        }
+        
+        .popup-foto-navigazione {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 1rem;
+            color: white;
+        }
+        
+        .btn-navigazione {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-navigazione:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+        
+        .btn-chiudi {
             background: none;
             border: none;
-            font-size: 24px;
+            color: white;
+            font-size: 1.5rem;
             cursor: pointer;
-            color: #64748b;
+            padding: 0.5rem;
         }
         
-        .foto-gallery {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
+        .popup-contatore {
+            color: white;
+            font-weight: 700;
+            font-size: 0.9rem;
         }
         
-        .foto-gallery img {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
-            border-radius: 10px;
-            border: 2px solid #cbd5e1;
-        }
-        
-        .loading-overlay {
+        /* LOADING */
+        #loadingOverlay {
             display: none;
             position: fixed;
             top: 0;
@@ -322,327 +452,267 @@
             align-items: center;
             justify-content: center;
             flex-direction: column;
-            gap: 20px;
+            gap: 1rem;
         }
         
-        .loading-spinner {
-            width: 60px;
-            height: 60px;
-            border: 5px solid #e2e8f0;
-            border-top-color: var(--primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
+        /* ANIMAZIONI */
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .spesa-card {
+            animation: slideDown 0.3s ease-out;
         }
         
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
         
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #64748b;
+        /* NOTE */
+        .spesa-note {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px dashed var(--border);
+            font-style: italic;
         }
-        
-        .empty-state .material-symbols-rounded {
-            font-size: 64px;
-            opacity: 0.3;
-            margin-bottom: 20px;
-        }
-        
-        @media (max-width: 768px) {
-            .filter-group {
-                grid-template-columns: 1fr;
-            }
-            
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .action-buttons {
-                flex-direction: column;
-            }
-            
-            .btn {
-                width: 100%;
-                justify-content: center;
-            }
-            
-            table {
-                display: block;
-                overflow-x: auto;
-            }
-        }
+
+/* FOOTER STYLE */
+.app-footer {
+    background: var(--white);
+    padding: 1rem;
+    text-align: center;
+    border-top: 1px solid var(--border);
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-width: 450px;
+    margin: 0 auto;
+    z-index: 100;
+}
+
+.footer-text {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+/* Aggiusta padding del container principale per evitare sovrapposizione */
+.app-container {
+    padding-bottom: 5rem; /* Aumenta questo valore se il footer si sovrappone */
+}
+
+
+
     </style>
 </head>
-<body>
+<body class="bg-app">
     <div class="app-container">
-        <!-- Header -->
-        <header class="app-header">
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-                <button onclick="window.location.href='menu.html'" class="btn-secondary" style="background: rgba(255,255,255,0.2); color: white; border-color: rgba(255,255,255,0.3);">
+        <!-- HEADER COMPATTO -->
+        <header class="app-header-spese" style="position: relative;">
+
+
+        <div id="db-status-indicator" style="
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    cursor: pointer;
+    z-index: 10;
+    background: #22c55e; /* Verde se configurato */
+"></div>
+
+
+
+
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                <button onclick="window.location.href='menu.html'" class="btn-icon-mobile" style="background: none; border: none; color: var(--text-main);">
                     <span class="material-symbols-rounded">arrow_back</span>
                 </button>
-                <h1 style="margin: 0; font-size: 1.5rem; font-weight: 800;">Le mie Spese</h1>
-                <button onclick="window.location.href='note_spese.html'" class="btn-secondary" style="background: rgba(255,255,255,0.2); color: white; border-color: rgba(255,255,255,0.3);">
-                    <span class="material-symbols-rounded">add</span> Nuova
+                <h1 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: var(--text-main);">Le mie Spese</h1>
+                <button onclick="window.location.href='note_spese.html'" class="btn-icon-mobile" style="background: var(--primary); color: var(--white);">
+                    <span class="material-symbols-rounded">add</span>
                 </button>
             </div>
             
-            <div style="text-align: center; margin-top: 15px;">
-                <div id="tecnico-nome" style="font-size: 1.2rem; font-weight: 700;"></div>
-                <div style="font-size: 0.9rem; opacity: 0.9; margin-top: 5px;">
+            <div style="text-align: center;">
+                <div id="tecnico-nome" style="font-size: 0.9rem; font-weight: 700; color: var(--text-main);"></div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
                     Consulta e gestisci le tue note spese
                 </div>
             </div>
         </header>
         
-        <!-- Filtri -->
-        <div class="filters-card">
-            <h3 style="margin: 0 0 20px 0; color: var(--primary-dark);">
-                <span class="material-symbols-rounded" style="vertical-align: middle;">filter_alt</span>
-                Filtri
-            </h3>
-            
-            <div class="filter-group">
-                <div>
-                    <div class="filter-label">Anno</div>
-                    <select id="filtro-anno" class="filter-select" onchange="caricaDati()">
-                        <option value="">Tutti gli anni</option>
-                    </select>
-                </div>
-                
-                <div>
-                    <div class="filter-label">Mese</div>
-                    <select id="filtro-mese" class="filter-select" onchange="caricaDati()">
-                        <option value="">Tutti i mesi</option>
-                        <option value="1">Gennaio</option>
-                        <option value="2">Febbraio</option>
-                        <option value="3">Marzo</option>
-                        <option value="4">Aprile</option>
-                        <option value="5">Maggio</option>
-                        <option value="6">Giugno</option>
-                        <option value="7">Luglio</option>
-                        <option value="8">Agosto</option>
-                        <option value="9">Settembre</option>
-                        <option value="10">Ottobre</option>
-                        <option value="11">Novembre</option>
-                        <option value="12">Dicembre</option>
-                    </select>
-                </div>
-                
-                <div>
-                    <div class="filter-label">Tipo Spesa</div>
-                    <select id="filtro-tipo" class="filter-select" onchange="caricaDati()">
-                        <option value="">Tutte le spese</option>
-                        <option value="vitto">Vitto/Trasporto</option>
-                        <option value="auto">Auto</option>
-                    </select>
-                </div>
-                
-                <div>
-                    <div class="filter-label">Località</div>
-                    <select id="filtro-localita" class="filter-select" onchange="caricaDati()">
-                        <option value="">Tutte le località</option>
-                        <option value="In Sede">In Sede</option>
-                        <option value="Fuori Sede">Fuori Sede</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="action-buttons">
-                <button onclick="caricaDati()" class="btn btn-primary">
-                    <span class="material-symbols-rounded">search</span>
-                    Applica Filtri
-                </button>
-                <button onclick="resetFiltri()" class="btn btn-secondary">
-                    <span class="material-symbols-rounded">refresh</span>
-                    Reset Filtri
-                </button>
-                <button onclick="esportaPDF()" class="btn btn-success">
-                    <span class="material-symbols-rounded">picture_as_pdf</span>
-                    Esporta PDF
-                </button>
-                <button onclick="esportaExcel()" class="btn btn-success">
-                    <span class="material-symbols-rounded">table_chart</span>
-                    Esporta Excel
-                </button>
-            </div>
-        </div>
+        <!-- SEZIONE FILTRI ESPANDIBILE -->
+        <button class="toggle-filtri" onclick="toggleFiltri()">
+            <span class="material-symbols-rounded">filter_alt</span>
+            Filtri e Statistiche
+            <span class="material-symbols-rounded" id="icona-filtri">expand_more</span>
+        </button>
         
-        <!-- Statistiche -->
-        <div class="filters-card">
-            <h3 style="margin: 0 0 20px 0; color: var(--primary-dark);">
-                <span class="material-symbols-rounded" style="vertical-align: middle;">insights</span>
-                Statistiche
-            </h3>
-            
-            <div class="stats-grid">
-                <div class="stat-card totale">
-                    <div class="stat-label">TOTALE PERIODO</div>
-                    <div class="stat-value" id="stat-totale">€0.00</div>
-                    <div class="stat-subvalue" id="stat-numero-spese">0 spese</div>
+        <div class="filtri-espandibili" id="filtriEspandibili">
+            <div class="filtri-compact">
+                <div class="filtri-row">
+                    <div class="filtro-compact">
+                        <span class="material-symbols-rounded">calendar_today</span>
+                        <select id="filtro-anno" class="select-compact" onchange="caricaDati()">
+                            <option value="">Tutti gli anni</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filtro-compact">
+                        <span class="material-symbols-rounded">date_range</span>
+                        <select id="filtro-mese" class="select-compact" onchange="caricaDati()">
+                            <option value="">Tutti i mesi</option>
+                            <option value="1">Gennaio</option>
+                            <option value="2">Febbraio</option>
+                            <option value="3">Marzo</option>
+                            <option value="4">Aprile</option>
+                            <option value="5">Maggio</option>
+                            <option value="6">Giugno</option>
+                            <option value="7">Luglio</option>
+                            <option value="8">Agosto</option>
+                            <option value="9">Settembre</option>
+                            <option value="10">Ottobre</option>
+                            <option value="11">Novembre</option>
+                            <option value="12">Dicembre</option>
+                        </select>
+                    </div>
                 </div>
                 
-                <div class="stat-card vitto">
-                    <div class="stat-label">VITTO/TRASPORTO</div>
-                    <div class="stat-value" id="stat-vitto">€0.00</div>
-                    <div class="stat-subvalue" id="stat-dettaglio-vitto">0 pasti • 0 pernottamenti</div>
+                <div class="filtri-row">
+                    <div class="filtro-compact">
+                        <span class="material-symbols-rounded">category</span>
+                        <select id="filtro-tipo" class="select-compact" onchange="caricaDati()">
+                            <option value="">Tutte le spese</option>
+                            <option value="vitto">Vitto/Trasporto</option>
+                            <option value="auto">Auto</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filtro-compact">
+                        <span class="material-symbols-rounded">location_on</span>
+                        <select id="filtro-localita" class="select-compact" onchange="caricaDati()">
+                            <option value="">Tutte le località</option>
+                            <option value="In Sede">In Sede</option>
+                            <option value="Fuori Sede">Fuori Sede</option>
+                        </select>
+                    </div>
                 </div>
                 
-                <div class="stat-card auto">
-                    <div class="stat-label">SPESE AUTO</div>
-                    <div class="stat-value" id="stat-auto">€0.00</div>
-                    <div class="stat-subvalue" id="stat-dettaglio-auto">0 km • €0 carburante</div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-label">MEDIA GIORNALIERA</div>
-                    <div class="stat-value" id="stat-media">€0.00</div>
-                    <div class="stat-subvalue" id="stat-giorni">0 giorni lavorativi</div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Grafico -->
-        <div class="chart-container">
-            <h3 style="margin: 0 0 20px 0; color: var(--primary-dark);">
-                <span class="material-symbols-rounded" style="vertical-align: middle;">bar_chart</span>
-                Distribuzione Spese
-            </h3>
-            <canvas id="graficoSpese"></canvas>
-        </div>
-        
-        <!-- Tabella spese -->
-        <div class="table-container">
-            <div style="padding: 20px; border-bottom: 1px solid #e2e8f0;">
-                <h3 style="margin: 0; color: var(--primary-dark); display: flex; align-items: center; gap: 10px;">
-                    <span class="material-symbols-rounded">receipt_long</span>
-                    Elenco Spese
-                    <span id="counter-spese" style="font-size: 0.9rem; color: #64748b; margin-left: auto;">0 spese</span>
-                </h3>
-            </div>
-            
-            <div id="tabella-container">
-                <!-- La tabella sarà generata dinamicamente -->
-                <div class="empty-state" id="empty-state">
-                    <span class="material-symbols-rounded">receipt_long</span>
-                    <h3 style="color: #64748b; margin: 10px 0;">Nessuna spesa trovata</h3>
-                    <p>Utilizza i filtri per cercare o inserisci una nuova spesa.</p>
-                    <button onclick="window.location.href='note_spese.html'" class="btn btn-primary" style="margin-top: 20px;">
-                        <span class="material-symbols-rounded">add</span> Inserisci Spesa
+                <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                    <button onclick="caricaDati()" class="btn-icon-mobile" style="flex: 1; border-radius: 10px; height: auto; padding: 0.75rem; justify-content: center;">
+                        <span class="material-symbols-rounded">search</span>
+                        Cerca
+                    </button>
+                    <button onclick="resetFiltri()" class="btn-icon-mobile" style="flex: 1; border-radius: 10px; height: auto; padding: 0.75rem; justify-content: center; background: var(--primary-light); color: var(--primary);">
+                        <span class="material-symbols-rounded">refresh</span>
+                        Reset
                     </button>
                 </div>
-                
-                <table id="tabella-spese" style="display: none;">
-                    <thead>
-                        <tr>
-                            <th>Data</th>
-                            <th>Località</th>
-                            <th>Tipo</th>
-                            <th>Vitto/Trasporto</th>
-                            <th>Auto</th>
-                            <th>Totale</th>
-                            <th>Foto</th>
-                            <th>Azioni</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabella-body">
-                        <!-- Righe generate dinamicamente -->
-                    </tbody>
-                </table>
             </div>
+            
+            <!-- STATISTICHE MOBILE -->
+            <div class="stats-mobile" id="statsMobile">
+                <!-- Popolato dinamicamente da JS -->
+            </div>
+            
+            <!-- GRAFICO -->
+            <div class="grafico-container">
+                <h4 style="margin: 0 0 1rem 0; color: var(--text-main); display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+                    <span class="material-symbols-rounded">bar_chart</span>
+                    Distribuzione Spese
+                </h4>
+                <canvas id="graficoSpese"></canvas>
+            </div>
+        </div>
+        
+        <!-- CONTENITORE LISTA SPESE (SOLO CARD) -->
+        <div class="lista-spese-container" id="listaCardContainer">
+            <div id="containerCardSpese">
+                <!-- Popolato dinamicamente da JS -->
+            </div>
+            
+            <!-- STATO VUOTO -->
+            <div class="stato-vuoto" id="statoVuoto">
+                <span class="material-symbols-rounded">receipt_long</span>
+                <h3 style="color: var(--text-muted); margin: 1rem 0 0.5rem 0;">Nessuna spesa trovata</h3>
+                <p>Utilizza i filtri per cercare o inserisci una nuova spesa.</p>
+                <button onclick="window.location.href='note_spese.html'" class="btn-icon-mobile" style="margin-top: 1.5rem; padding: 0.75rem 1.5rem; width: auto; border-radius: 12px;">
+                    <span class="material-symbols-rounded">add</span> Inserisci Spesa
+                </button>
+            </div>
+        </div>
+        
+        <!-- BOTTONE ESPORTA PDF (mobile only) -->
+        <div class="azione-globale">
+            <button class="btn-floating" onclick="esportaPDF()" title="Esporta PDF">
+                <span class="material-symbols-rounded">picture_as_pdf</span>
+            </button>
+        </div>
+        
+        <!-- POPUP FOTO A SCHERMO INTERO -->
+        <div class="popup-foto-overlay" id="popupFoto">
+            <div class="popup-foto-header">
+                <h3 style="margin: 0; font-size: 1rem; color: white;">Foto Ricevuta</h3>
+                <button class="btn-chiudi" onclick="chiudiPopupFoto()">×</button>
+            </div>
+            <div class="popup-foto-contenuto">
+                <img id="popupFotoImg" class="popup-foto-img" src="" alt="Foto ricevuta">
+                <div class="popup-foto-navigazione">
+                    <button class="btn-navigazione" onclick="fotoPrecedente()">
+                        <span class="material-symbols-rounded">chevron_left</span>
+                    </button>
+                    <div class="popup-contatore" id="popupContatore">1/1</div>
+                    <button class="btn-navigazione" onclick="fotoSuccessiva()">
+                        <span class="material-symbols-rounded">chevron_right</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- LOADING -->
+        <div id="loadingOverlay">
+            <div style="width: 50px; height: 50px; border: 4px solid var(--primary-light); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            <div style="font-weight: 800; color: var(--primary);">Caricamento...</div>
         </div>
     </div>
     
-    <!-- Modale foto -->
-    <div id="modal-foto" class="modal-overlay">
-        <div class="modal-content">
-            <button class="modal-close" onclick="chiudiModaleFoto()">×</button>
-            <h3 id="modal-titolo" style="margin: 0 0 20px 0; color: var(--primary-dark);">Foto Ricevute</h3>
-            <div id="modal-foto-gallery" class="foto-gallery">
-                <!-- Foto caricate dinamicamente -->
-            </div>
-        </div>
-    </div>
-    
-    <!-- Loading overlay -->
-    <div id="loading-overlay" class="loading-overlay">
-        <div class="loading-spinner"></div>
-        <div style="font-weight: 700; color: var(--primary);">Caricamento in corso...</div>
-    </div>
-    
-
-
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const configInfo = getDbConfigInfo();
-        
-        if (!configInfo.configured) {
-            console.warn('Database non configurato per ParkApp');
-            mostraIndicatoreDB(false);
-        } else {
-            console.log('DB configurato:', configInfo.urlShort);
-            mostraIndicatoreDB(true);
-        }
-    });
-    
-    function mostraIndicatoreDB(isConfigured) {
-        const header = document.querySelector('.app-header') || 
-                      document.querySelector('header') || 
-                      document.querySelector('div[style*="position: sticky"]');
-        
-        if (!header) return;
-        
-        // Crea o aggiorna indicatore
-        let indicator = document.getElementById('db-status-indicator');
-        if (!indicator) {
-            indicator = document.createElement('div');
-            indicator.id = 'db-status-indicator';
-            indicator.style.cssText = `
-                position: absolute;
-                top: 15px;
-                right: 15px;
-                width: 10px;
-                height: 10px;
-                border-radius: 50%;
-                border: 2px solid white;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                cursor: pointer;
-                z-index: 10;
-            `;
-            indicator.onclick = function() {
-                if (confirm('Database non configurato. Vuoi andare alla configurazione?')) {
-                    window.location.href = 'config.html';
-                }
-            };
-            header.style.position = 'relative';
-            header.appendChild(indicator);
-        }
-        
-        if (isConfigured) {
-            indicator.style.background = '#22c55e'; // Verde
-            indicator.title = `DB configurato • ${configInfo.urlShort}`;
-            indicator.onclick = null;
-        } else {
-            indicator.style.background = '#f59e0b'; // Giallo/arancione
-            indicator.title = 'Database non configurato - Clicca per configurare';
-        }
-    }
-</script>
+    <!-- SCRIPTS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db-config.js"></script>
+    <script src="check-db-config.js"></script>
     <script src="lista_spese.js"></script>
+    
     <script>
-        // Variabili globali
+        // Variabili globali per questa pagina
         let chartInstance = null;
         let tutteSpese = [];
+        
+        // Variabili per gestione popup foto
+        let fotoCorrente = 0;
+        let fotoUrls = [];
         
         // Inizializzazione pagina
         document.addEventListener('DOMContentLoaded', async () => {
             const tecnico = localStorage.getItem('tecnico_loggato');
             document.getElementById('tecnico-nome').textContent = tecnico || 'Tecnico';
             
-            // Popola anni (ultimi 3 anni + anno corrente)
+            // Popola anni
             const annoSelect = document.getElementById('filtro-anno');
             const annoCorrente = new Date().getFullYear();
             
@@ -654,26 +724,48 @@
                 annoSelect.appendChild(option);
             }
             
-            // Carica dati iniziali
+            // Carica dati
             await caricaDati();
+            
+            // Chiudi popup con ESC
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    chiudiPopupFoto();
+                }
+            });
+            
+            // Chiudi popup cliccando sullo sfondo
+            document.getElementById('popupFoto').addEventListener('click', (e) => {
+                if (e.target.classList.contains('popup-foto-overlay')) {
+                    chiudiPopupFoto();
+                }
+            });
         });
         
-        // Funzioni di utilità
-        function mostraLoading() {
-            document.getElementById('loading-overlay').style.display = 'flex';
-        }
-        
-        function nascondiLoading() {
-            document.getElementById('loading-overlay').style.display = 'none';
+        // FUNZIONI UI
+        function toggleFiltri() {
+            const container = document.getElementById('filtriEspandibili');
+            const icona = document.getElementById('icona-filtri');
+            
+            container.classList.toggle('aperto');
+            icona.textContent = container.classList.contains('aperto') ? 'expand_less' : 'expand_more';
         }
         
         function formattaData(dataString) {
-            const data = new Date(dataString);
-            return data.toLocaleDateString('it-IT', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric'
-            });
+            if (!dataString) return 'Data non valida';
+            
+            try {
+                const data = new Date(dataString);
+                if (isNaN(data.getTime())) return 'Data non valida';
+                
+                return data.toLocaleDateString('it-IT', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+            } catch (error) {
+                return 'Data non valida';
+            }
         }
         
         function formattaEuro(valore) {
@@ -688,37 +780,21 @@
             caricaDati();
         }
         
-        function apriModaleFoto(fotoUrls, titolo) {
-            const modal = document.getElementById('modal-foto');
-            const gallery = document.getElementById('modal-foto-gallery');
-            const titoloModal = document.getElementById('modal-titolo');
-            
-            titoloModal.textContent = titolo;
-            gallery.innerHTML = '';
-            
-            if (fotoUrls && fotoUrls.length > 0) {
-                fotoUrls.forEach(url => {
-                    const img = document.createElement('img');
-                    img.src = url;
-                    img.alt = 'Ricevuta spesa';
-                    img.onclick = () => window.open(url, '_blank');
-                    gallery.appendChild(img);
-                });
-            } else {
-                gallery.innerHTML = '<p style="color: #64748b; text-align: center; width: 100%;">Nessuna foto disponibile</p>';
-            }
-            
-            modal.style.display = 'flex';
+
+        // FUNZIONI DI UTILITY
+        function mostraLoading() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
         }
         
-        function chiudiModaleFoto() {
-            document.getElementById('modal-foto').style.display = 'none';
+        function nascondiLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
         }
-        
-        // Chiudi modale cliccando fuori
-        document.getElementById('modal-foto').onclick = function(e) {
-            if (e.target === this) chiudiModaleFoto();
-        };
     </script>
+
+    <footer class="app-footer">
+    <span class="footer-text">EDIT BY KINGFREAK Version 1.0</span>
+</footer>
+
+
 </body>
 </html>

@@ -1,9 +1,9 @@
-// db-config.js
+// db-config.js - VERSIONE CORRETTA CON SINGLETON
 // Gestione centralizzata della configurazione Supabase per FloX
 // ==============================================================
 
-// Importa la libreria Supabase (assicurati che sia caricata prima di questo file)
-// <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+// VARIABILE GLOBALE PER IL CLIENT SINGLETON
+let _supabaseClientInstance = null;
 
 /**
  * Controlla se la configurazione del database è presente
@@ -39,11 +39,17 @@ function getSupabaseKey() {
 }
 
 /**
- * Crea e restituisce un client Supabase configurato
+ * Crea e restituisce un client Supabase configurato (SINGLETON)
  * @returns {object} Client Supabase
  * @throws {Error} Se la configurazione non è presente
  */
 function getSupabaseClient() {
+    // Se esiste già, restituisci l'istanza esistente
+    if (_supabaseClientInstance) {
+        console.log('✓ Client Supabase riutilizzato (singleton)');
+        return _supabaseClientInstance;
+    }
+    
     const url = getSupabaseUrl();
     const key = getSupabaseKey();
     
@@ -51,8 +57,31 @@ function getSupabaseClient() {
         throw new Error('Configurazione database non trovata. Vai in Configurazione → Database per configurarlo.');
     }
     
-    // Crea il client Supabase
-    return supabase.createClient(url, key);
+    console.log('✓ Nuovo client Supabase creato (singleton)');
+    
+    // Crea il client Supabase (una sola volta)
+    _supabaseClientInstance = supabase.createClient(url, key, {
+        auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true
+        },
+        global: {
+            headers: {
+                'apikey': key
+            }
+        }
+    });
+    
+    return _supabaseClientInstance;
+}
+
+/**
+ * Resetta il client Supabase (utile per riconnessione)
+ */
+function resetSupabaseClient() {
+    _supabaseClientInstance = null;
+    console.log('✓ Client Supabase resettato');
 }
 
 /**
@@ -73,7 +102,8 @@ function getDbConfigInfo() {
         keyLength: key ? key.length : 0,
         timestamp: timestamp ? new Date(timestamp).toLocaleString('it-IT') : null,
         table: tabellaSelezionata,
-        daysSinceConfig: timestamp ? Math.floor((new Date() - new Date(timestamp)) / (1000 * 60 * 60 * 24)) : null
+        daysSinceConfig: timestamp ? Math.floor((new Date() - new Date(timestamp)) / (1000 * 60 * 60 * 24)) : null,
+        clientInstance: _supabaseClientInstance ? 'Creata' : 'Non creata'
     };
 }
 
@@ -92,54 +122,31 @@ async function testDbConnection() {
     try {
         const client = getSupabaseClient();
         
-        // Prova con tabelle comuni
-        const tabelleProva = ['Parco_app', 'manutentori', 'information_schema.tables'];
-        let connessioneRiuscita = false;
-        let tabellaTrovata = null;
+        // Usa una query semplice e veloce
+        const { data, error } = await client
+            .from('tecnici')
+            .select('count', { count: 'exact', head: true });
         
-        for (const tabellaProva of tabelleProva) {
-            try {
-                if (tabellaProva === 'information_schema.tables') {
-                    const { error } = await client
-                        .from('information_schema.tables')
-                        .select('table_name')
-                        .eq('table_schema', 'public')
-                        .limit(1);
-                    
-                    if (!error) {
-                        connessioneRiuscita = true;
-                        tabellaTrovata = 'information_schema';
-                        break;
-                    }
-                } else {
-                    const { error } = await client
-                        .from(tabellaProva)
-                        .select('*')
-                        .limit(1);
-                    
-                    if (!error || (error && error.code !== '42P01')) {
-                        connessioneRiuscita = true;
-                        tabellaTrovata = tabellaProva;
-                        break;
-                    }
-                }
-            } catch (e) {
-                continue;
-            }
-        }
-        
-        if (connessioneRiuscita) {
+        if (error) {
+            // Prova con una query più semplice
+            const { error: simpleError } = await client
+                .from('tecnici')
+                .select('id')
+                .limit(1);
+            
+            if (simpleError) throw simpleError;
+            
             return {
                 success: true,
-                message: `Connesso a ${tabellaTrovata || 'Supabase'}`,
-                timestamp: new Date().toISOString()
-            };
-        } else {
-            return {
-                success: false,
-                error: 'Impossibile stabilire connessione con le tabelle di prova'
+                message: 'Connesso a Supabase (query semplice)'
             };
         }
+        
+        return {
+            success: true,
+            message: `Connesso a Supabase (${data || 'OK'})`,
+            count: data
+        };
         
     } catch (error) {
         console.error('Test connessione fallito:', error);
@@ -150,13 +157,18 @@ async function testDbConnection() {
         } else if (error.message.includes('fetch')) {
             messaggioErrore = 'URL non raggiungibile';
         } else if (error.code === '42501') {
-            messaggioErrore = 'Permessi insufficienti';
+            messaggioErrore = 'Permessi insufficienti (RLS)';
+        } else if (error.code === '42P01') {
+            messaggioErrore = 'Tabella non trovata';
+        } else if (error.code === 'PGRST116') {
+            messaggioErrore = 'Tabella non esiste nello schema';
         }
         
         return {
             success: false,
             error: messaggioErrore,
-            details: error.message
+            details: error.message,
+            code: error.code
         };
     }
 }
@@ -171,6 +183,9 @@ function resetDbConfig() {
     localStorage.removeItem('config_timestamp');
     localStorage.removeItem('sync_tabella');
     localStorage.removeItem('sync_timestamp');
+    
+    // Resetta anche il client
+    resetSupabaseClient();
     
     console.log('Configurazione database resettata');
 }
@@ -194,6 +209,9 @@ function saveDbConfig(url, key) {
     localStorage.setItem('supabase_key', key);
     localStorage.setItem('config_caricata', 'true');
     localStorage.setItem('config_timestamp', new Date().toISOString());
+    
+    // Resetta il client quando cambia la configurazione
+    resetSupabaseClient();
     
     console.log('Configurazione database salvata:', url.substring(0, 30) + '...');
     return true;
@@ -261,29 +279,57 @@ function importDbConfig(content) {
 }
 
 // ==============================================================
-// ESEMPIO DI USO:
-/*
-// 1. Controlla se configurato
-if (hasDbConfig()) {
-    console.log('Database configurato');
-    
-    // 2. Ottieni client
-    const supabase = getSupabaseClient();
-    
-    // 3. Usa normalmente
-    const { data, error } = await supabase
-        .from('Parco_app')
-        .select('*');
-} else {
-    console.log('Database non configurato');
-    
-    // 4. Ottieni info
-    const info = getDbConfigInfo();
-    console.log(info);
-    
-    // 5. Test connessione (se configurato)
-    const test = await testDbConnection();
-    console.log(test);
-}
-*/
+// FUNZIONI AGGIUNTIVE PER MIGLIORARE LE PERFORMANCE
 // ==============================================================
+
+/**
+ * Ottiene tutti i tecnici (con caching opzionale)
+ * @param {boolean} useCache - Usa cache locale se disponibile
+ * @returns {Promise<Array>} Lista di tecnici
+ */
+async function getTecnici(useCache = true) {
+    const CACHE_KEY = 'tecnici_cache';
+    const CACHE_TIMESTAMP = 'tecnici_cache_timestamp';
+    const CACHE_DURATION = 5 * 60 * 1000; // 5 minuti
+    
+    // Controlla cache se richiesto
+    if (useCache) {
+        const cached = localStorage.getItem(CACHE_KEY);
+        const timestamp = localStorage.getItem(CACHE_TIMESTAMP);
+        
+        if (cached && timestamp) {
+            const age = Date.now() - parseInt(timestamp);
+            if (age < CACHE_DURATION) {
+                console.log('✓ Tecnici caricati dalla cache');
+                return JSON.parse(cached);
+            }
+        }
+    }
+    
+    // Carica dal database
+    const client = getSupabaseClient();
+    const { data, error } = await client
+        .from('tecnici')
+        .select('id, nome_completo, ruolo, pin')
+        .order('nome_completo', { ascending: true });
+    
+    if (error) throw error;
+    
+    // Salva in cache
+    if (data && useCache) {
+        localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+        localStorage.setItem(CACHE_TIMESTAMP, Date.now().toString());
+        console.log('✓ Tecnici salvati in cache');
+    }
+    
+    return data || [];
+}
+
+/**
+ * Pulisce la cache dei tecnici
+ */
+function clearTecniciCache() {
+    localStorage.removeItem('tecnici_cache');
+    localStorage.removeItem('tecnici_cache_timestamp');
+    console.log('✓ Cache tecnici pulita');
+}

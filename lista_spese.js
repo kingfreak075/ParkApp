@@ -1,206 +1,402 @@
-// ✅ SOSTITUIRE CON QUESTO:
-// 1. Controllo configurazione
-if (!hasDbConfig()) {
-    showDbConfigOverlay();
-    throw new Error('Configurazione database mancante');
-}
+// ================================
+// FUNZIONI PER LA PAGINA LISTA SPESE
+// ================================
 
-// 2. Ottenere client
-let supabaseClient;
-try {
-    supabaseClient = getSupabaseClient();
-} catch (error) {
-    console.error('Errore creazione client:', error);
-    mostraErroreDB(error.message);
-}
+// NOTA: chartInstance e tutteSpese sono dichiarati nell'HTML
 
-// 3. Funzione errore DB
-function mostraErroreDB(messaggio) {
-    console.error('Errore DB:', messaggio);
-    
-    // Mostra messaggio nella pagina
-    const listaDiv = document.getElementById('lista-manutenzioni');
-    if (listaDiv) {
-        listaDiv.innerHTML = `
-            <div style="text-align: center; padding: 40px 20px; color: #ef4444;">
-                <span class="material-symbols-rounded" style="font-size: 3rem; margin-bottom: 20px;">error</span>
-                <h3 style="margin-bottom: 10px;">Errore Database</h3>
-                <p>${messaggio}</p>
-                <button onclick="window.location.href='config.html'" 
-                        style="margin-top: 20px; padding: 10px 20px; background: #ef4444; color: white; border: none; border-radius: 8px; font-weight: 600;">
-                    Configura Database
-                </button>
-            </div>
-        `;
-    }
-    
-    // Disabilita filtro periodicità se presente
-    const filtroDiv = document.querySelector('.filtro-btn');
-    if (filtroDiv) {
-        filtroDiv.style.opacity = '0.5';
-        filtroDiv.style.pointerEvents = 'none';
-    }
-}
-
-// Carica dati spese
+// CARICA DATI E FILTRI
 async function caricaDati() {
-    mostraLoading();
-    
     try {
+        mostraLoading();
+        
+        const supabase = getSupabaseClient();
+        if (!supabase) {
+            throw new Error('Database non configurato');
+        }
+
         const tecnico = localStorage.getItem('tecnico_loggato');
         if (!tecnico) {
-            window.location.href = 'index.html';
-            return;
+            throw new Error('Nessun tecnico loggato');
         }
-        
-        // Costruisci query con filtri
-        let query = supabaseClient
+
+        // ✅ USARE I NOMI CORRETTI DELLE COLONNE DAL DATABASE
+        let query = supabase
             .from('note_spese')
             .select('*')
             .eq('tecnico', tecnico)
-            .order('data', { ascending: false });
-        
-        // Applica filtri
-        const anno = document.getElementById('filtro-anno').value;
-        const mese = document.getElementById('filtro-mese').value;
-        const tipo = document.getElementById('filtro-tipo').value;
-        const localita = document.getElementById('filtro-localita').value;
-        
-        if (anno) query = query.eq('anno', parseInt(anno));
-        if (mese) query = query.eq('mese', parseInt(mese));
-        if (localita) query = query.eq('localita', localita);
-        
+            .order('data', { ascending: false }); // Usa 'data' non 'data_spesa'
+
+        const filtroAnno = document.getElementById('filtro-anno').value;
+        const filtroMese = document.getElementById('filtro-mese').value;
+        const filtroTipo = document.getElementById('filtro-tipo').value;
+        const filtroLocalita = document.getElementById('filtro-localita').value;
+
+        if (filtroAnno) {
+            query = query.gte('data', `${filtroAnno}-01-01`)
+                         .lte('data', `${filtroAnno}-12-31`);
+        }
+
+        if (filtroMese && filtroAnno) {
+            const meseFormattato = filtroMese.padStart(2, '0');
+            query = query.gte('data', `${filtroAnno}-${meseFormattato}-01`)
+                         .lte('data', `${filtroAnno}-${meseFormattato}-31`);
+        }
+
+        if (filtroTipo) {
+            if (filtroTipo === 'vitto') {
+                // ✅ CORREGGERE I NOMI DELLE COLONNE
+                query = query.or('pasti.gt.0,pernottamenti.gt.0,mezzi_trasp.gt.0,altre_spese.gt.0');
+            } else if (filtroTipo === 'auto') {
+                query = query.or('km_auto_propria.gt.0,ped_autostrad.gt.0,parcheggi.gt.0,lavaggio.gt.0,carbur_lubrif.gt.0');
+            }
+        }
+
+        if (filtroLocalita) {
+            if (filtroLocalita === 'In Sede') {
+                // Verifica se esiste la colonna 'fuori_sede' o usa 'localita'
+                query = query.eq('localita', 'In Sede');
+            } else if (filtroLocalita === 'Fuori Sede') {
+                query = query.neq('localita', 'In Sede');
+            }
+        }
+
         const { data: spese, error } = await query;
-        
+
         if (error) throw error;
-        
+
         tutteSpese = spese || [];
         
-        // Aggiorna interfaccia
-        aggiornaStatistiche(spese);
-        aggiornaTabella(spese);
-        aggiornaGrafico(spese);
+        // Aggiorna UI
+        aggiornaStatistiche(tutteSpese);
+        aggiornaGrafico(tutteSpese);
+        renderListaSpese(tutteSpese);
+        
+        nascondiLoading();
         
     } catch (error) {
         console.error('Errore caricamento spese:', error);
-        alert('Errore durante il caricamento delle spese: ' + error.message);
-    } finally {
+        mostraNotifica('error', 'Errore nel caricamento delle spese');
         nascondiLoading();
     }
 }
 
-// Aggiorna statistiche
+// AGGIORNA STATISTICHE
 function aggiornaStatistiche(spese) {
-    if (!spese || spese.length === 0) {
-        document.getElementById('stat-totale').textContent = '€0.00';
-        document.getElementById('stat-vitto').textContent = '€0.00';
-        document.getElementById('stat-auto').textContent = '€0.00';
-        document.getElementById('stat-media').textContent = '€0.00';
-        document.getElementById('stat-numero-spese').textContent = '0 spese';
-        document.getElementById('stat-dettaglio-vitto').textContent = '0 pasti • 0 pernottamenti';
-        document.getElementById('stat-dettaglio-auto').textContent = '0 km • €0 carburante';
-        document.getElementById('stat-giorni').textContent = '0 giorni lavorativi';
-        return;
-    }
-    
-    // Calcola totali
-    let totaleGenerale = 0;
+    let totale = 0;
     let totaleVitto = 0;
     let totaleAuto = 0;
-    let totalePasti = 0;
-    let totalePernottamenti = 0;
-    let totaleKm = 0;
-    let totaleCarburante = 0;
-    let giorniUnici = new Set();
+    let numeroSpese = spese.length;
+    let numeroVitto = 0;
+    let numeroAuto = 0;
+    
+    // Calcola giorni lavorativi unici
+    const giorniUnici = new Set();
     
     spese.forEach(spesa => {
-        totaleGenerale += parseFloat(spesa.totale_generale) || 0;
-totaleVitto += parseFloat(spesa.totale_vitto) || 0;
-totaleAuto += parseFloat(spesa.totale_auto) || 0;
-        totalePasti += parseFloat(spesa.pasti) || 0;
-        totalePernottamenti += parseFloat(spesa.pernottamenti) || 0;
-        totaleKm += parseFloat(spesa.km_auto_propria) || 0;
-        totaleCarburante += parseFloat(spesa.carbur_lubrif) || 0;
-        giorniUnici.add(spesa.data);
+        // ✅ GESTIRE DATI MANCANTI O NULL
+        if (!spesa.data) {
+            console.warn('Data mancante per spesa:', spesa.id);
+            return; // Salta questa spesa
+        }
+        
+        try {
+            const data = new Date(spesa.data);
+            if (isNaN(data.getTime())) {
+                console.warn('Data non valida per spesa:', spesa.id, spesa.data);
+                return; // Salta questa spesa
+            }
+            
+            const giornoKey = data.toISOString().split('T')[0];
+            giorniUnici.add(giornoKey);
+            
+            // ✅ USARE I NOMI CORRETTI DELLE COLONNE
+            const vitto = (parseFloat(spesa.pasti) || 0) + 
+                         (parseFloat(spesa.pernottamenti) || 0) +
+                         (parseFloat(spesa.mezzi_trasp) || 0) + // Nota: mezzi_trasp non mezzi_trasporto
+                         (parseFloat(spesa.altre_spese) || 0);
+            
+            const auto = (parseFloat(spesa.km_auto_propria) || 0) + // Nota: km_auto_propria non km_auto
+                        (parseFloat(spesa.ped_autostrad) || 0) +   // Nota: ped_autostrad non pedaggi
+                        (parseFloat(spesa.parcheggi) || 0) +
+                        (parseFloat(spesa.lavaggio) || 0) +
+                        (parseFloat(spesa.carbur_lubrif) || 0); // Nota: carbur_lubrif non carburante
+            
+            totaleVitto += vitto;
+            totaleAuto += auto;
+            totale += vitto + auto;
+            
+            if (vitto > 0) numeroVitto++;
+            if (auto > 0) numeroAuto++;
+            
+        } catch (error) {
+            console.error('Errore elaborazione spesa:', spesa.id, error);
+        }
     });
     
-    // Calcola media giornaliera
-    const mediaGiornaliera = giorniUnici.size > 0 ? totaleGenerale / giorniUnici.size : 0;
+    const giorniLavorativi = giorniUnici.size;
+    const mediaGiornaliera = giorniLavorativi > 0 ? totale / giorniLavorativi : 0;
     
-    // Aggiorna UI
-    document.getElementById('stat-totale').textContent = formattaEuro(totaleGenerale);
-    document.getElementById('stat-vitto').textContent = formattaEuro(totaleVitto);
-    document.getElementById('stat-auto').textContent = formattaEuro(totaleAuto);
-    document.getElementById('stat-media').textContent = formattaEuro(mediaGiornaliera);
+    // Aggiorna elementi
+    aggiornaElementoSeEsiste('stat-totale', formattaEuro(totale));
+    aggiornaElementoSeEsiste('stat-totale-mobile', formattaEuro(totale));
+    aggiornaElementoSeEsiste('stat-numero-spese', `${numeroSpese} spese`);
     
-    document.getElementById('stat-numero-spese').textContent = `${spese.length} spese`;
-    document.getElementById('stat-dettaglio-vitto').textContent = 
-        `${totalePasti} pasti • ${totalePernottamenti} pernottamenti`;
-    document.getElementById('stat-dettaglio-auto').textContent = 
-        `${totaleKm} km • ${formattaEuro(totaleCarburante)} carburante`;
-    document.getElementById('stat-giorni').textContent = `${giorniUnici.size} giorni lavorativi`;
+    aggiornaElementoSeEsiste('stat-vitto', formattaEuro(totaleVitto));
+    aggiornaElementoSeEsiste('stat-dettaglio-vitto', `${numeroVitto} spese vitto`);
+    
+    aggiornaElementoSeEsiste('stat-auto', formattaEuro(totaleAuto));
+    aggiornaElementoSeEsiste('stat-dettaglio-auto', `${numeroAuto} spese auto`);
+    
+    aggiornaElementoSeEsiste('stat-media', formattaEuro(mediaGiornaliera));
+    aggiornaElementoSeEsiste('stat-giorni', `${giorniLavorativi} giorni lavorativi`);
+    
+    aggiornaElementoSeEsiste('counter-spese', `${numeroSpese} spese`);
+    
+    // Aggiorna statistiche mobile
+    if (typeof renderStatsMobile === 'function') {
+        renderStatsMobile({
+            totale,
+            numero_spese: numeroSpese,
+            totale_vitto: totaleVitto,
+            numero_vitto: numeroVitto,
+            totale_auto: totaleAuto,
+            numero_auto: numeroAuto,
+            media_giornaliera: mediaGiornaliera,
+            giorni_lavorativi: giorniLavorativi
+        });
+    }
 }
 
-// Aggiorna tabella
-function aggiornaTabella(spese) {
-    const tbody = document.getElementById('tabella-body');
-    const emptyState = document.getElementById('empty-state');
-    const tabella = document.getElementById('tabella-spese');
-    const counter = document.getElementById('counter-spese');
+// FUNZIONE AUSILIARIA: aggiorna solo se l'elemento esiste
+function aggiornaElementoSeEsiste(id, valore) {
+    const elemento = document.getElementById(id);
+    if (elemento) {
+        elemento.textContent = valore;
+    }
+}
+
+// RENDER LISTA SPESE (adattato per entrambe le visualizzazioni)
+function renderListaSpese(spese) {
+    // Render card per mobile (sempre)
+    if (typeof renderCardSpese === 'function') {
+        renderCardSpese(spese);
+    }
     
-    counter.textContent = `${spese.length} spese`;
+    // Se esiste ancora la tabella desktop (per compatibilità)
+    const tabellaBody = document.getElementById('tabellaBodyDesktop');
+    if (tabellaBody && typeof renderTabellaDesktop === 'function') {
+        renderTabellaDesktop(spese);
+    }
     
-    if (!spese || spese.length === 0) {
-        emptyState.style.display = 'block';
-        tabella.style.display = 'none';
-        tbody.innerHTML = '';
+    // Mostra/nascondi stato vuoto
+    const statoVuoto = document.getElementById('statoVuoto');
+    const containerCard = document.getElementById('containerCardSpese');
+    
+    if (spese.length === 0) {
+        if (statoVuoto) statoVuoto.style.display = 'block';
+        if (containerCard) containerCard.innerHTML = '';
+    } else {
+        if (statoVuoto) statoVuoto.style.display = 'none';
+    }
+}
+
+// RENDER CARD SPESE (versione aggiornata)
+function renderCardSpese(spese) {
+    const container = document.getElementById('containerCardSpese');
+    const statoVuoto = document.getElementById('statoVuoto');
+    
+    container.innerHTML = '';
+    
+    if (spese.length === 0) {
+        if (statoVuoto) statoVuoto.style.display = 'block';
         return;
     }
     
-    emptyState.style.display = 'none';
-    tabella.style.display = 'table';
+    if (statoVuoto) statoVuoto.style.display = 'none';
+    
+    spese.forEach(spesa => {
+        const card = document.createElement('div');
+        card.className = 'spesa-card';
+        
+        // Usa i totali già calcolati dal database
+        const totaleVitto = parseFloat(spesa.totale_vitto) || 0;
+        const totaleAuto = parseFloat(spesa.totale_auto) || 0;
+        const totale = parseFloat(spesa.totale_generale) || 0;
+        
+        // Gestisci array foto
+        const fotoUrls = spesa.foto_url || [];
+        const hasFoto = Array.isArray(fotoUrls) ? fotoUrls.length > 0 : false;
+        const fotoUrlsArray = Array.isArray(fotoUrls) ? fotoUrls : (fotoUrls ? [fotoUrls] : []);
+        
+        card.innerHTML = `
+            <div class="spesa-header">
+                <div>
+                    <div class="spesa-data">${formattaData(spesa.data)}</div>
+                    <span class="spesa-localita">${spesa.localita || 'In Sede'}</span>
+                </div>
+                <div style="font-size: 0.7rem; color: var(--text-muted);">
+                    ${spesa.tecnico || ''}
+                </div>
+            </div>
+            
+            <div class="spesa-dettagli">
+                <div class="dettaglio-item">
+                    <span class="dettaglio-label">Vitto/Trasporto</span>
+                    <span class="dettaglio-valore">${formattaEuro(totaleVitto)}</span>
+                </div>
+                <div class="dettaglio-item">
+                    <span class="dettaglio-label">Spese Auto</span>
+                    <span class="dettaglio-valore">${formattaEuro(totaleAuto)}</span>
+                </div>
+                <div class="dettaglio-item" style="grid-column: 1 / -1;">
+                    <span class="dettaglio-label">TOTALE</span>
+                    <span class="dettaglio-valore" style="color: var(--primary); font-size: 1.1rem;">
+                        ${formattaEuro(totale)}
+                    </span>
+                </div>
+            </div>
+            
+            ${spesa.note ? `
+            <div class="spesa-note">
+                <strong>Note:</strong> ${spesa.note}
+            </div>
+            ` : ''}
+            
+            <div class="spesa-footer">
+                <div class="icona-foto-container">
+                    ${hasFoto ? `
+                    <button class="btn-foto" onclick="apriPopupFoto(${JSON.stringify(fotoUrlsArray).replace(/"/g, '&quot;')})">
+                        <span class="material-symbols-rounded">photo_camera</span>
+                        Foto
+                        ${fotoUrlsArray.length > 1 ? `<span class="contatore-foto">${fotoUrlsArray.length}</span>` : ''}
+                    </button>
+                    ` : ''}
+                </div>
+                <div class="spesa-azioni">
+                    <button class="btn-icon-mobile elimina" onclick="eliminaSpesa('${spesa.id}')" title="Elimina spesa">
+                        <span class="material-symbols-rounded">delete</span>
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        container.appendChild(card);
+    });
+}
+
+
+// FUNZIONI PER IL POPUP FOTO (aggiunte nuove)
+function apriPopupFoto(urls) {
+    if (!urls || urls.length === 0) return;
+    
+    // Se urls è una stringa, converti in array
+    const fotoUrls = Array.isArray(urls) ? urls : [urls];
+    if (fotoUrls.length === 0) return;
+    
+    // Salva nelle variabili globali (dichiarate nell'HTML)
+    window.fotoUrls = fotoUrls;
+    window.fotoCorrente = 0;
+    
+    // Trova gli elementi del popup
+    const popup = document.getElementById('popupFoto');
+    const img = document.getElementById('popupFotoImg');
+    const contatore = document.getElementById('popupContatore');
+    
+    if (!popup || !img || !contatore) {
+        console.error('Elementi popup non trovati');
+        return;
+    }
+    
+    // Carica la prima immagine
+    img.src = fotoUrls[0];
+    contatore.textContent = `1/${fotoUrls.length}`;
+    
+    // Mostra popup
+    popup.style.display = 'flex';
+    document.body.classList.add('body-no-scroll');
+}
+
+// Queste funzioni sono richiamate dall'HTML
+function fotoPrecedente() {
+    if (!window.fotoUrls || window.fotoUrls.length <= 1) return;
+    
+    window.fotoCorrente = (window.fotoCorrente - 1 + window.fotoUrls.length) % window.fotoUrls.length;
+    aggiornaPopupFoto();
+}
+
+function fotoSuccessiva() {
+    if (!window.fotoUrls || window.fotoUrls.length <= 1) return;
+    
+    window.fotoCorrente = (window.fotoCorrente + 1) % window.fotoUrls.length;
+    aggiornaPopupFoto();
+}
+
+function aggiornaPopupFoto() {
+    const img = document.getElementById('popupFotoImg');
+    const contatore = document.getElementById('popupContatore');
+    
+    if (img && contatore && window.fotoUrls && window.fotoUrls[window.fotoCorrente]) {
+        img.src = window.fotoUrls[window.fotoCorrente];
+        contatore.textContent = `${window.fotoCorrente + 1}/${window.fotoUrls.length}`;
+    }
+}
+
+function chiudiPopupFoto() {
+    const popup = document.getElementById('popupFoto');
+    if (popup) {
+        popup.style.display = 'none';
+        document.body.classList.remove('body-no-scroll');
+        window.fotoUrls = [];
+        window.fotoCorrente = 0;
+    }
+}
+
+// RENDER TABELLA DESKTOP
+function renderTabellaDesktop(spese) {
+    const tbody = document.getElementById('tabellaBodyDesktop');
+    if (!tbody) return;
+    
     tbody.innerHTML = '';
     
-    spese.forEach((spesa, index) => {
+    spese.forEach(spesa => {
+        const totaleVitto = parseFloat(spesa.totale_vitto) || 0;
+        const totaleAuto = parseFloat(spesa.totale_auto) || 0;
+        const totale = parseFloat(spesa.totale_generale) || 0;
+        
+        const dataSpesa = spesa.data ? formattaData(spesa.data) : 'Data non valida';
+        const localita = spesa.localita || 'In Sede';
+        const fotoUrls = spesa.foto_url || [];
+        const hasFoto = Array.isArray(fotoUrls) ? fotoUrls.length > 0 : false;
+        
         const row = document.createElement('tr');
-        
-        // Determina tipo spesa
-        const tipo = parseFloat(spesa.totale_vitto) > parseFloat(spesa.totale_auto) ? 'vitto' : 'auto';
-        const badge = tipo === 'vitto' ? 
-            '<span class="badge badge-vitto">Vitto</span>' : 
-            '<span class="badge badge-auto">Auto</span>';
-        
-        // Foto preview
-        let fotoHTML = '<div class="foto-cell">';
-        if (spesa.foto_url && spesa.foto_url.length > 0) {
-            spesa.foto_url.slice(0, 3).forEach((url, i) => {
-                fotoHTML += `
-                    <div class="foto-thumb" onclick="apriModaleFoto(${JSON.stringify(spesa.foto_url)}, 'Foto - ${formattaData(spesa.data)}')">
-                        <img src="${url}" alt="Foto ${i+1}">
-                        ${i === 2 && spesa.foto_url.length > 3 ? `<div style="position:absolute;bottom:0;background:rgba(0,0,0,0.7);color:white;font-size:10px;width:100%;text-align:center;">+${spesa.foto_url.length - 3}</div>` : ''}
-                    </div>
-                `;
-            });
-        } else {
-            fotoHTML += '<span style="color:#94a3b8;">Nessuna foto</span>';
-        }
-        fotoHTML += '</div>';
-        
         row.innerHTML = `
-            <td><strong>${formattaData(spesa.data)}</strong></td>
-            <td>${spesa.localita || 'N/D'}</td>
-            <td>${badge}</td>
-            <td>${formattaEuro(spesa.totale_vitto)}</td>
-            <td>${formattaEuro(spesa.totale_auto)}</td>
-            <td><strong style="color: var(--primary);">${formattaEuro(spesa.totale_generale)}</strong></td>
-            <td>${fotoHTML}</td>
-            <td>
-                <button onclick="dettaglioSpesa(${index})" class="btn-secondary" style="padding: 5px 10px; font-size: 0.8rem;">
-                    <span class="material-symbols-rounded" style="font-size: 16px;">visibility</span>
-                </button>
-                <button onclick="eliminaSpesa('${spesa.id}')" class="btn-danger" style="padding: 5px 10px; font-size: 0.8rem;">
-                    <span class="material-symbols-rounded" style="font-size: 16px;">delete</span>
-                </button>
+            <td style="padding: 0.875rem 1rem;">${dataSpesa}</td>
+            <td style="padding: 0.875rem 1rem;">${localita}</td>
+            <td style="padding: 0.875rem 1rem;">
+                <span class="badge-tipo ${totaleVitto > totaleAuto ? 'badge-vitto' : 'badge-auto'}" 
+                      style="display: inline-block; padding: 0.25rem 0.5rem; font-size: 0.7rem;">
+                    ${totaleVitto > totaleAuto ? 'Vitto' : 'Auto'}
+                </span>
+            </td>
+            <td style="padding: 0.875rem 1rem;">${formattaEuro(totaleVitto)}</td>
+            <td style="padding: 0.875rem 1rem;">${formattaEuro(totaleAuto)}</td>
+            <td style="padding: 0.875rem 1rem; font-weight: 800; color: var(--primary);">
+                ${formattaEuro(totale)}
+            </td>
+            <td style="padding: 0.875rem 1rem;">
+                ${hasFoto ? 
+                    `<div class="foto-thumb" onclick="apriPopupFoto(${JSON.stringify(fotoUrls).replace(/"/g, '&quot;')})" style="width: 32px; height: 32px; border-radius: 6px; overflow: hidden; cursor: pointer;">
+                        <img src="${fotoUrls[0]}" alt="Ricevuta" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>` 
+                    : 'No foto'}
+            </td>
+            <td style="padding: 0.875rem 1rem;">
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn-icon-mobile elimina" onclick="eliminaSpesa('${spesa.id}')" 
+                            style="background: #fee2e2; color: #ef4444;">
+                        <span class="material-symbols-rounded" style="font-size: 1rem;">delete</span>
+                    </button>
+                </div>
             </td>
         `;
         
@@ -208,89 +404,91 @@ function aggiornaTabella(spese) {
     });
 }
 
-// Aggiorna grafico
+// AGGIORNA GRAFICO
 function aggiornaGrafico(spese) {
-    const ctx = document.getElementById('graficoSpese').getContext('2d');
+    const ctx = document.getElementById('graficoSpese');
+    if (!ctx) return;
     
-    // Distruggi grafico esistente
-    if (chartInstance) {
-        chartInstance.destroy();
-    }
+    // Calcola dati per grafico
+    const datiMensili = {};
+    const tipi = ['Vitto/Trasporto', 'Auto'];
+    const colori = ['#22c55e', '#ef4444'];
     
-    if (!spese || spese.length === 0) {
-        // Grafico vuoto
-        chartInstance = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['Nessun dato'],
-                datasets: [{
-                    label: 'Spese',
-                    data: [0],
-                    backgroundColor: '#e2e8f0'
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { display: false },
-                    title: {
-                        display: true,
-                        text: 'Nessuna spesa disponibile per il periodo selezionato'
-                    }
-                }
-            }
-        });
-        return;
-    }
-    
-    // Raggruppa per mese
-    const spesePerMese = {};
     spese.forEach(spesa => {
-        const chiave = `${spesa.mese}/${spesa.anno}`;
-        if (!spesePerMese[chiave]) {
-            spesePerMese[chiave] = {
-                vitto: 0,
-                auto: 0,
-                totale: 0
-            };
+        if (!spesa.data) return;
+        
+        try {
+            const data = new Date(spesa.data);
+            if (isNaN(data.getTime())) return;
+            
+            const meseAnno = `${data.getFullYear()}-${(data.getMonth() + 1).toString().padStart(2, '0')}`;
+            
+            if (!datiMensili[meseAnno]) {
+                datiMensili[meseAnno] = [0, 0];
+            }
+            
+            // ✅ USARE I NOMI CORRETTI DELLE COLONNE
+            const vitto = (parseFloat(spesa.pasti) || 0) + 
+                         (parseFloat(spesa.pernottamenti) || 0) +
+                         (parseFloat(spesa.mezzi_trasp) || 0) +
+                         (parseFloat(spesa.altre_spese) || 0);
+            
+            const auto = (parseFloat(spesa.km_auto_propria) || 0) +
+                        (parseFloat(spesa.ped_autostrad) || 0) +
+                        (parseFloat(spesa.parcheggi) || 0) +
+                        (parseFloat(spesa.lavaggio) || 0) +
+                        (parseFloat(spesa.carbur_lubrif) || 0);
+            
+            datiMensili[meseAnno][0] += vitto;
+            datiMensili[meseAnno][1] += auto;
+            
+        } catch (error) {
+            console.error('Errore elaborazione dati grafico:', error);
         }
-        spesePerMese[chiave].vitto += parseFloat(spesa.totale_vitto) || 0;
-        spesePerMese[chiave].auto += parseFloat(spesa.totale_auto) || 0;
-        spesePerMese[chiave].totale += parseFloat(spesa.totale_generale) || 0;
     });
     
-    const mesi = Object.keys(spesePerMese);
-    const datiVitto = mesi.map(mese => spesePerMese[mese].vitto);
-    const datiAuto = mesi.map(mese => spesePerMese[mese].auto);
+    // Ordina per data
+    const mesiOrdinati = Object.keys(datiMensili).sort();
+    const labels = mesiOrdinati.map(mese => {
+        const [anno, meseNum] = mese.split('-');
+        const nomiMesi = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+        return `${nomiMesi[parseInt(meseNum) - 1]} ${anno}`;
+    });
     
-    chartInstance = new Chart(ctx, {
+    const datasets = tipi.map((tipo, index) => ({
+        label: tipo,
+        data: mesiOrdinati.map(mese => datiMensili[mese][index]),
+        backgroundColor: colori[index] + '80',
+        borderColor: colori[index],
+        borderWidth: 2,
+        borderRadius: 6
+    }));
+    
+    // Distruggi grafico esistente
+    if (window.chartInstance) {
+        window.chartInstance.destroy();
+    }
+    
+    // Crea nuovo grafico
+    window.chartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: mesi,
-            datasets: [
-                {
-                    label: 'Vitto/Trasporto',
-                    data: datiVitto,
-                    backgroundColor: '#22c55e',
-                    borderColor: '#16a34a',
-                    borderWidth: 1
-                },
-                {
-                    label: 'Auto',
-                    data: datiAuto,
-                    backgroundColor: '#ef4444',
-                    borderColor: '#dc2626',
-                    borderWidth: 1
-                }
-            ]
+            labels,
+            datasets
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
-                title: {
-                    display: true,
-                    text: 'Distribuzione Spese per Mese',
-                    font: { size: 16, weight: 'bold' }
+                legend: {
+                    position: 'top',
+                    labels: {
+                        font: {
+                            family: 'Inter',
+                            size: 12,
+                            weight: '600'
+                        }
+                    }
                 },
                 tooltip: {
                     callbacks: {
@@ -301,18 +499,32 @@ function aggiornaGrafico(spese) {
                 }
             },
             scales: {
-                x: {
-                    grid: { display: false }
-                },
                 y: {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return '€' + value;
+                            return '€' + value.toFixed(0);
+                        },
+                        font: {
+                            family: 'Inter',
+                            size: 11,
+                            weight: '600'
                         }
                     },
                     grid: {
-                        color: '#e2e8f0'
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        font: {
+                            family: 'Inter',
+                            size: 11,
+                            weight: '600'
+                        }
                     }
                 }
             }
@@ -320,340 +532,423 @@ function aggiornaGrafico(spese) {
     });
 }
 
-// Dettaglio spesa
-function dettaglioSpesa(index) {
-    const spesa = tutteSpese[index];
-    if (!spesa) return;
-    
-    let dettaglio = `
-        <h3 style="color: var(--primary-dark); margin-bottom: 20px;">Dettaglio Spesa - ${formattaData(spesa.data)}</h3>
-        
-        <div style="background: #f8fafc; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                <div>
-                    <div style="font-size: 0.9rem; color: #64748b; margin-bottom: 5px;">Località</div>
-                    <div style="font-weight: 700; font-size: 1.1rem;">${spesa.localita || 'N/D'}</div>
-                </div>
-                <div>
-                    <div style="font-size: 0.9rem; color: #64748b; margin-bottom: 5px;">Tipo</div>
-                    <div>
-                        ${parseFloat(spesa.totale_vitto) > 0 ? '<span class="badge badge-vitto" style="margin-right: 5px;">Vitto</span>' : ''}
-                        ${parseFloat(spesa.totale_auto) > 0 ? '<span class="badge badge-auto">Auto</span>' : ''}
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-            <!-- Vitto/Trasporto -->
-            <div style="background: #f0fdf4; padding: 15px; border-radius: 10px; border-left: 4px solid #22c55e;">
-                <div style="font-weight: 800; color: #166534; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
-                    <span class="material-symbols-rounded">restaurant</span>
-                    VITTO/TRASPORTO
-                </div>
-                <div style="font-size: 2rem; font-weight: 900; color: #166534; margin-bottom: 10px;">
-                    ${formattaEuro(spesa.totale_vitto)}
-                </div>
-                <div style="font-size: 0.9rem; color: #475569;">
-                    <div>${spesa.pasti} pasti (€${(spesa.pasti * 12).toFixed(2)})</div>
-                    <div>${spesa.pernottamenti} pernottamenti (€${(spesa.pernottamenti * 80).toFixed(2)})</div>
-                    <div>Mezzi trasporto: ${formattaEuro(spesa.mezzi_trasp)}</div>
-                    <div>Altre spese: ${formattaEuro(spesa.altre_spese)}</div>
-                </div>
-            </div>
-            
-            <!-- Auto -->
-            <div style="background: #fef2f2; padding: 15px; border-radius: 10px; border-left: 4px solid #dc2626;">
-                <div style="font-weight: 800; color: #991b1b; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
-                    <span class="material-symbols-rounded">directions_car</span>
-                    AUTO
-                </div>
-                <div style="font-size: 2rem; font-weight: 900; color: #991b1b; margin-bottom: 10px;">
-                    ${formattaEuro(spesa.totale_auto)}
-                </div>
-                <div style="font-size: 0.9rem; color: #475569;">
-                    <div>${spesa.km_auto_propria} km (€${(spesa.km_auto_propria * 0.5).toFixed(2)})</div>
-                    <div>Pedaggi: ${formattaEuro(spesa.ped_autostrad)}</div>
-                    <div>Parcheggi: ${formattaEuro(spesa.parcheggi)}</div>
-                    <div>Lavaggio: ${formattaEuro(spesa.lavaggio)}</div>
-                    <div>Carburante: ${formattaEuro(spesa.carbur_lubrif)}</div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Note -->
-        ${spesa.note ? `
-        <div style="background: #f0f9ff; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #0ea5e9;">
-            <div style="font-weight: 800; color: #0369a1; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
-                <span class="material-symbols-rounded">notes</span>
-                NOTE
-            </div>
-            <div style="color: #475569;">${spesa.note}</div>
-        </div>
-        ` : ''}
-        
-        <!-- Foto -->
-        <div style="background: #faf5ff; padding: 15px; border-radius: 10px; border-left: 4px solid #8b5cf6;">
-            <div style="font-weight: 800; color: #7c3aed; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
-                <span class="material-symbols-rounded">photo_camera</span>
-                FOTO RICEVUTE (${spesa.foto_url ? spesa.foto_url.length : 0})
-            </div>
-            ${spesa.foto_url && spesa.foto_url.length > 0 ? 
-                `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px;">
-                    ${spesa.foto_url.map(url => 
-                        `<img src="${url}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; cursor: pointer;" onclick="window.open('${url}', '_blank')">`
-                    ).join('')}
-                </div>` :
-                '<div style="color: #94a3b8; text-align: center; padding: 20px;">Nessuna foto disponibile</div>'
-            }
-        </div>
-    `;
-    
-    // Crea modale
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.style.display = 'flex';
-    modal.innerHTML = `
-        <div class="modal-content" style="max-width: 900px;">
-            <button class="modal-close" onclick="this.parentElement.parentElement.remove()">×</button>
-            ${dettaglio}
-            <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
-                <button onclick="this.parentElement.parentElement.parentElement.remove()" class="btn btn-secondary">
-                    <span class="material-symbols-rounded">close</span>
-                    Chiudi
-                </button>
-                <button onclick="window.print()" class="btn btn-primary">
-                    <span class="material-symbols-rounded">print</span>
-                    Stampa
-                </button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // Chiudi cliccando fuori
-    modal.onclick = function(e) {
-        if (e.target === this) this.remove();
-    };
-}
-
-// Elimina spesa
+// ELIMINA SPESA
 async function eliminaSpesa(id) {
-    if (!confirm('Sei sicuro di voler eliminare questa spesa?\nQuesta azione non può essere annullata.')) {
-        return;
-    }
-    
-    mostraLoading();
+    if (!confirm('Sei sicuro di voler eliminare questa spesa?')) return;
     
     try {
-        // Elimina eventuali foto dallo storage
-        const { data: spesa, error: errorSpesa } = await supabaseClient
+        mostraLoading();
+        
+        const supabase = getSupabaseClient();
+        if (!supabase) throw new Error('Database non configurato');
+        
+        // Prima elimina le foto dallo storage (se esiste)
+        const { data: spesa } = await supabase
             .from('note_spese')
             .select('foto_url')
             .eq('id', id)
             .single();
         
-        if (spesa && spesa.foto_url && spesa.foto_url.length > 0) {
-            // Estrai nomi file dagli URL
-            const fileNames = spesa.foto_url.map(url => {
-                const parts = url.split('/');
-                return parts[parts.length - 1];
-            });
-            
-            // Elimina file dallo storage
-            const { error: errorStorage } = await supabaseClient.storage
-                .from('spese')
-                .remove(fileNames);
-            
-            if (errorStorage) console.error('Errore eliminazione foto:', errorStorage);
+        if (spesa && spesa.foto_url) {
+            try {
+                const path = spesa.foto_url.split('/').pop();
+                await supabase.storage
+                    .from('ricevute_spese')
+                    .remove([path]);
+            } catch (storageError) {
+                console.warn('Errore eliminazione foto:', storageError);
+                // Continua comunque con l'eliminazione della spesa
+            }
         }
         
-        // Elimina record dal database
-        const { error } = await supabaseClient
+        // Poi elimina la spesa dal database
+        const { error } = await supabase
             .from('note_spese')
             .delete()
             .eq('id', id);
         
         if (error) throw error;
         
-        alert('Spesa eliminata con successo!');
-        await caricaDati(); // Ricarica dati
+        // Ricarica dati
+        await caricaDati();
+        mostraNotifica('success', 'Spesa eliminata con successo');
         
     } catch (error) {
-        console.error('Errore eliminazione:', error);
-        alert('Errore durante l\'eliminazione: ' + error.message);
+        console.error('Errore eliminazione spesa:', error);
+        mostraNotifica('error', 'Errore nell\'eliminazione della spesa');
     } finally {
         nascondiLoading();
     }
 }
 
-// Export PDF
+// ESPORTA PDF (aggiornata per le nuove colonne)
 async function esportaPDF() {
-    if (!tutteSpese || tutteSpese.length === 0) {
-        alert('Nessuna spesa da esportare');
-        return;
-    }
-    
-    mostraLoading();
-    
     try {
-        // Crea PDF con jsPDF
+        mostraLoading();
+        
+        if (tutteSpese.length === 0) {
+            mostraNotifica('warning', 'Nessuna spesa da esportare');
+            nascondiLoading();
+            return;
+        }
+        
+        const tecnico = localStorage.getItem('tecnico_loggato') || 'Tecnico';
+        const filtroAnno = document.getElementById('filtro-anno').value;
+        const filtroMese = document.getElementById('filtro-mese').value;
+        
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('landscape');
+        const doc = new jsPDF();
         
-        // Logo e intestazione
+        // Titolo
         doc.setFontSize(20);
-        doc.setTextColor(56, 96, 178);
-        doc.text('PARKAPP - NOTE SPESE', 20, 20);
+        doc.setTextColor(37, 99, 235);
+        doc.text('Report Spese - ParkApp', 20, 20);
         
+        // Dati tecnico e periodo
         doc.setFontSize(12);
-        doc.setTextColor(100, 116, 139);
-        doc.text(`Tecnico: ${localStorage.getItem('tecnico_loggato')}`, 20, 30);
-        doc.text(`Periodo: ${document.getElementById('filtro-anno').value || 'Tutti'} - ${document.getElementById('filtro-mese').value || 'Tutti i mesi'}`, 20, 37);
-        doc.text(`Data esportazione: ${new Date().toLocaleDateString('it-IT')}`, 20, 44);
-        
-        // Linea separatrice
-        doc.setDrawColor(56, 96, 178);
-        doc.setLineWidth(0.5);
-        doc.line(20, 48, 280, 48);
-        
-        // Intestazione tabella
-        let y = 60;
-        const headers = [['Data', 'Località', 'Vitto/Trasp.', 'Auto', 'Totale', 'Note']];
-        const columnWidths = [30, 40, 40, 40, 40, 90];
-        
-        // Stile intestazione
-        doc.setFillColor(56, 96, 178);
-        doc.setTextColor(255, 255, 255);
-        doc.setFont(undefined, 'bold');
-        
-        headers[0].forEach((header, i) => {
-            doc.rect(20 + columnWidths.slice(0, i).reduce((a, b) => a + b, 0), y - 10, columnWidths[i], 10, 'F');
-            doc.text(header, 22 + columnWidths.slice(0, i).reduce((a, b) => a + b, 0), y - 3);
-        });
-        
-        // Dati tabella
-        doc.setFont(undefined, 'normal');
         doc.setTextColor(0, 0, 0);
+        doc.text(`Tecnico: ${tecnico}`, 20, 35);
         
-        tutteSpese.forEach((spesa, index) => {
-            if (y > 180) {
-                doc.addPage();
-                y = 20;
-            }
+        let periodo = 'Tutto il periodo';
+        if (filtroAnno) {
+            periodo = filtroMese ? `Mese ${filtroMese}/${filtroAnno}` : `Anno ${filtroAnno}`;
+        }
+        doc.text(`Periodo: ${periodo}`, 20, 42);
+        
+        // Statistiche
+        let totale = 0;
+        let totaleVitto = 0;
+        let totaleAuto = 0;
+        
+        tutteSpese.forEach(spesa => {
+            const vitto = (parseFloat(spesa.pasti) || 0) + 
+                         (parseFloat(spesa.pernottamenti) || 0) +
+                         (parseFloat(spesa.mezzi_trasp) || 0) +
+                         (parseFloat(spesa.altre_spese) || 0);
             
-            const row = [
-                formattaData(spesa.data),
-                spesa.localita || '',
-                formattaEuro(spesa.totale_vitto),
-                formattaEuro(spesa.totale_auto),
-                formattaEuro(spesa.totale_generale),
-                spesa.note ? (spesa.note.length > 50 ? spesa.note.substring(0, 50) + '...' : spesa.note) : ''
-            ];
+            const auto = (parseFloat(spesa.km_auto_propria) || 0) +
+                        (parseFloat(spesa.ped_autostrad) || 0) +
+                        (parseFloat(spesa.parcheggi) || 0) +
+                        (parseFloat(spesa.lavaggio) || 0) +
+                        (parseFloat(spesa.carbur_lubrif) || 0);
             
-            row.forEach((cell, i) => {
-                doc.text(cell, 22 + columnWidths.slice(0, i).reduce((a, b) => a + b, 0), y);
-            });
-            
-            y += 8;
+            totaleVitto += vitto;
+            totaleAuto += auto;
+            totale += vitto + auto;
         });
         
-        // Totali
-        y += 10;
-        doc.setFont(undefined, 'bold');
-        doc.text('TOTALI PERIODO:', 20, y);
+        doc.setFontSize(14);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Statistiche:', 20, 55);
         
-        const totaleVitto = tutteSpese.reduce((sum, s) => sum + (parseFloat(s.totale_vitto) || 0), 0);
-        const totaleAuto = tutteSpese.reduce((sum, s) => sum + (parseFloat(s.totale_auto) || 0), 0);
-        const totaleGenerale = tutteSpese.reduce((sum, s) => sum + (parseFloat(s.totale_generale) || 0), 0);
+        doc.setFontSize(11);
+        doc.text(`Totale Spese: ${formattaEuro(totale)}`, 30, 65);
+        doc.text(`Vitto/Trasporto: ${formattaEuro(totaleVitto)}`, 30, 72);
+        doc.text(`Spese Auto: ${formattaEuro(totaleAuto)}`, 30, 79);
+        doc.text(`Numero spese: ${tutteSpese.length}`, 30, 86);
         
-        y += 8;
-        doc.text(`Vitto/Trasporto: ${formattaEuro(totaleVitto)}`, 25, y);
-        y += 6;
-        doc.text(`Auto: ${formattaEuro(totaleAuto)}`, 25, y);
-        y += 6;
-        doc.setTextColor(56, 96, 178);
-        doc.text(`TOTALE GENERALE: ${formattaEuro(totaleGenerale)}`, 25, y);
+        // Tabella spese
+        let yPos = 100;
+        
+        if (tutteSpese.length > 0) {
+            doc.setFontSize(12);
+            doc.text('Elenco Dettagliato:', 20, yPos);
+            yPos += 10;
+            
+            // Intestazione tabella
+            doc.setFillColor(37, 99, 235);
+            doc.setTextColor(255, 255, 255);
+            doc.rect(20, yPos, 170, 8, 'F');
+            
+            doc.setFontSize(10);
+            doc.text('Data', 22, yPos + 6);
+            doc.text('Località', 45, yPos + 6);
+            doc.text('Tipo', 80, yPos + 6);
+            doc.text('Vitto', 100, yPos + 6);
+            doc.text('Auto', 125, yPos + 6);
+            doc.text('Totale', 150, yPos + 6);
+            
+            yPos += 10;
+            
+            // Dati tabella
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(9);
+            
+            tutteSpese.forEach((spesa, index) => {
+                if (yPos > 280) {
+                    doc.addPage();
+                    yPos = 20;
+                }
+                
+                const vitto = (parseFloat(spesa.pasti) || 0) + 
+                             (parseFloat(spesa.pernottamenti) || 0) +
+                             (parseFloat(spesa.mezzi_trasp) || 0) +
+                             (parseFloat(spesa.altre_spese) || 0);
+                
+                const auto = (parseFloat(spesa.km_auto_propria) || 0) +
+                            (parseFloat(spesa.ped_autostrad) || 0) +
+                            (parseFloat(spesa.parcheggi) || 0) +
+                            (parseFloat(spesa.lavaggio) || 0) +
+                            (parseFloat(spesa.carbur_lubrif) || 0);
+                
+                const totaleSpesa = vitto + auto;
+                const tipo = vitto > auto ? 'Vitto' : 'Auto';
+                const localita = spesa.localita || 'In Sede';
+                const data = spesa.data ? formattaData(spesa.data) : 'Data non valida';
+                
+                doc.text(data, 22, yPos);
+                doc.text(localita, 45, yPos);
+                doc.text(tipo, 80, yPos);
+                doc.text(formattaEuro(vitto), 100, yPos);
+                doc.text(formattaEuro(auto), 125, yPos);
+                doc.text(formattaEuro(totaleSpesa), 150, yPos);
+                
+                yPos += 7;
+                
+                // Alterna colore righe
+                if (index % 2 === 0) {
+                    doc.setFillColor(240, 240, 240);
+                    doc.rect(20, yPos - 7, 170, 7, 'F');
+                }
+            });
+        }
+        
+        // Data generazione
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        const dataGenerazione = new Date().toLocaleDateString('it-IT');
+        doc.text(`Generato il: ${dataGenerazione}`, 20, 290);
         
         // Salva PDF
-        doc.save(`note_spese_${localStorage.getItem('tecnico_loggato')}_${Date.now()}.pdf`);
+        const nomeFile = `spese_${tecnico.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+        doc.save(nomeFile);
+        
+        mostraNotifica('success', 'PDF esportato con successo');
+        nascondiLoading();
         
     } catch (error) {
         console.error('Errore esportazione PDF:', error);
-        alert('Errore durante l\'esportazione PDF');
-    } finally {
+        mostraNotifica('error', 'Errore nell\'esportazione PDF');
         nascondiLoading();
     }
 }
 
-// Export Excel
+// ESPORTA EXCEL (aggiornata per le nuove colonne)
 async function esportaExcel() {
-    if (!tutteSpese || tutteSpese.length === 0) {
-        alert('Nessuna spesa da esportare');
-        return;
-    }
-    
-    mostraLoading();
-    
     try {
+        mostraLoading();
+        
+        if (tutteSpese.length === 0) {
+            mostraNotifica('warning', 'Nessuna spesa da esportare');
+            nascondiLoading();
+            return;
+        }
+        
         // Prepara dati
-        const dati = tutteSpese.map(spesa => ({
-            Data: formattaData(spesa.data),
-            Località: spesa.localita || '',
-            'Pasti (n)': spesa.pasti,
-            'Pasti (€)': (spesa.pasti * 12).toFixed(2),
-            'Pernottamenti (n)': spesa.pernottamenti,
-            'Pernottamenti (€)': (spesa.pernottamenti * 80).toFixed(2),
-            'Mezzi Trasporto (€)': parseFloat(spesa.mezzi_trasp).toFixed(2),
-            'Altre Spese (€)': parseFloat(spesa.altre_spese).toFixed(2),
-            'KM Auto': spesa.km_auto_propria,
-            'KM Auto (€)': (spesa.km_auto_propria * 0.5).toFixed(2),
-            'Pedaggi (€)': parseFloat(spesa.ped_autostrad).toFixed(2),
-            'Parcheggi (€)': parseFloat(spesa.parcheggi).toFixed(2),
-            'Lavaggio (€)': parseFloat(spesa.lavaggio).toFixed(2),
-            'Carburante (€)': parseFloat(spesa.carbur_lubrif).toFixed(2),
-            'Totale Vitto/Trasporto (€)': parseFloat(spesa.totale_vitto).toFixed(2),
-            'Totale Auto (€)': parseFloat(spesa.totale_auto).toFixed(2),
-            'Totale Generale (€)': parseFloat(spesa.totale_generale).toFixed(2),
-            Note: spesa.note || '',
-            'Numero Foto': spesa.foto_url ? spesa.foto_url.length : 0
-        }));
-        
-        // Crea worksheet
-        const ws = XLSX.utils.json_to_sheet(dati);
-        
-        // Aggiungi totali
-        const totaliVitto = tutteSpese.reduce((sum, s) => sum + (parseFloat(s.totale_vitto) || 0), 0);
-        const totaliAuto = tutteSpese.reduce((sum, s) => sum + (parseFloat(s.totale_auto) || 0), 0);
-        const totaliGenerale = tutteSpese.reduce((sum, s) => sum + (parseFloat(s.totale_generale) || 0), 0);
-        
-        const righeTotali = [
-            {},
-            {
-                Data: 'TOTALI PERIODO:',
-                'Totale Vitto/Trasporto (€)': totaliVitto.toFixed(2),
-                'Totale Auto (€)': totaliAuto.toFixed(2),
-                'Totale Generale (€)': totaliGenerale.toFixed(2)
-            }
-        ];
-        
-        XLSX.utils.sheet_add_json(ws, righeTotali, {
-            origin: -1,
-            skipHeader: true
+        const datiExcel = tutteSpese.map(spesa => {
+            const vitto = (parseFloat(spesa.pasti) || 0) + 
+                         (parseFloat(spesa.pernottamenti) || 0) +
+                         (parseFloat(spesa.mezzi_trasp) || 0) +
+                         (parseFloat(spesa.altre_spese) || 0);
+            
+            const auto = (parseFloat(spesa.km_auto_propria) || 0) +
+                        (parseFloat(spesa.ped_autostrad) || 0) +
+                        (parseFloat(spesa.parcheggi) || 0) +
+                        (parseFloat(spesa.lavaggio) || 0) +
+                        (parseFloat(spesa.carbur_lubrif) || 0);
+            
+            return {
+                'Data': spesa.data ? formattaData(spesa.data) : '',
+                'Località': spesa.localita || 'In Sede',
+                'Pasti (€)': parseFloat(spesa.pasti) || 0,
+                'Pernottamenti (€)': parseFloat(spesa.pernottamenti) || 0,
+                'Trasporto (€)': parseFloat(spesa.mezzi_trasp) || 0,
+                'Altre Spese (€)': parseFloat(spesa.altre_spese) || 0,
+                'KM Auto (€)': parseFloat(spesa.km_auto_propria) || 0,
+                'Pedaggi (€)': parseFloat(spesa.ped_autostrad) || 0,
+                'Parcheggi (€)': parseFloat(spesa.parcheggi) || 0,
+                'Lavaggio (€)': parseFloat(spesa.lavaggio) || 0,
+                'Carburante (€)': parseFloat(spesa.carbur_lubrif) || 0,
+                'Totale Vitto/Trasporto (€)': vitto,
+                'Totale Auto (€)': auto,
+                'TOTALE (€)': vitto + auto,
+                'Note': spesa.note || ''
+            };
         });
         
         // Crea workbook
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Note Spese');
+        const ws = XLSX.utils.json_to_sheet(datiExcel);
+        
+        // Stile larghezza colonne
+        const wscols = [
+            { wch: 12 }, // Data
+            { wch: 15 }, // Località
+            { wch: 10 }, // Pasti
+            { wch: 12 }, // Pernottamenti
+            { wch: 10 }, // Trasporto
+            { wch: 12 }, // Altre Spese
+            { wch: 10 }, // KM Auto
+            { wch: 10 }, // Pedaggi
+            { wch: 10 }, // Parcheggi
+            { wch: 10 }, // Lavaggio
+            { wch: 12 }, // Carburante
+            { wch: 15 }, // Totale Vitto
+            { wch: 12 }, // Totale Auto
+            { wch: 12 }, // TOTALE
+            { wch: 25 }  // Note
+        ];
+        ws['!cols'] = wscols;
+        
+        // Aggiungi foglio
+        XLSX.utils.book_append_sheet(wb, ws, 'Spese');
         
         // Salva file
-        XLSX.writeFile(wb, `note_spese_${localStorage.getItem('tecnico_loggato')}_${Date.now()}.xlsx`);
+        const tecnico = localStorage.getItem('tecnico_loggato') || 'Tecnico';
+        const nomeFile = `spese_${tecnico.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
+        XLSX.writeFile(wb, nomeFile);
+        
+        mostraNotifica('success', 'Excel esportato con successo');
+        nascondiLoading();
         
     } catch (error) {
         console.error('Errore esportazione Excel:', error);
-        alert('Errore durante l\'esportazione Excel');
-    } finally {
+        mostraNotifica('error', 'Errore nell\'esportazione Excel');
         nascondiLoading();
     }
 }
+
+// FUNZIONI UTILITY
+function formattaData(dataString) {
+    if (!dataString) return 'Data non valida';
+    
+    try {
+        const data = new Date(dataString);
+        if (isNaN(data.getTime())) return 'Data non valida';
+        
+        return data.toLocaleDateString('it-IT', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+    } catch (error) {
+        console.error('Errore formattazione data:', dataString, error);
+        return 'Data non valida';
+    }
+}
+
+function formattaEuro(valore) {
+    return '€' + parseFloat(valore).toFixed(2);
+}
+
+function mostraLoading() {
+    const loading = document.getElementById('loadingOverlay');
+    if (loading) loading.style.display = 'flex';
+}
+
+function nascondiLoading() {
+    const loading = document.getElementById('loadingOverlay');
+    if (loading) loading.style.display = 'none';
+}
+
+function mostraNotifica(tipo, messaggio) {
+    let container = document.getElementById('notifiche-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'notifiche-container';
+        container.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 90%;
+            width: 400px;
+        `;
+        document.body.appendChild(container);
+    }
+    
+    const notifica = document.createElement('div');
+    notifica.style.cssText = `
+        background: white;
+        padding: 16px 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-left: 4px solid;
+        animation: slideDown 0.3s ease-out;
+    `;
+    
+    let colore = '#2563eb';
+    let icona = 'info';
+    
+    switch (tipo) {
+        case 'success':
+            colore = '#22c55e';
+            icona = 'check_circle';
+            break;
+        case 'error':
+            colore = '#ef4444';
+            icona = 'error';
+            break;
+        case 'warning':
+            colore = '#f59e0b';
+            icona = 'warning';
+            break;
+    }
+    
+    notifica.style.borderLeftColor = colore;
+    
+    notifica.innerHTML = `
+        <span class="material-symbols-rounded" style="color: ${colore};">${icona}</span>
+        <span style="flex: 1; font-weight: 600; color: #1e293b;">${messaggio}</span>
+        <button onclick="this.parentElement.remove()" style="background: none; border: none; color: #64748b; cursor: pointer;">
+            <span class="material-symbols-rounded">close</span>
+        </button>
+    `;
+    
+    container.insertBefore(notifica, container.firstChild);
+    
+    setTimeout(() => {
+        if (notifica.parentElement) {
+            notifica.remove();
+        }
+    }, 5000);
+}
+
+// RESET FILTRI
+function resetFiltri() {
+    document.getElementById('filtro-anno').value = new Date().getFullYear();
+    document.getElementById('filtro-mese').value = '';
+    document.getElementById('filtro-tipo').value = '';
+    document.getElementById('filtro-localita').value = '';
+    caricaDati();
+}
+
+// APRI MODALE FOTO (per compatibilità con le funzioni nell'HTML)
+function apriModaleFoto(fotoUrls, titolo) {
+    // Se siamo in modalità mobile, usa la funzione mobile
+    if (window.innerWidth < 768 && typeof apriModalFotoMobile === 'function') {
+        apriModalFotoMobile(fotoUrls, titolo);
+        return;
+    }
+    
+    // Altrimenti implementazione di fallback
+    if (fotoUrls && fotoUrls.length > 0) {
+        window.open(fotoUrls[0], '_blank');
+    }
+}
+
+// Inizializzazione
+document.addEventListener('DOMContentLoaded', () => {
+    const tecnico = localStorage.getItem('tecnico_loggato');
+    const nomeTecnico = document.getElementById('tecnico-nome');
+    if (nomeTecnico && tecnico) {
+        nomeTecnico.textContent = tecnico;
+    }
+});

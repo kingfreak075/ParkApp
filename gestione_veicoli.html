@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ParkApp - Gestione Veicoli</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db-config.js"></script>
+    <script src="check-db-config.js"></script>
+    <style>
+        /* Stili principali rimangono uguali */
+        .app-container { max-width: 450px; margin: 0 auto; min-height: 100vh; position: relative; padding-bottom: 5rem; }
+        .app-header-veicoli { background: var(--white); border-bottom: 1px solid var(--border); padding: 1rem; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
+        .veicoli-tabs { display: flex; background: var(--white); border-bottom: 1px solid var(--border); overflow-x: auto; padding: 0 1rem; }
+        .veicoli-tab { flex: 1; min-width: 110px; padding: 0.875rem 1rem; background: none; border: none; border-bottom: 3px solid transparent; font-family: 'Inter', sans-serif; font-size: 0.85rem; font-weight: 700; color: var(--text-muted); cursor: pointer; white-space: nowrap; text-align: center; transition: all 0.2s; }
+        .veicoli-tab.active { color: var(--primary); border-bottom-color: var(--primary); background: linear-gradient(to bottom, rgba(37, 99, 235, 0.05), transparent); }
+        .veicoli-content { padding: 1rem; }
+        .veicoli-section { background: var(--white); border-radius: 16px; padding: 1.5rem; margin-bottom: 1rem; border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04); }
+        .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+        .section-title { font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 0.75rem; }
+        .section-title .material-symbols-rounded { font-size: 1.5rem; color: var(--primary); background: var(--primary-light); padding: 0.5rem; border-radius: 10px; }
+        .veicolo-card { background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 16px; padding: 1.5rem; margin-bottom: 1rem; border: 1px solid var(--border); position: relative; }
+        .veicolo-targa { font-size: 1.5rem; font-weight: 900; color: var(--primary); letter-spacing: 1px; background: white; padding: 0.5rem 1rem; border-radius: 10px; border: 2px solid var(--primary); display: inline-block; }
+        .veicolo-modello { font-size: 1rem; font-weight: 700; color: var(--text-main); margin-top: 0.5rem; }
+        .km-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin: 1.5rem 0; }
+        .km-stat-card { background: white; border-radius: 12px; padding: 1rem; text-align: center; border: 1px solid var(--border); }
+        .km-stat-value { font-size: 1.5rem; font-weight: 900; color: var(--primary); margin: 0.25rem 0; }
+        .km-stat-label { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .km-item { background: white; border-radius: 12px; padding: 1rem; margin-bottom: 0.75rem; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .km-item.pendente { border-left: 4px solid #f59e0b; background: #fffbeb; }
+        .km-item.confermato { border-left: 4px solid #22c55e; background: #f0fdf4; }
+        .km-valore { font-size: 1.25rem; font-weight: 900; color: var(--primary); }
+        .reminder-card { background: #fffbeb; border: 2px solid #fbbf24; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 1rem; }
+        .stato-vuoto { text-align: center; padding: 3rem 1rem; color: var(--text-muted); }
+        .stato-vuoto .material-symbols-rounded { font-size: 3rem; opacity: 0.3; margin-bottom: 1rem; }
+        .message-veicoli { display: none; padding: 1rem; border-radius: 12px; margin: 1rem 0; font-size: 0.9rem; font-weight: 600; animation: slideDown 0.3s ease-out; }
+        .message-success { background: #f0fdf4; color: #166534; border-left: 4px solid #22c55e; }
+        .message-error { background: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; }
+        .message-warning { background: #fffbeb; color: #92400e; border-left: 4px solid #f59e0b; }
+        .app-footer { background: var(--white); padding: 1rem; text-align: center; border-top: 1px solid var(--border); position: fixed; bottom: 0; left: 0; right: 0; max-width: 450px; margin: 0 auto; z-index: 100; }
+        .footer-text { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+
+
+        /* ASSICURA CHE I MODALI SIANO SOPRA TUTTO */
+.modale-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    z-index: 9999 !important;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.modale-content {
+    background: white !important;
+    border-radius: 16px !important;
+    padding: 1.5rem !important;
+    max-width: 90% !important;
+    width: 500px !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+    z-index: 10000 !important;
+    position: relative !important;
+}
+    </style>
+</head>
+<body class="bg-app">
+    <div class="app-container">
+        <!-- HEADER -->
+        <header class="app-header-veicoli">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; position: relative;">
+                <button onclick="window.location.href='menu.html'" style="background: none; border: none; padding: 0.5rem; border-radius: 10px; color: var(--primary); cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                    <span class="material-symbols-rounded" style="font-size: 1.5rem;">arrow_back</span>
+                </button>
+                <div style="flex-grow: 1;">
+                    <h1 style="font-size: 1.25rem; font-weight: 800; color: var(--primary); margin: 0;">Gestione Veicoli</h1>
+                    <p id="tecnico-veicoli" style="margin: 0; font-size: 0.85rem; color: var(--text-muted); font-weight: 600;"></p>
+                </div>
+                <div id="db-status-indicator" style="width: 10px; height: 10px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); background: #f59e0b; cursor: help; position: absolute; top: 0; right: 0;"></div>
+            </div>
+        </header>
+
+        <!-- TABS -->
+        <nav class="veicoli-tabs" id="veicoli-tabs-container">
+            <button class="veicoli-tab active" data-target="dashboard-section">
+                <span class="material-symbols-rounded" style="font-size: 1.2rem; vertical-align: middle;">dashboard</span> Dashboard
+            </button>
+            <button class="veicoli-tab" data-target="kilometri-section">
+                <span class="material-symbols-rounded" style="font-size: 1.2rem; vertical-align: middle;">speed</span> Kilometri
+            </button>
+            <button class="veicoli-tab" data-target="reminder-section">
+                <span class="material-symbols-rounded" style="font-size: 1.2rem; vertical-align: middle;">notifications</span> Reminder
+            </button>
+        </nav>
+
+        <!-- CONTENUTO PRINCIPALE -->
+        <main class="veicoli-content" id="main-content">
+            <!-- SEZIONE DASHBOARD (visibile inizialmente) -->
+            <div id="dashboard-section">
+                <!-- Veicolo Assegnato -->
+                <div class="veicoli-section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span class="material-symbols-rounded">directions_car</span> Il mio veicolo
+                        </h2>
+                    </div>
+                    <div id="veicolo-assegnato"></div>
+                </div>
+
+                <!-- Statistiche Kilometri -->
+                <div class="veicoli-section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span class="material-symbols-rounded">trending_up</span> Statistiche Kilometri
+                        </h2>
+                    </div>
+                    <div id="statistiche-km"></div>
+                </div>
+
+                <!-- Alert/Notifiche -->
+                <div class="veicoli-section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span class="material-symbols-rounded">warning</span> Avvisi Importanti
+                        </h2>
+                    </div>
+                    <div id="alert-container"></div>
+                </div>
+
+                <!-- Ultimi Inserimenti -->
+                <div class="veicoli-section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span class="material-symbols-rounded">history</span> Ultimi inserimenti
+                        </h2>
+                    </div>
+                    <div id="ultimi-inserimenti"></div>
+                </div>
+            </div>
+
+            <!-- SEZIONE KILOMETRI (nascosta inizialmente) -->
+            <div id="kilometri-section" class="veicoli-section" style="display: none;">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <span class="material-symbols-rounded">speed</span> Storico Kilometri
+                    </h2>
+                    <button id="btn-nuovo-km" class="btn-action btn-primary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
+                        <span class="material-symbols-rounded">add</span> Nuovo
+                    </button>
+                </div>
+                <div id="lista-kilometri"></div>
+            </div>
+
+            <!-- SEZIONE REMINDER (nascosta inizialmente) -->
+            <div id="reminder-section" class="veicoli-section" style="display: none;">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <span class="material-symbols-rounded">notifications</span> Gestione Reminder
+                    </h2>
+                    <button id="btn-nuovo-reminder" class="btn-action btn-primary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
+                        <span class="material-symbols-rounded">add_alert</span> Nuovo
+                    </button>
+                </div>
+                <div id="lista-reminder"></div>
+            </div>
+        </main>
+
+        <!-- BOTTONE AZIONE PRINCIPALE -->
+        <div style="position: fixed; bottom: 5rem; right: 1rem; z-index: 99;">
+            <button id="btn-azione-principale" class="btn-action btn-primary" style="width: 56px; height: 56px; border-radius: 50%; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);">
+                <span class="material-symbols-rounded">add</span>
+            </button>
+        </div>
+
+        <!-- FOOTER -->
+        <footer class="app-footer">
+            <span class="footer-text">EDIT BY KINGFREAK Version 1.0</span>
+        </footer>
+
+        <!-- MODALE INSERIMENTO KM -->
+        <div class="modale-overlay" id="modale-km">
+            <div class="modale-content">
+                <div class="modale-header">
+                    <h3 class="modale-title">Inserisci Kilometri</h3>
+                    <button onclick="chiudiModaleKm()" style="background: none; border: none; color: var(--text-muted); cursor: pointer;">
+                        <span class="material-symbols-rounded">close</span>
+                    </button>
+                </div>
+                <div class="modale-body">
+                    <div class="input-group">
+                        <label class="input-label">Veicolo</label>
+                        <div id="veicolo-selezionato" style="padding: 0.875rem 1rem; background: #f8fafc; border: 2px solid var(--border); border-radius: 12px; font-weight: 700; color: var(--primary);"></div>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Mese/Anno</label>
+                        <div style="display: flex; gap: 0.75rem;">
+                            <select id="mese-km" class="input-field" style="flex: 1;">
+                                <option value="">Seleziona mese</option>
+                                <option value="1">Gennaio</option><option value="2">Febbraio</option><option value="3">Marzo</option>
+                                <option value="4">Aprile</option><option value="5">Maggio</option><option value="6">Giugno</option>
+                                <option value="7">Luglio</option><option value="8">Agosto</option><option value="9">Settembre</option>
+                                <option value="10">Ottobre</option><option value="11">Novembre</option><option value="12">Dicembre</option>
+                            </select>
+                            <input type="number" id="anno-km" class="input-field" placeholder="Anno" min="2020" max="2030" style="flex: 1;">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Kilometri Tachimetro</label>
+                        <input type="number" id="km-fine-mese" class="input-field" placeholder="Es: 125000" min="0" step="1">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Inserisci i kilometri totali sul tachimetro</div>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Note (opzionale)</label>
+                        <textarea id="note-km" class="input-field" rows="3" placeholder="Eventuali note..."></textarea>
+                    </div>
+                    <div id="info-precedente" style="background: #eff6ff; border-radius: 12px; padding: 1rem; margin: 1rem 0; border-left: 4px solid var(--primary); display: none;">
+                        <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-main);">Ultimo inserimento: <span id="km-precedente">0</span> km</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Differenza: <span id="km-differenza">0</span> km</div>
+                    </div>
+                </div>
+                <div class="modale-footer">
+                    <button onclick="chiudiModaleKm()" class="btn-action btn-secondary" style="flex: 1;">Annulla</button>
+                    <button onclick="salvaKilometri()" class="btn-action btn-primary" style="flex: 2;">
+                        <span class="material-symbols-rounded">save</span> Salva Kilometri
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODALE REMINDER -->
+        <div class="modale-overlay" id="modale-reminder">
+            <div class="modale-content">
+                <div class="modale-header">
+                    <h3 class="modale-title">Nuovo Reminder</h3>
+                    <button onclick="chiudiModaleReminder()" style="background: none; border: none; color: var(--text-muted); cursor: pointer;">
+                        <span class="material-symbols-rounded">close</span>
+                    </button>
+                </div>
+                <div class="modale-body">
+                    <div class="input-group">
+                        <label class="input-label">Tipo Reminder</label>
+                        <select id="tipo-reminder" class="input-field">
+                            <option value="cambio_gomme_estive">Cambio Gomme Estive</option>
+                            <option value="cambio_gomme_invernali">Cambio Gomme Invernali</option>
+                            <option value="assicurazione">Scadenza Assicurazione</option>
+                            <option value="revisione">Scadenza Revisione</option>
+                            <option value="bollo">Scadenza Bollo</option>
+                            <option value="altro">Altro</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Data Scadenza</label>
+                        <input type="date" id="data-scadenza" class="input-field">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Descrizione (opzionale)</label>
+                        <textarea id="descrizione-reminder" class="input-field" rows="3" placeholder="Descrizione del reminder..."></textarea>
+                    </div>
+                </div>
+                <div class="modale-footer">
+                    <button onclick="chiudiModaleReminder()" class="btn-action btn-secondary" style="flex: 1;">Annulla</button>
+                    <button onclick="salvaReminder()" class="btn-action btn-primary" style="flex: 2;">
+                        <span class="material-symbols-rounded">add_alert</span> Crea Reminder
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MESSAGGI -->
+        <div id="messaggio-veicoli" class="message-veicoli"></div>
+    </div>
+
+    <!-- SCRIPT PRINCIPALE -->
+    <script src="gestione_veicoli.js"></script>
+</body>
+</html>

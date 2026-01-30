@@ -128,31 +128,23 @@ body {
 
 /* Footer Persistente */
 .app-footer {
+    background: var(--white);
+    padding: 1rem;
+    text-align: center;  /* ← QUESTA PROPRIETÀ CENTRA IL TESTO */
+    border-top: 1px solid var(--border);
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    background-color: var(--white);
-    border-top: 1px solid var(--border);
-    padding: 0.75rem 1rem;
-    display: flex;
-    justify-content: flex-end;
-    z-index: 100;
     max-width: 450px;
     margin: 0 auto;
-    /* Aggiungi queste due righe: */
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    box-sizing: border-box;
+    z-index: 100;
 }
 
 .footer-text {
-    font-size: 0.65rem;
-    font-weight: 600;
+    font-size: 0.7rem;
     color: var(--text-muted);
-    letter-spacing: 0.025em;
-    text-transform: uppercase;
+    font-weight: 600;
 }
 
 /* Padding extra per il main per non coprire l'ultima card con il footer */
@@ -1819,4 +1811,220 @@ main {
 
 .filtro-btn:active {
     transform: scale(0.98);
+}
+
+
+/* Aggiungi a style.css */
+.input-group {
+    margin-bottom: 1rem;
+}
+
+.input-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+    color: var(--text-main);
+    font-size: 0.9rem;
+}
+
+.input-field {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    background: var(--white);
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+}
+
+.input-field:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: var(--white);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.input-field.error {
+    border-color: #ef4444;
+    background: #fef2f2;
+}
+
+textarea.input-field {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* ================================
+   STILI PER LISTA SPESE (AGGIUNTE)
+   ================================ */
+
+/* ICONA FOTO NELLA CARD */
+.btn-foto {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.4rem 0.75rem;
+    background: var(--primary-light);
+    color: var(--primary);
+    border: none;
+    border-radius: 8px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-foto:hover {
+    background: var(--primary);
+    color: var(--white);
+    transform: scale(1.05);
+}
+
+.btn-foto .contatore-foto {
+    background: var(--primary);
+    color: var(--white);
+    padding: 0.1rem 0.35rem;
+    border-radius: 10px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    margin-left: 0.25rem;
+}
+
+/* POPUP FOTO A SCHERMO INTERO */
+.popup-foto-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 2000;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.popup-foto-header {
+    width: 100%;
+    max-width: 450px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    color: white;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.popup-foto-contenuto {
+    max-width: 450px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.popup-foto-img {
+    max-width: 100%;
+    max-height: 70vh;
+    border-radius: 12px;
+    object-fit: contain;
+    background: #111;
+}
+
+.popup-foto-navigazione {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    margin-top: 1rem;
+    color: white;
+}
+
+.btn-navigazione {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: white;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-navigazione:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+.btn-chiudi {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+}
+
+.popup-contatore {
+    color: white;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+/* NOTE NELLA CARD SPESA */
+.spesa-note {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed var(--border);
+    font-style: italic;
+    line-height: 1.4;
+}
+
+/* ANIMAZIONE PER POPUP */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.popup-foto-overlay {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* RESPONSIVE PER POPUP */
+@media (max-width: 450px) {
+    .popup-foto-header {
+        padding: 0.75rem;
+    }
+    
+    .popup-foto-img {
+        max-height: 60vh;
+    }
+    
+    .btn-navigazione {
+        width: 40px;
+        height: 40px;
+    }
+}
+
+/* STILE PER DISABILITARE SCROLL QUANDO POPUP È APERTO */
+.body-no-scroll {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    height: 100%;
 }

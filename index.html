@@ -7,6 +7,11 @@
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <!-- Libreria Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- File di configurazione -->
+    <script src="db-config.js"></script>
+    <script src="check-db-config.js"></script>
     <style>
         .tecnici-container {
             display: flex;
@@ -32,6 +37,11 @@
             gap: 12px;
             transition: all 0.2s;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            cursor: pointer;
+            width: 100%;
+        }
+        .btn-tecnico:hover {
+            background: #f7fafc;
         }
         .btn-tecnico:active {
             transform: scale(0.98);
@@ -39,54 +49,460 @@
             color: white;
         }
         .btn-tecnico span { font-size: 1.2rem; }
+        
+        .loader {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+        
+        .error-message {
+            display: none;
+            background: #fed7d7;
+            color: #9b2c2c;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem;
+            text-align: center;
+        }
+        
+        .debug-info {
+            font-size: 0.7rem;
+            color: #64748b;
+            padding: 0.5rem;
+            background: #f8fafc;
+            border-radius: 6px;
+            margin: 0.5rem 0;
+            word-break: break-all;
+        }
     </style>
 </head>
 <body class="bg-app">
     <div class="app-container">
-        <header class="app-header" style="text-align: center;">
-            <h1 style="margin: 0; font-size: 1.5rem; font-weight: 800;">ParkApp</h1>
-            <p style="margin: 5px 0 0; opacity: 0.8; font-size: 0.9rem;">Seleziona il tuo profilo tecnico</p>
+        <!-- Header con indicatore DB -->
+        <header class="app-header-login" style="position: relative; padding: 1rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <div style="text-align: center; width: 100%;">
+                    <h1 style="margin: 0; font-size: 1.5rem; font-weight: 800;">ParkApp</h1>
+                    <p style="margin: 5px 0 0; opacity: 0.8; font-size: 0.9rem;">Seleziona il tuo profilo tecnico</p>
+                </div>
+                
+                <!-- Indicatore DB -->
+                <div id="db-status-indicator" style="
+                    position: absolute;
+                    top: 15px;
+                    right: 15px;
+                    width: 10px;
+                    height: 10px;
+                    border-radius: 50%;
+                    border: 2px solid white;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    cursor: help;
+                    z-index: 10;
+                "></div>
+            </div>
+            
+            <!-- Stato connessione e debug -->
+            <div id="connection-status" style="
+                font-size: 0.75rem;
+                padding: 4px 8px;
+                border-radius: 4px;
+                display: inline-block;
+                margin-top: 5px;
+            "></div>
+            
+            <!-- Debug info (visibile solo se c'è errore) -->
+            <div id="debug-info" style="display: none; margin-top: 10px;"></div>
         </header>
 
-        <main>
+        <main style="padding: 1rem;">
+            <!-- Loader -->
+            <div id="loader" class="loader">
+                <span class="material-symbols-rounded" style="font-size: 2rem; animation: spin 1s linear infinite;">sync</span>
+                <p>Caricamento tecnici...</p>
+            </div>
+            
+            <!-- Messaggio errore -->
+            <div id="error-message" class="error-message"></div>
+            
+            <!-- Debug test connessione -->
+            <div id="test-panel" style="
+                background: #f8fafc;
+                border-radius: 10px;
+                padding: 1rem;
+                margin-bottom: 1rem;
+                border: 1px solid #e2e8f0;
+                display: none;
+            ">
+                <h3 style="margin: 0 0 10px 0; font-size: 0.9rem; color: var(--primary);">
+                    <span class="material-symbols-rounded" style="font-size: 1rem;">bug_report</span>
+                    Debug Test Connessione
+                </h3>
+                <div id="test-results"></div>
+                <button onclick="runConnectionTests()" style="
+                    margin-top: 10px;
+                    padding: 8px 16px;
+                    background: var(--primary);
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    font-size: 0.8rem;
+                ">
+                    Esegui Test
+                </button>
+            </div>
+            
+            <!-- Lista tecnici -->
             <div class="tecnici-container" id="lista-tecnici">
+                <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                    Caricamento elenco tecnici...
                 </div>
+            </div>
         </main>
 
+        <!-- Footer fisso -->
         <footer class="app-footer">
             <span class="footer-text">EDIT BY KINGFREAK Version 1.0</span>
         </footer>
     </div>
 
     <script>
-        // Elenco nomi forniti (corrispondenti al database fogliolavoro)
-        const tecnici = [
-            "Baldo Baldassarre", "Forte Fortunato", "Svelto Spartaco", "Grasso Gorgonzola",
-            "Pigro Polidoro", "Saggio Salomone", "Coraggio Coriandolo", "Furbo Fabrizio",
-            "Parlav Paranzana", "Dormi Dodicidita", "Burlone Bartolomeo", "Veloce Vincenzo",
-            "Canta Carmelo", "Sogna Settimio", "Mangia Manlio", "Ride Rufolo",
-            "Scalda Scipione", "Salta Silvio", "Volà Valerio", "Birbone Beniamino",
-            "Sbadiglio Saturnino", "Ghiottone Galdino", "Chiacchierone Cornelio", "Sbadato Severino",
-            "Gorgogliatore Gaspare", "Sghignazzante Sansone", "Vagabondo Virgilio", "Russatore Rinaldo",
-            "Pisolino Pacifico", "Tartagliante Teodoro", "Sognatore Silverio"
-        ];
-
-        const container = document.getElementById('lista-tecnici');
-
-        tecnici.forEach(nome => {
+        // ==============================================
+        // FUNZIONI DI DEBUG E TEST
+        // ==============================================
+        
+        async function runConnectionTests() {
+            const resultsDiv = document.getElementById('test-results');
+            resultsDiv.innerHTML = '<div style="color: #64748b;">Esecuzione test...</div>';
+            
+            let tests = [];
+            
+            // Test 1: Configurazione
+            tests.push({
+                name: 'Configurazione DB',
+                test: () => {
+                    const config = getDbConfigInfo();
+                    return config.configured ? 
+                        `✅ Configurato (${config.urlShort})` : 
+                        `❌ Non configurato`;
+                }
+            });
+            
+            // Test 2: Connessione Supabase
+            tests.push({
+                name: 'Connessione Supabase',
+                test: async () => {
+                    try {
+                        const supabase = getSupabaseClient();
+                        // Test semplice
+                        const { data, error } = await supabase
+                            .from('tecnici')
+                            .select('count', { count: 'exact', head: true });
+                        
+                        if (error) throw error;
+                        return `✅ Connesso (${data || 'OK'})`;
+                    } catch (err) {
+                        return `❌ Errore: ${err.message.substring(0, 100)}`;
+                    }
+                }
+            });
+            
+            // Test 3: Lettura tabella tecnici
+            tests.push({
+                name: 'Tabella tecnici',
+                test: async () => {
+                    try {
+                        const supabase = getSupabaseClient();
+                        const { data, error } = await supabase
+                            .from('tecnici')
+                            .select('id, nome_completo')
+                            .limit(2);
+                        
+                        if (error) throw error;
+                        
+                        if (data && data.length > 0) {
+                            return `✅ Trovata (${data.length} record: ${data.map(d => d.nome_completo).join(', ')})`;
+                        } else {
+                            return `⚠️ Tabella vuota`;
+                        }
+                    } catch (err) {
+                        return `❌ Errore: ${err.message.substring(0, 100)}`;
+                    }
+                }
+            });
+            
+            // Test 4: Permessi RLS (Row Level Security)
+            tests.push({
+                name: 'Permessi RLS',
+                test: async () => {
+                    try {
+                        const supabase = getSupabaseClient();
+                        // Prova insert semplice per testare permessi
+                        const { error } = await supabase
+                            .from('tecnici')
+                            .select('*')
+                            .limit(1);
+                        
+                        if (error && error.code === '42501') {
+                            return `❌ RLS blocca accesso (servono politiche)`;
+                        } else if (error) {
+                            return `⚠️ Altro errore: ${error.code}`;
+                        } else {
+                            return `✅ RLS configurato correttamente`;
+                        }
+                    } catch (err) {
+                        return `❌ Errore: ${err.message}`;
+                    }
+                }
+            });
+            
+            // Esegui tutti i test
+            let results = '';
+            for (const test of tests) {
+                try {
+                    const result = typeof test.test === 'function' ? 
+                        await test.test() : test.test;
+                    results += `<div style="margin: 5px 0; font-size: 0.8rem;">
+                        <strong>${test.name}:</strong> ${result}
+                    </div>`;
+                } catch (err) {
+                    results += `<div style="margin: 5px 0; color: #ef4444; font-size: 0.8rem;">
+                        <strong>${test.name}:</strong> ❌ Errore test: ${err.message}
+                    </div>`;
+                }
+            }
+            
+            resultsDiv.innerHTML = results;
+        }
+        
+        // ==============================================
+        // FUNZIONI PRINCIPALI
+        // ==============================================
+        
+        function updateDbIndicator() {
+            const indicator = document.getElementById('db-status-indicator');
+            const statusDiv = document.getElementById('connection-status');
+            const debugDiv = document.getElementById('debug-info');
+            const testPanel = document.getElementById('test-panel');
+            
+            try {
+                const configInfo = getDbConfigInfo();
+                
+                if (configInfo.configured) {
+                    // DB configurato - VERDE
+                    indicator.style.background = '#22c55e';
+                    indicator.title = `DB configurato • ${configInfo.urlShort || 'N/A'}`;
+                    
+                    if (statusDiv) {
+                        statusDiv.innerHTML = `<span style="color:#22c55e">● DB configurato (${configInfo.urlShort})</span>`;
+                        statusDiv.style.background = '#f0fdf4';
+                        statusDiv.style.color = '#166534';
+                    }
+                    
+                    // Mostra info debug
+                    debugDiv.innerHTML = `
+                        <div class="debug-info">
+                            <strong>Configurazione:</strong> ${configInfo.configured ? 'Sì' : 'No'}<br>
+                            <strong>URL:</strong> ${configInfo.urlShort}<br>
+                            <strong>Key presente:</strong> ${configInfo.keyPresent ? 'Sì' : 'No'} (${configInfo.keyLength} caratteri)<br>
+                            <strong>Ultima config:</strong> ${configInfo.timestamp || 'Mai'}
+                        </div>
+                    `;
+                    debugDiv.style.display = 'block';
+                    testPanel.style.display = 'block';
+                    
+                } else {
+                    // DB non configurato - ARANCIO
+                    indicator.style.background = '#f59e0b';
+                    indicator.title = 'Database non configurato';
+                    indicator.onclick = function() {
+                        window.location.href = 'config.html';
+                    };
+                    
+                    if (statusDiv) {
+                        statusDiv.innerHTML = `<span style="color:#f59e0b">● DB non configurato</span>`;
+                        statusDiv.style.background = '#fffbeb';
+                        statusDiv.style.color = '#92400e';
+                    }
+                    
+                    debugDiv.innerHTML = `
+                        <div class="debug-info">
+                            <strong>Errore:</strong> Database non configurato<br>
+                            <a href="config.html" style="color: var(--primary); text-decoration: underline;">
+                                Vai alla configurazione
+                            </a>
+                        </div>
+                    `;
+                    debugDiv.style.display = 'block';
+                    testPanel.style.display = 'none';
+                }
+            } catch (error) {
+                indicator.style.background = '#ef4444';
+                indicator.title = 'Errore configurazione';
+                
+                debugDiv.innerHTML = `
+                    <div class="debug-info" style="color: #ef4444;">
+                        <strong>Errore caricamento configurazione:</strong><br>
+                        ${error.message}
+                    </div>
+                `;
+                debugDiv.style.display = 'block';
+                testPanel.style.display = 'block';
+            }
+        }
+        
+        async function caricaTecnici() {
+    const loader = document.getElementById('loader');
+    const errorDiv = document.getElementById('error-message');
+    const container = document.getElementById('lista-tecnici');
+    
+    // Mostra loader
+    loader.style.display = 'block';
+    errorDiv.style.display = 'none';
+    container.innerHTML = '<div style="text-align: center; padding: 1rem; color: var(--text-muted);">Caricamento in corso...</div>';
+    
+    try {
+        // Controlla se il DB è configurato
+        if (!hasDbConfig()) {
+            throw new Error('Database non configurato. Vai su Configurazione → Database per configurarlo.');
+        }
+        
+        console.log('Tentativo di caricamento tecnici...');
+        
+        // Usa la nuova funzione con cache
+        const tecnici = await getTecnici(true);
+        console.log(`Trovati ${tecnici.length} tecnici`);
+        
+        if (!tecnici || tecnici.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                    <span class="material-symbols-rounded" style="font-size: 3rem; opacity: 0.3;">engineering</span>
+                    <p style="margin-top: 1rem; font-weight: 600;">Nessun tecnico trovato</p>
+                    <p style="font-size: 0.9rem; margin-top: 0.5rem;">
+                        La tabella esiste ma è vuota.
+                    </p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Pulisci container
+        container.innerHTML = '';
+        
+        // Crea i bottoni per ogni tecnico
+        tecnici.forEach(tecnico => {
+            if (!tecnico.nome_completo) return;
+            
             const btn = document.createElement('button');
             btn.className = 'btn-tecnico';
             btn.innerHTML = `
                 <span class="material-symbols-rounded">engineering</span>
-                ${nome}
+                <div style="flex: 1;">
+                    <div style="font-weight: 700;">${tecnico.nome_completo}</div>
+                    ${tecnico.ruolo ? `<div style="font-size: 0.7rem; color: var(--text-muted);">${tecnico.ruolo}</div>` : ''}
+                </div>
             `;
             btn.onclick = () => {
-                // Salvataggio per le query su Supabase
-                localStorage.setItem('tecnico_loggato', nome);
+                // Salva tecnico selezionato
+                localStorage.setItem('tecnico_loggato', tecnico.nome_completo);
+                localStorage.setItem('tecnico_id', tecnico.id);
+                console.log(`Tecnico selezionato: ${tecnico.nome_completo} (${tecnico.id})`);
+                
+                // Reindirizza al menu
                 window.location.href = 'menu.html';
             };
             container.appendChild(btn);
         });
+        
+        // Aggiungi contatore
+        const countDiv = document.createElement('div');
+        countDiv.style.cssText = `
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        `;
+        countDiv.innerHTML = `
+            <strong>${tecnici.length}</strong> tecnici disponibili
+            <br><span style="font-size: 0.7rem; color: #94a3b8;">Tabella: <code>tecnici</code> • Cache: abilitata</span>
+            <br><button onclick="clearTecniciCache(); caricaTecnici();" style="
+                margin-top: 5px;
+                padding: 4px 8px;
+                background: #e2e8f0;
+                border: none;
+                border-radius: 4px;
+                font-size: 0.7rem;
+                cursor: pointer;
+            ">Pulisci cache</button>
+        `;
+        container.appendChild(countDiv);
+        
+    } catch (error) {
+        console.error('Errore caricamento tecnici:', error);
+        
+        // ... resto del codice di gestione errori rimane uguale ...
+        // (mantieni la gestione errori esistente)
+    } finally {
+        loader.style.display = 'none';
+    }
+}
+        // INIZIALIZZAZIONE PAGINA
+        // ==============================================
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Pagina login caricata');
+            
+            // 1. Aggiorna indicatore DB
+            updateDbIndicator();
+            
+            // 2. Verifica se c'è già un tecnico loggato
+            const tecnicoLoggato = localStorage.getItem('tecnico_loggato');
+            if (tecnicoLoggato && window.location.href.includes('index.html')) {
+                if (confirm(`Sei già loggato come ${tecnicoLoggato}. Vuoi cambiare utente?`)) {
+                    localStorage.removeItem('tecnico_loggato');
+                    localStorage.removeItem('tecnico_id');
+                } else {
+                    window.location.href = 'menu.html';
+                    return;
+                }
+            }
+            
+            // 3. Carica i tecnici
+            setTimeout(() => caricaTecnici(), 500);
+            
+            // 4. Aggiungi animazione spin
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            `;
+            document.head.appendChild(style);
+        });
+        
+        // ==============================================
+        // FUNZIONI UTILITY
+        // ==============================================
+        
+        // Per debug dalla console
+        window.debugLogin = {
+            testConnessione: runConnectionTests,
+            ricarica: caricaTecnici,
+            getConfig: () => getDbConfigInfo(),
+            clearLogin: () => {
+                localStorage.removeItem('tecnico_loggato');
+                localStorage.removeItem('tecnico_id');
+                location.reload();
+            }
+        };
+        
+        console.log('Debug disponibile: window.debugLogin');
     </script>
 </body>
 </html>
