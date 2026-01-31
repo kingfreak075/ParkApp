@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ParkApp - Admin Reperibilità</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db-config.js"></script>
+    <style>
+        /* Stili specifici per admin reperibilità */
+        .app-container { max-width: 800px; margin: 0 auto; min-height: 100vh; padding-bottom: 5rem; }
+        
+        .admin-section { 
+            background: var(--white); 
+            border-radius: 16px; 
+            padding: 1.5rem; 
+            margin: 1rem 0; 
+            border: 1px solid var(--border); 
+        }
+        
+        .section-title { 
+            font-size: 1.1rem; 
+            font-weight: 800; 
+            color: var(--text-main); 
+            margin: 0 0 1.5rem 0; 
+            display: flex; 
+            align-items: center; 
+            gap: 0.75rem; 
+        }
+        
+        .admin-tabs { 
+            display: flex; 
+            background: var(--white); 
+            border-bottom: 1px solid var(--border); 
+            overflow-x: auto; 
+            padding: 0 1rem; 
+            position: sticky; 
+            top: 0; 
+            z-index: 10; 
+        }
+        
+        .admin-tab { 
+            padding: 1rem 1.5rem; 
+            background: none; 
+            border: none; 
+            border-bottom: 3px solid transparent; 
+            font-family: 'Inter', sans-serif; 
+            font-size: 0.9rem; 
+            font-weight: 700; 
+            color: var(--text-muted); 
+            cursor: pointer; 
+            white-space: nowrap; 
+            transition: all 0.2s; 
+        }
+        
+        .admin-tab.active { 
+            color: var(--primary); 
+            border-bottom-color: var(--primary); 
+            background: linear-gradient(to bottom, rgba(37, 99, 235, 0.05), transparent); 
+        }
+        
+        .tab-content { 
+            padding: 1.5rem; 
+            display: none; 
+        }
+        
+        .tab-content.active { 
+            display: block; 
+        }
+        
+        /* Stili comuni per input/buttons */
+        .input-group { margin-bottom: 1.25rem; }
+        .input-label { display: block; font-size: 0.8rem; font-weight: 800; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; }
+        .input-field { width: 100%; padding: 0.875rem 1rem; background: #f8fafc; border: 2px solid var(--border); border-radius: 12px; font-family: 'Inter', sans-serif; font-size: 0.95rem; font-weight: 600; color: var(--text-main); outline: none; }
+        .btn-action { padding: 1rem; border: none; border-radius: 12px; font-family: 'Inter', sans-serif; font-size: 0.95rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; margin-top: 1rem; }
+        .btn-primary { background: var(--primary); color: var(--white); }
+        .btn-secondary { background: var(--primary-light); color: var(--primary); border: 2px solid var(--border); }
+        
+        /* Messaggi */
+        .message { display: none; padding: 1rem; border-radius: 12px; margin: 1rem 0; font-size: 0.9rem; font-weight: 600; }
+        .message-success { background: #f0fdf4; color: #166534; border-left: 4px solid #22c55e; }
+        .message-error { background: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; }
+        .message-warning { background: #fffbeb; color: #92400e; border-left: 4px solid #f59e0b; }
+        
+        /* Lista elementi */
+        .lista-elementi { margin-top: 1.5rem; }
+        .elemento-item { 
+            background: #f8fafc; 
+            border-radius: 12px; 
+            padding: 1rem; 
+            margin-bottom: 0.75rem; 
+            border: 1px solid var(--border); 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        
+        /* CSV upload */
+        .csv-upload-area { 
+            border: 2px dashed var(--border); 
+            border-radius: 12px; 
+            padding: 2rem; 
+            text-align: center; 
+            cursor: pointer; 
+            transition: all 0.3s; 
+        }
+        
+        .csv-upload-area:hover { 
+            border-color: var(--primary); 
+            background: rgba(37, 99, 235, 0.02); 
+        }
+        
+        /* Footer */
+        .app-footer { 
+            background: var(--white); 
+            padding: 1rem; 
+            text-align: center; 
+            border-top: 1px solid var(--border); 
+            position: fixed; 
+            bottom: 0; 
+            left: 0; 
+            right: 0; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            z-index: 10; 
+        }
+        
+        .footer-text { 
+            font-size: 0.7rem; 
+            color: var(--text-muted); 
+            font-weight: 600; 
+        }
+
+/* Modali (se non già presenti) */
+.modale-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.modale-content {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    max-width: 90%;
+    width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    z-index: 10000;
+    position: relative;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.modale-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.modale-title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--text-main);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.modale-body {
+    margin-bottom: 1.5rem;
+}
+
+.modale-footer {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.btn-success {
+    background: #22c55e;
+    color: white;
+}
+
+.btn-danger {
+    background: #ef4444;
+    color: white;
+}
+/* Stili per pulsanti azioni */
+.btn-icon {
+    padding: 8px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.btn-icon.btn-secondary {
+    background-color: #e5e7eb;
+    color: #374151;
+}
+
+.btn-icon.btn-secondary:hover {
+    background-color: #d1d5db;
+}
+
+.btn-icon.btn-danger {
+    background-color: #fee2e2;
+    color: #dc2626;
+}
+
+.btn-icon.btn-danger:hover {
+    background-color: #fecaca;
+}
+
+.btn-action.btn-danger {
+    background-color: #dc2626;
+    color: white;
+    border: none;
+}
+
+.btn-action.btn-danger:hover {
+    background-color: #b91c1c;
+}
+
+.material-symbols-rounded {
+    font-size: 18px;
+    vertical-align: middle;
+}
+    </style>
+</head>
+<body class="bg-app">
+    <div class="app-container">
+        <!-- HEADER -->
+        <header class="app-header-admin">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                <button onclick="window.location.href='menu.html'" style="background: none; border: none; padding: 0.5rem; color: var(--primary); cursor: pointer;">
+                    <span class="material-symbols-rounded" style="font-size: 1.5rem;">arrow_back</span>
+                </button>
+                <div style="flex-grow: 1;">
+                    <h1 style="font-size: 1.25rem; font-weight: 800; color: var(--primary); margin: 0;">
+                        Admin Reperibilità
+                    </h1>
+                    <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">
+                        Gestione turni e zone reperibilità
+                    </p>
+                </div>
+                <div id="db-status-indicator" style="width: 10px; height: 10px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); background: #22c55e; cursor: help;" title="Database connesso"></div>
+            </div>
+        </header>
+
+        <!-- TABS -->
+        <nav class="admin-tabs" id="admin-tabs-container">
+            <button class="admin-tab active" data-target="zone-tab">
+                <span class="material-symbols-rounded">location_on</span>
+                Zone
+            </button>
+            <button class="admin-tab" data-target="csv-tab">
+                <span class="material-symbols-rounded">upload</span>
+                Carica CSV
+            </button>
+            <button class="admin-tab" data-target="festivita-tab">
+                <span class="material-symbols-rounded">event</span>
+                Festività
+            </button>
+            <button class="admin-tab" data-target="turni-tab">
+                <span class="material-symbols-rounded">calendar_month</span>
+                Turni
+            </button>
+            <button class="admin-tab" data-target="approvazioni-tab">
+                <span class="material-symbols-rounded">approval</span>
+                Approvazioni
+            </button>
+        </nav>
+
+        <!-- CONTENUTO TABS -->
+        <main id="tab-content-container">
+            <!-- TAB 1: ZONE -->
+            <div id="zone-tab" class="tab-content active">
+                <div class="admin-section">
+                    <h2 class="section-title">
+                        <span class="material-symbols-rounded">add_location</span>
+                        Nuova Zona
+                    </h2>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Nome Zona *</label>
+                        <input type="text" id="nome-zona" class="input-field" placeholder="BO EST, BO CENTRO, ecc." maxlength="50">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Descrizione (opzionale)</label>
+                        <textarea id="descrizione-zona" class="input-field" rows="2" placeholder="Descrizione della zona..."></textarea>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Colore</label>
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <input type="color" id="colore-zona" value="#3B82F6" style="width: 60px; height: 60px; border-radius: 8px; border: 2px solid var(--border); cursor: pointer;">
+                            <div style="font-size: 0.85rem; color: var(--text-muted);">
+                                Seleziona un colore per identificare la zona nei calendari
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button onclick="salvaZona()" class="btn-action btn-primary">
+                        <span class="material-symbols-rounded">save</span>
+                        Salva Zona
+                    </button>
+                </div>
+
+                <div class="admin-section">
+                    <h2 class="section-title">
+                        <span class="material-symbols-rounded">list</span>
+                        Zone Esistenti
+                    </h2>
+                    
+                    <div id="lista-zone" class="lista-elementi">
+                        <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                            <span class="material-symbols-rounded">sync</span>
+                            <p style="margin-top: 0.5rem;">Caricamento zone...</p>
+                        </div>
+                    </div>
+                    
+                    <button onclick="caricaZone()" class="btn-action btn-secondary">
+                        <span class="material-symbols-rounded">refresh</span>
+                        Aggiorna Lista
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB 2: CARICA CSV -->
+            <div id="csv-tab" class="tab-content">
+                <div class="admin-section">
+                    <h2 class="section-title">
+                        <span class="material-symbols-rounded">upload_file</span>
+                        Caricamento Turni da CSV
+                    </h2>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Template CSV</label>
+                        <div style="background: #f8fafc; border-radius: 12px; padding: 1rem; border: 1px solid var(--border);">
+                            <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: var(--primary);">Scarica template:</p>
+                            <button onclick="scaricaTemplateCSV()" class="btn-action btn-secondary" style="margin-top: 0;">
+                                <span class="material-symbols-rounded">download</span>
+                                Template_Reperibilita.csv
+                            </button>
+                            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">
+                                Formato: <code>DataInizio;Zona;Tecnico</code><br>
+                                Esempio: <code>2025-01-03;BO EST;Mario Rossi</code>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">File CSV *</label>
+                        <div id="csv-drop-area" class="csv-upload-area" onclick="document.getElementById('file-csv').click()">
+                            <input type="file" id="file-csv" accept=".csv" style="display: none;">
+                            <span class="material-symbols-rounded" style="font-size: 3rem; color: var(--primary-light); margin-bottom: 1rem;">cloud_upload</span>
+                            <p style="font-weight: 800; color: var(--primary); margin: 0 0 0.5rem 0;">Clicca per selezionare file CSV</p>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">Trascina qui il file o clicca per selezionare</p>
+                        </div>
+                        <div id="file-info" style="display: none; background: #f8fafc; border-radius: 12px; padding: 1rem; margin-top: 1rem; border: 1px solid var(--border);">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <p style="font-weight: 800; color: var(--text-main); margin: 0 0 0.25rem 0;" id="file-name"></p>
+                                    <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;" id="file-size"></p>
+                                </div>
+                                <button onclick="rimuoviFile()" style="background: none; border: none; color: #ef4444; cursor: pointer;">
+                                    <span class="material-symbols-rounded">delete</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Opzioni</label>
+                        <div style="display: flex; gap: 1rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" id="backup-csv" checked>
+                                <span style="font-size: 0.9rem; font-weight: 600;">Crea backup prima dell'import</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" id="sovrascrivi-csv" checked>
+                                <span style="font-size: 0.9rem; font-weight: 600;">Sovrascrivi turni esistenti</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div id="anteprima-csv" style="display: none;">
+                        <!-- L'anteprima verrà generata qui -->
+                    </div>
+                    
+                    <button onclick="validaECaricaCSV()" class="btn-action btn-primary" id="btn-carica-csv" disabled>
+                        <span class="material-symbols-rounded">upload</span>
+                        Valida e Carica CSV
+                    </button>
+                    
+                    <div id="log-caricamento" style="display: none; margin-top: 1.5rem;">
+                        <!-- Log verrà mostrato qui -->
+                    </div>
+                </div>
+                
+                <div class="admin-section">
+                    <h2 class="section-title">
+                        <span class="material-symbols-rounded">history</span>
+                        Storico Caricamenti
+                    </h2>
+                    
+                    <div id="storico-caricamenti" class="lista-elementi">
+                        <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                            <span class="material-symbols-rounded">history</span>
+                            <p style="margin-top: 0.5rem;">Nessun caricamento effettuato</p>
+                        </div>
+                    </div>
+                    
+                    <button onclick="caricaStoricoCSV()" class="btn-action btn-secondary">
+                        <span class="material-symbols-rounded">refresh</span>
+                        Aggiorna Storico
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB 3: FESTIVITÀ -->
+            <div id="festivita-tab" class="tab-content">
+                <div class="admin-section">
+                    <h2 class="section-title">
+                        <span class="material-symbols-rounded">event_add</span>
+                        Nuova Festività
+                    </h2>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Data *</label>
+                        <input type="date" id="data-festivita" class="input-field">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Nome Festività *</label>
+                        <input type="text" id="nome-festivita" class="input-field" placeholder="Es: Capodanno, Santo Patrono, ecc.">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Tipo *</label>
+                        <select id="tipo-festivita" class="input-field">
+                            <option value="nazionale">Nazionale</option>
+                            <option value="regionale">Regionale</option>
+                            <option value="locale">Locale (per zona)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="input-group" id="zona-festivita-container" style="display: none;">
+                        <label class="input-label">Zona (per festività locale)</label>
+                        <select id="zona-festivita" class="input-field">
+                            <!-- Le zone verranno caricate dinamicamente -->
+                        </select>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Note (opzionali)</label>
+                        <textarea id="note-festivita" class="input-field" rows="2" placeholder="Note aggiuntive..."></textarea>
+                    </div>
+                    
+                    <button onclick="salvaFestivita()" class="btn-action btn-primary">
+                        <span class="material-symbols-rounded">add_circle</span>
+                        Aggiungi Festività
+                    </button>
+                </div>
+
+                <div class="admin-section">
+                    <h2 class="section-title">
+                        <span class="material-symbols-rounded">event_note</span>
+                        Festività Esistenti
+                    </h2>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Filtra per anno</label>
+                        <select id="filtro-anno-festivita" class="input-field" onchange="caricaFestivita()">
+                            <option value="2025">2025</option>
+                            <option value="2026" selected>2026</option>
+                            <option value="tutti">Tutti gli anni</option>
+                        </select>
+                    </div>
+                    
+                    <div id="lista-festivita" class="lista-elementi">
+                        <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                            <span class="material-symbols-rounded">sync</span>
+                            <p style="margin-top: 0.5rem;">Caricamento festività...</p>
+                        </div>
+                    </div>
+                    
+                    <button onclick="caricaFestivita()" class="btn-action btn-secondary">
+                        <span class="material-symbols-rounded">refresh</span>
+                        Aggiorna Lista
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB 4: TURNI (VISUALIZZAZIONE) -->
+           <!-- TAB 4: TURNI (VISUALIZZAZIONE) -->
+<div id="turni-tab" class="tab-content">
+    <div class="admin-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <div>
+                <h2 class="section-title">
+                    <span class="material-symbols-rounded">calendar_view_month</span>
+                    Visualizzazione Turni
+                </h2>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">
+                    Panoramica completa di tutti i turni di reperibilità
+                </p>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <button onclick="esportaTurniCSV()" class="btn-action btn-secondary" style="padding: 0.75rem;">
+                    <span class="material-symbols-rounded">download</span>
+                    Esporta CSV
+                </button>
+                <button onclick="caricaTurni()" class="btn-action btn-secondary" style="padding: 0.75rem;">
+                    <span class="material-symbols-rounded">refresh</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="input-group">
+            <label class="input-label">Filtri</label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <select id="filtro-zona-turni" class="input-field" onchange="caricaTurni()">
+                        <option value="">Tutte le zone</option>
+                        <!-- Le zone verranno caricate dinamicamente -->
+                    </select>
+                </div>
+                <div>
+                    <select id="filtro-mese-turni" class="input-field" onchange="caricaTurni()">
+                        <option value="">Tutti i mesi</option>
+                        <option value="1">Gennaio</option>
+                        <option value="2">Febbraio</option>
+                        <option value="3">Marzo</option>
+                        <option value="4">Aprile</option>
+                        <option value="5">Maggio</option>
+                        <option value="6">Giugno</option>
+                        <option value="7">Luglio</option>
+                        <option value="8">Agosto</option>
+                        <option value="9">Settembre</option>
+                        <option value="10">Ottobre</option>
+                        <option value="11">Novembre</option>
+                        <option value="12">Dicembre</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div id="calendario-turni">
+            <div style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                <span class="material-symbols-rounded">calendar_month</span>
+                <p style="margin-top: 0.5rem;">Seleziona i filtri per visualizzare i turni</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+            <!-- TAB 5: APPROVAZIONI -->
+         <!-- SOSTITUISCI l'intero contenuto del div#approvazioni-tab (riga ~390-430) con: -->
+
+<div id="approvazioni-tab" class="tab-content">
+    <div class="admin-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <div>
+                <h2 class="section-title">
+                    <span class="material-symbols-rounded">pending_actions</span>
+                    Richieste da Approvare
+                </h2>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">
+                    Gestione richieste di modifica turni
+                </p>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <button onclick="caricaRichiestePending()" class="btn-action btn-secondary" style="padding: 0.75rem;">
+                    <span class="material-symbols-rounded">refresh</span>
+                </button>
+                <select id="filtro-stato-approvazioni" class="input-field" style="width: auto;" onchange="caricaRichiestePending()">
+                    <option value="pending">In attesa</option>
+                    <option value="peer_approval">Da collega</option>
+                    <option value="admin_approval">Da admin</option>
+                    <option value="tutti">Tutte le pendenti</option>
+                </select>
+            </div>
+        </div>
+        
+        <div id="lista-richieste-pending" class="lista-elementi">
+            <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                <span class="material-symbols-rounded">sync</span>
+                <p style="margin-top: 0.5rem;">Caricamento richieste...</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="admin-section">
+        <h2 class="section-title">
+            <span class="material-symbols-rounded">history</span>
+            Storico Approvazioni
+        </h2>
+        
+        <div class="input-group">
+            <label class="input-label">Filtri avanzati</label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                <select id="filtro-anno-storico" class="input-field">
+                    <option value="2025">2025</option>
+                    <option value="2026" selected>2026</option>
+                </select>
+                <select id="filtro-tipo-storico" class="input-field">
+                    <option value="">Tutti i tipi</option>
+                    <option value="scambio">Scambi</option>
+                    <option value="sostituzione">Sostituzioni</option>
+                    <option value="cessione_parziale">Cessioni</option>
+                </select>
+            </div>
+        </div>
+        
+        <div id="storico-approvazioni" class="lista-elementi">
+            <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                <span class="material-symbols-rounded">history</span>
+                <p style="margin-top: 0.5rem;">Nessuna approvazione registrata</p>
+            </div>
+        </div>
+        
+        <button onclick="caricaStoricoApprovazioni()" class="btn-action btn-secondary">
+            <span class="material-symbols-rounded">refresh</span>
+            Aggiorna Storico
+        </button>
+    </div>
+</div>
+        </main>
+
+        <!-- MESSAGGI -->
+        <div id="messaggio-admin" class="message"></div>
+
+        <!-- FOOTER -->
+        <footer class="app-footer">
+            <span class="footer-text">EDIT BY KINGFREAK Version 1.0 | Reperibilità Module</span>
+        </footer>
+    </div>
+<!-- AGGIUNGI DOPO I MODALI ESISTENTI (prima di </div> chiusura app-container): -->
+
+<!-- MODALE DETTAGLIO RICHIESTA -->
+<div class="modale-overlay" id="modale-dettaglio-richiesta">
+    <div class="modale-content" style="max-width: 500px;">
+        <div class="modale-header">
+            <h3 class="modale-title">Dettaglio Richiesta</h3>
+            <button onclick="chiudiModaleDettaglioRichiesta()" style="background: none; border: none; color: var(--text-muted); cursor: pointer;">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+        </div>
+        <div class="modale-body">
+            <div id="dettaglio-richiesta-content">
+                <!-- Contenuto dinamico -->
+            </div>
+        </div>
+        <div class="modale-footer">
+            <button onclick="rifiutaRichiestaSelezionata()" class="btn-action btn-danger" style="flex: 1;">
+                <span class="material-symbols-rounded">close</span>
+                Rifiuta
+            </button>
+            <button onclick="approvaRichiestaSelezionata()" class="btn-action btn-success" style="flex: 1;">
+                <span class="material-symbols-rounded">check</span>
+                Approva
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODALE CONFLITTI -->
+<div class="modale-overlay" id="modale-conflitti">
+    <div class="modale-content" style="max-width: 600px;">
+        <div class="modale-header">
+            <h3 class="modale-title">
+                <span class="material-symbols-rounded" style="color: #f59e0b;">warning</span>
+                Conflitto di Richieste
+            </h3>
+            <button onclick="chiudiModaleConflitti()" style="background: none; border: none; color: var(--text-muted); cursor: pointer;">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+        </div>
+        <div class="modale-body">
+            <div style="background: #fffbeb; border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem; border-left: 4px solid #f59e0b;">
+                <p style="margin: 0; color: #92400e; font-weight: 600;">
+                    <span class="material-symbols-rounded" style="vertical-align: middle;">info</span>
+                    Più richieste per lo stesso turno. Puoi approvarne solo una.
+                </p>
+            </div>
+            <div id="contenuto-conflitti">
+                <!-- Lista richieste in conflitto -->
+            </div>
+        </div>
+        <div class="modale-footer">
+            <button onclick="chiudiModaleConflitti()" class="btn-action btn-secondary" style="flex: 1;">
+                Chiudi
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODALE MODIFICA TURNO -->
+<div class="modale-overlay" id="modale-modifica-turno" style="display: none;">
+    <div class="modale-content" style="max-width: 500px;">
+        <div class="modale-header">
+            <h3 class="modale-title">Modifica Turno</h3>
+            <button onclick="chiudiModaleModificaTurno()" style="background: none; border: none; color: var(--text-muted); cursor: pointer;">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+        </div>
+        <div class="modale-body">
+            <div id="modifica-turno-content" data-turno-id="">
+                <!-- Contenuto generato dinamicamente -->
+            </div>
+            
+            <!-- Messaggi di errore -->
+            <div id="modifica-errore-message" style="display: none; background: #fef2f2; color: #991b1b; padding: 1rem; border-radius: 8px; border-left: 4px solid #ef4444; margin-top: 1rem;"></div>
+        </div>
+        <div class="modale-footer">
+            <button onclick="chiudiModaleModificaTurno()" class="btn-action btn-secondary" style="flex: 1;">
+                Annulla
+            </button>
+            <button onclick="salvaModificaTurno()" class="btn-action btn-primary" style="flex: 2;">
+                <span class="material-symbols-rounded">save</span>
+                Salva Modifiche
+            </button>
+        </div>
+    </div>
+</div>
+
+
+
+    <!-- SCRIPT PRINCIPALE -->
+    <script src="admin_reperibilita.js"></script>
+</body>
+</html>
