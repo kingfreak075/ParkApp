@@ -360,7 +360,7 @@ async function cambiaStatoZona(id, nuovoStato) {
     }
 }
 
-// ============================================
+/// ============================================
 // FUNZIONI CARICAMENTO CSV (TAB 2)
 // ============================================
 
@@ -1216,7 +1216,6 @@ async function eliminaFestivita(id) {
         mostraMessaggio(`Errore: ${error.message}`, 'error');
     }
 }
-
 // ============================================
 // FUNZIONI TURNI E APPROVAZIONI (TAB 4-5)
 // ============================================
@@ -1259,12 +1258,50 @@ async function caricaTurni() {
         if (error) throw error;
         
         turniList = turni || [];
+
+        // Recupera e aggancia le cessioni parziali
+        const parzialiMap = await caricaParzialiPerTurni(turniList);
+        turniList = (turniList || []).map(t => ({ ...t, parziali: parzialiMap[t.id] || [] }));
+        
         console.log(`✅ Turni caricati: ${turniList.length}`);
         aggiornaUI_Turni();
         
     } catch (error) {
         console.error('❌ Errore caricamento turni:', error);
         mostraMessaggio('Errore nel caricamento dei turni', 'error');
+    }
+}
+
+// Nuova funzione per admin: carica parziali per i turni
+async function caricaParzialiPerTurni(turni) {
+    try {
+        const supabase = getSupabaseClient();
+        if (!supabase || !turni || turni.length === 0) return {};
+
+        const ids = turni.map(t => t.id).filter(Boolean);
+        if (ids.length === 0) return {};
+
+        const { data: parziali, error } = await supabase
+            .from('turni_parziali')
+            .select('*')
+            .in('turno_originale_id', ids)
+            .eq('stato', 'attivo');
+
+        if (error) {
+            console.warn('❌ Errore caricamento parziali:', error);
+            return {};
+        }
+
+        const mappa = {};
+        (parziali || []).forEach(p => {
+            if (!mappa[p.turno_originale_id]) mappa[p.turno_originale_id] = [];
+            mappa[p.turno_originale_id].push(p);
+        });
+
+        return mappa;
+    } catch (err) {
+        console.error('❌ caricaParzialiPerTurni error:', err);
+        return {};
     }
 }
 
@@ -1389,6 +1426,21 @@ function aggiornaUI_Turni() {
                             <div style="font-size: 0.85rem; color: var(--text-main);">
                                 <strong>Tecnico:</strong> ${turno.tecnico_id}
                             </div>
+
+                            ${(turno.parziali && turno.parziali.length > 0) ? `
+                                <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">
+                                    <strong>Cessioni parziali attive:</strong>
+                                    ${turno.parziali.map(p => {
+                                        const pInizio = new Date(p.data_inizio_cessione).toLocaleDateString('it-IT');
+                                        const pFine = new Date(p.data_fine_cessione).toLocaleDateString('it-IT');
+                                        const cessionario = p.tecnico_cessionario_id || p.tecnico_cessionario || 'N/D';
+                                        return `<div style="margin-top:0.35rem; padding:0.5rem; background:#fff; border-radius:8px; border:1px solid var(--border);">
+                                                    <div style="font-weight:800; color:var(--text-main);">${cessionario}</div>
+                                                    <div style="font-size:0.8rem; color:#64748b;">Periodo: ${pInizio} → ${pFine}</div>
+                                                </div>`;
+                                    }).join('')}
+                                </div>
+                            ` : ''}
                         </div>
                         
                         <div style="flex: 1; text-align: right;">
@@ -2970,9 +3022,7 @@ function nascondiLoading() {
     if (loading) loading.style.display = 'none';
 }
 
-// ============================================
-// ESPORTA FUNZIONI GLOBALI
-// ============================================
+// ESPORTA FUNZIONI GLOBALI (ripristina/export se presenti)
 window.salvaZona = salvaZona;
 window.caricaZone = caricaZone;
 window.modificaZona = modificaZona;
@@ -3007,4 +3057,4 @@ window.chiudiModaleDettaglioDecisione = chiudiModaleDettaglioDecisione;
 window.mostraDettagliTurno = mostraDettagliTurno;
 window.chiudiModaleDettaglioTurnoStorico = chiudiModaleDettaglioTurnoStorico;
 
-console.log('✅ Admin Reperibilità JS caricato completamente');
+console.log('✅ Admin Reperibilità JS caricato (modificato per parziali)');

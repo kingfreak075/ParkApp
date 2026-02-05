@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FloX Admin - Gestione Database</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <link rel="stylesheet" href="style_admin.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- SIDEBAR -->
+        <aside class="admin-sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="material-symbols-rounded">database</span>
+                    <h1>FloX Admin</h1>
+                </div>
+                <div class="app-version">v2.0</div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <h3>DATABASE</h3>
+                    <button class="nav-btn active" data-tab="config">
+                        <span class="material-symbols-rounded">settings</span>
+                        Configurazione
+                    </button>
+                    <button class="nav-btn" data-tab="tables">
+                        <span class="material-symbols-rounded">table_chart</span>
+                        Tabelle
+                    </button>
+                </div>
+                
+                <div class="nav-section">
+                    <h3>SINCRONIZZAZIONE</h3>
+                    <button class="nav-btn" data-tab="analyze">
+                        <span class="material-symbols-rounded">analytics</span>
+                        Analisi Tabella
+                    </button>
+                    <button class="nav-btn" data-tab="sync">
+                        <span class="material-symbols-rounded">sync</span>
+                        Sincronizza CSV
+                    </button>
+                </div>
+                
+                <div class="nav-section">
+                    <h3>UTILITIES</h3>
+                    <button class="nav-btn" data-tab="backup">
+                        <span class="material-symbols-rounded">backup</span>
+                        Backup/Ripristino
+                    </button>
+                    <button class="nav-btn" data-tab="logs">
+                        <span class="material-symbols-rounded">list_alt</span>
+                        Logs
+                    </button>
+                </div>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="db-status" id="db-status">
+                    <div class="status-indicator offline"></div>
+                    <span>Database: Non connesso</span>
+                </div>
+                <button class="logout-btn">
+                    <span class="material-symbols-rounded">logout</span>
+                    Logout
+                </button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="admin-main">
+            <!-- HEADER -->
+            <header class="admin-header">
+                <div class="header-left">
+                    <h2 id="page-title">Configurazione Database</h2>
+                    <div class="breadcrumb" id="breadcrumb">
+                        <span>Home</span>
+                        <span class="material-symbols-rounded">chevron_right</span>
+                        <span>Database</span>
+                    </div>
+                </div>
+                
+                <div class="header-right">
+                    <div class="user-info">
+                        <span class="material-symbols-rounded">account_circle</span>
+                        <div>
+                            <div class="user-name">Administrator</div>
+                            <div class="user-role">Admin</div>
+                        </div>
+                    </div>
+                    <button class="notifications-btn">
+                        <span class="material-symbols-rounded">notifications</span>
+                        <span class="notification-count">3</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- CONTENT AREA -->
+            <div class="content-area">
+                <!-- TAB 1: CONFIGURAZIONE DATABASE -->
+                <div id="tab-config" class="tab-content active">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>
+                                <span class="material-symbols-rounded">database</span>
+                                Configurazione Database Supabase
+                            </h3>
+                            <div class="card-actions">
+                                <button class="btn btn-icon" title="Test connessione" onclick="testConnection()">
+                                    <span class="material-symbols-rounded">wifi</span>
+                                </button>
+                                <button class="btn btn-icon" title="Esporta configurazione" onclick="exportConfig()">
+                                    <span class="material-symbols-rounded">download</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="card-body">
+                            <div class="config-grid">
+                                <!-- Configurazione attuale -->
+                                <div class="config-current">
+                                    <h4>Configurazione Attuale</h4>
+                                    <div class="config-info">
+                                        <div class="info-item">
+                                            <span class="label">Stato:</span>
+                                            <span id="config-status" class="value status-offline">Non configurato</span>
+                                        </div>
+                                        <div class="info-item">
+                                            <span class="label">URL Supabase:</span>
+                                            <span id="config-url" class="value">-</span>
+                                        </div>
+                                        <div class="info-item">
+                                            <span class="label">Ultimo test:</span>
+                                            <span id="config-last-test" class="value">-</span>
+                                        </div>
+                                        <div class="info-item">
+                                            <span class="label">Tempo online:</span>
+                                            <span id="config-uptime" class="value">-</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Metodi di configurazione -->
+                                <div class="config-methods">
+                                    <h4>Nuova Configurazione</h4>
+                                    <div class="tabs-horizontal">
+                                        <button class="tab-btn active" data-method="file">File DB.kf</button>
+                                        <button class="tab-btn" data-method="manual">Inserimento Manuale</button>
+                                    </div>
+                                    
+                                    <!-- Metodo File -->
+                                    <div id="method-file" class="method-content active">
+                                        <div class="file-upload-area" id="drop-zone">
+                                            <input type="file" id="file-kf" accept=".kf,.txt,.json" hidden>
+                                            <span class="material-symbols-rounded">cloud_upload</span>
+                                            <p>Trascina il file DB.kf qui o <a href="#" onclick="document.getElementById('file-kf').click()">clicca per selezionare</a></p>
+                                            <small>Formati supportati: .kf, .txt, .json</small>
+                                        </div>
+                                        <div id="file-info" class="file-info" style="display: none;">
+                                            <div class="file-info-content">
+                                                <span class="material-symbols-rounded">check_circle</span>
+                                                <div>
+                                                    <strong>File caricato:</strong>
+                                                    <span id="file-name"></span>
+                                                </div>
+                                                <button class="btn-icon-small" onclick="removeFile()">
+                                                    <span class="material-symbols-rounded">close</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Metodo Manuale -->
+                                    <div id="method-manual" class="method-content">
+                                        <div class="form-group">
+                                            <label for="supabase-url">SUPABASE URL</label>
+                                            <input type="text" id="supabase-url" placeholder="https://tuoprogetto.supabase.co">
+                                            <small>Dashboard → Settings → API</small>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="supabase-key">ANON KEY</label>
+                                            <div class="input-with-icon">
+                                                <input type="password" id="supabase-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+                                                <button class="btn-icon-small" onclick="togglePassword()">
+                                                    <span class="material-symbols-rounded" id="toggle-icon">visibility</span>
+                                                </button>
+                                            </div>
+                                            <small>Chiave anonima (pubblica) del progetto</small>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="config-actions">
+                                        <button class="btn btn-primary" onclick="saveConfig()">
+                                            <span class="material-symbols-rounded">save</span>
+                                            Salva Configurazione
+                                        </button>
+                                        <button class="btn btn-secondary" onclick="resetConfig()">
+                                            <span class="material-symbols-rounded">delete</span>
+                                            Resetta
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: TABELLE -->
+                <div id="tab-tables" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>
+                                <span class="material-symbols-rounded">table_chart</span>
+                                Gestione Tabelle
+                            </h3>
+                            <div class="card-actions">
+                                <button class="btn btn-icon" onclick="refreshTables()">
+                                    <span class="material-symbols-rounded">refresh</span>
+                                </button>
+                                <button class="btn btn-primary" onclick="showCreateTableModal()">
+                                    <span class="material-symbols-rounded">add</span>
+                                    Nuova Tabella
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="card-body">
+                            <div class="tables-overview">
+                                <!-- Statistiche -->
+                                <div class="stats-grid">
+                                    <div class="stat-card">
+                                        <div class="stat-icon">
+                                            <span class="material-symbols-rounded">table</span>
+                                        </div>
+                                        <div class="stat-content">
+                                            <div class="stat-value" id="total-tables">0</div>
+                                            <div class="stat-label">Tabelle</div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-icon">
+                                            <span class="material-symbols-rounded">data_array</span>
+                                        </div>
+                                        <div class="stat-content">
+                                            <div class="stat-value" id="total-rows">0</div>
+                                            <div class="stat-label">Record Totali</div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-icon">
+                                            <span class="material-symbols-rounded">storage</span>
+                                        </div>
+                                        <div class="stat-content">
+                                            <div class="stat-value" id="total-size">0 KB</div>
+                                            <div class="stat-label">Spazio Occupato</div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-icon">
+                                            <span class="material-symbols-rounded">history</span>
+                                        </div>
+                                        <div class="stat-content">
+                                            <div class="stat-value" id="last-sync">-</div>
+                                            <div class="stat-label">Ultima Sincronizzazione</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Lista Tabelle -->
+                                <div class="tables-list">
+                                    <div class="table-filters">
+                                        <div class="search-box">
+                                            <span class="material-symbols-rounded">search</span>
+                                            <input type="text" placeholder="Cerca tabella..." id="table-search">
+                                        </div>
+                                        <select id="table-filter">
+                                            <option value="all">Tutte le tabelle</option>
+                                            <option value="system">Tabelle di sistema</option>
+                                            <option value="user">Tabelle utente</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="tables-container">
+                                        <table class="data-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Nome</th>
+                                                    <th>Tipo</th>
+                                                    <th>Record</th>
+                                                    <th>Dimensione</th>
+                                                    <th>Ultima Modifica</th>
+                                                    <th>Azioni</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="tables-body">
+                                                <!-- Le tabelle verranno caricate qui -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: ANALISI TABELLA -->
+                <div id="tab-analyze" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>
+                                <span class="material-symbols-rounded">analytics</span>
+                                Analisi e Configurazione Tabella
+                            </h3>
+                            <div class="card-actions">
+                                <button class="btn btn-icon" onclick="refreshAnalysis()">
+                                    <span class="material-symbols-rounded">refresh</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="card-body">
+                            <div class="analyze-grid">
+                                <!-- Selezione Tabella -->
+                                <div class="card-section">
+                                    <h4>Selezione Tabella</h4>
+                                    <div class="form-group">
+                                        <label for="table-select">Tabella da analizzare</label>
+                                        <select id="table-select" onchange="loadTableStructure()">
+                                            <option value="">Seleziona una tabella...</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <!-- Struttura Tabella -->
+                                <div class="card-section">
+                                    <h4>Struttura Tabella</h4>
+                                    <div id="table-structure" class="structure-info">
+                                        <div class="structure-loading">
+                                            <span class="material-symbols-rounded">hourglass_top</span>
+                                            <p>Seleziona una tabella per visualizzare la struttura</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Selezione Chiave Primaria -->
+                                <div class="card-section">
+                                    <h4>Selezione Chiave Primaria</h4>
+                                    <div id="key-selection" class="key-selection">
+                                        <p class="info-text">La chiave primaria identifica univocamente ogni record.</p>
+                                        <div id="key-options">
+                                            <!-- Le opzioni verranno generate qui -->
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Anteprima Dati -->
+                                <div class="card-section full-width">
+                                    <div class="section-header">
+                                        <h4>Anteprima Dati</h4>
+                                        <select id="preview-limit" onchange="loadPreview()">
+                                            <option value="10">10 record</option>
+                                            <option value="25" selected>25 record</option>
+                                            <option value="50">50 record</option>
+                                            <option value="100">100 record</option>
+                                        </select>
+                                    </div>
+                                    <div id="data-preview" class="data-preview">
+                                        <p>Seleziona una tabella per visualizzare l'anteprima</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 4: SINCRONIZZA CSV -->
+                <div id="tab-sync" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>
+                                <span class="material-symbols-rounded">sync</span>
+                                Sincronizzazione CSV
+                            </h3>
+                        </div>
+                        
+                        <div class="card-body">
+            <!-- AGGIUNGI QUI L'INDICATORE -->
+            <div id="analysis-status" class="status-indicator" style="display: none;">
+                <span class="status-icon">📊</span>
+                <span id="analysis-status-text">Analisi non eseguita</span>
+            </div>
+            
+            <div class="sync-grid">
+                                <!-- Caricamento CSV -->
+                                <div class="card-section">
+                                    <h4>Carica File CSV</h4>
+                                    <div class="file-upload-area large" id="csv-drop-zone">
+                                        <input type="file" id="file-csv" accept=".csv,.txt" hidden>
+                                        <span class="material-symbols-rounded">upload_file</span>
+                                        <p>Trascina il file CSV qui o <a href="#" onclick="document.getElementById('file-csv').click()">clicca per selezionare</a></p>
+                                        <small>Formati supportati: .csv, .txt (max 10MB)</small>
+                                    </div>
+                                    
+                                    <div id="csv-info" class="file-info" style="display: none;">
+                                        <div class="file-info-content">
+                                            <span class="material-symbols-rounded">check_circle</span>
+                                            <div>
+                                                <strong>File CSV:</strong>
+                                                <span id="csv-file-name"></span>
+                                                <small id="csv-file-stats"></small>
+                                            </div>
+                                            <div class="file-actions">
+                                                <button class="btn btn-sm" onclick="previewCSV()">Anteprima</button>
+                                                <button class="btn-icon-small" onclick="removeCSV()">
+                                                    <span class="material-symbols-rounded">close</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Opzioni CSV -->
+                                    <div id="csv-options" class="form-grid" style="display: none;">
+                                        <div class="form-group">
+                                            <label for="csv-delimiter">Delimitatore</label>
+                                            <select id="csv-delimiter">
+                                                <option value=",">Virgola (,)</option>
+                                                <option value=";">Punto e virgola (;)</option>
+                                                <option value="\t">Tab</option>
+                                                <option value="|">Pipe (|)</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="csv-header">Intestazione</label>
+                                            <select id="csv-header">
+                                                <option value="true" selected>Prima riga come intestazione</option>
+                                                <option value="false">Nessuna intestazione</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Informazioni Confronto -->
+                                <div class="card-section">
+                                    <h4>Informazioni Confronto</h4>
+                                    <div class="comparison-info">
+                                        <div class="info-box">
+                                            <div class="info-header">
+                                                <span class="material-symbols-rounded">database</span>
+                                                <h5>Database</h5>
+                                            </div>
+                                            <div class="info-content">
+                                                <div><strong>Tabella:</strong> <span id="sync-table">-</span></div>
+                                                <div><strong>Chiave:</strong> <span id="sync-key">-</span></div>
+                                                <div><strong>Record:</strong> <span id="sync-db-count">0</span></div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="info-box">
+                                            <div class="info-header">
+                                                <span class="material-symbols-rounded">description</span>
+                                                <h5>File CSV</h5>
+                                            </div>
+                                            <div class="info-content">
+                                                <div><strong>File:</strong> <span id="sync-csv-file">-</span></div>
+                                                <div><strong>Record:</strong> <span id="sync-csv-count">0</span></div>
+                                                <div><strong>Colonne:</strong> <span id="sync-csv-cols">0</span></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Corrispondenze Colonne -->
+                                    <div id="column-mapping" style="display: none;">
+                                        <h5>Corrispondenze Colonne</h5>
+                                        <div id="mapping-list" class="mapping-list">
+                                            <!-- Le corrispondenze verranno generate qui -->
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Indicatore stato analisi -->
+
+                                <!-- Opzioni Sincronizzazione -->
+                                <div class="card-section">
+                                    <h4>Opzioni Sincronizzazione</h4>
+                                    <div class="form-group">
+                                        <label>Modalità</label>
+                                        <div class="radio-group">
+                                            <label class="radio-label">
+                                                <input type="radio" name="sync-mode" value="analyze" checked>
+                                                <span class="radio-custom"></span>
+                                                Solo Analisi
+                                            </label>
+                                            <label class="radio-label">
+                                                <input type="radio" name="sync-mode" value="sync">
+                                                <span class="radio-custom"></span>
+                                                Sincronizza
+                                            </label>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label>Azioni</label>
+                                        <div class="checkbox-group">
+                                            <label class="checkbox-label">
+                                                <input type="checkbox" id="action-insert" checked>
+                                                <span class="checkbox-custom"></span>
+                                                Inserire nuovi record
+                                            </label>
+                                            <label class="checkbox-label">
+                                                <input type="checkbox" id="action-update" checked>
+                                                <span class="checkbox-custom"></span>
+                                                Aggiornare record esistenti
+                                            </label>
+                                            <label class="checkbox-label">
+                                                <input type="checkbox" id="action-delete">
+                                                <span class="checkbox-custom"></span>
+                                                Eliminare record dal DB
+                                                <span class="badge badge-warning">ATTENZIONE</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="batch-size">Batch Size</label>
+                                        <select id="batch-size">
+                                            <option value="10">10 record/batch</option>
+                                            <option value="50" selected>50 record/batch</option>
+                                            <option value="100">100 record/batch</option>
+                                            <option value="200">200 record/batch</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <!-- Riepilogo e Avvio -->
+                                <div class="card-section">
+                                    <h4>Riepilogo</h4>
+                                    <div class="summary-stats" id="summary-stats">
+                                        <div class="stat-item">
+                                            <div class="stat-label">Nuovi</div>
+                                            <div class="stat-value" id="stat-new">0</div>
+                                        </div>
+                                        <div class="stat-item">
+                                            <div class="stat-label">Da Aggiornare</div>
+                                            <div class="stat-value" id="stat-update">0</div>
+                                        </div>
+                                        <div class="stat-item">
+                                            <div class="stat-label">Uguali</div>
+                                            <div class="stat-value" id="stat-same">0</div>
+                                        </div>
+                                        <div class="stat-item">
+                                            <div class="stat-label">Da Eliminare</div>
+                                            <div class="stat-value" id="stat-delete">0</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="sync-actions">
+                                        <button class="btn btn-primary" id="btn-analyze" onclick="analyzeComparison()" disabled>
+                                            <span class="material-symbols-rounded">analytics</span>
+                                            Analizza Confronto
+                                        </button>
+                                        <button class="btn btn-success" id="btn-sync" onclick="startSync()" disabled>
+                                            <span class="material-symbols-rounded">sync</span>
+                                            Avvia Sincronizzazione
+                                        </button>
+                                    </div>
+                                    <!-- Aggiungi questo nel tab sync (probabilmente intorno alla riga 400-450) -->
+
+                                    <div id="warning-sync" class="alert alert-warning" style="display: none;">
+                                        <span class="material-symbols-rounded">warning</span>
+                                        <div id="warning-text"></div>
+                                    </div>
+
+                                </div>
+                            </div>
+
+
+
+
+
+                        </div>
+                    </div>
+                    
+                    <!-- Risultati Sincronizzazione -->
+                    <div id="sync-results" class="card" style="display: none;">
+                        <div class="card-header">
+                            <h3>
+                                <span class="material-symbols-rounded">task_alt</span>
+                                Risultati Sincronizzazione
+                            </h3>
+                            <button class="btn btn-secondary" onclick="exportResults()">
+                                <span class="material-symbols-rounded">download</span>
+                                Esporta
+                            </button>
+                        </div>
+                        
+                        <div class="card-body">
+                            <div class="results-grid">
+                                <div class="results-stats">
+                                    <div class="stat-card success">
+                                        <div class="stat-icon">
+                                            <span class="material-symbols-rounded">add_circle</span>
+                                        </div>
+                                        <div class="stat-content">
+                                            <div class="stat-value" id="result-inserted">0</div>
+                                            <div class="stat-label">Inseriti</div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card warning">
+                                        <div class="stat-icon">
+                                            <span class="material-symbols-rounded">update</span>
+                                        </div>
+                                        <div class="stat-content">
+                                            <div class="stat-value" id="result-updated">0</div>
+                                            <div class="stat-label">Aggiornati</div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card danger">
+                                        <div class="stat-icon">
+                                            <span class="material-symbols-rounded">delete</span>
+                                        </div>
+                                        <div class="stat-content">
+                                            <div class="stat-value" id="result-deleted">0</div>
+                                            <div class="stat-label">Eliminati</div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card info">
+                                        <div class="stat-icon">
+                                            <span class="material-symbols-rounded">error</span>
+                                        </div>
+                                        <div class="stat-content">
+                                            <div class="stat-value" id="result-errors">0</div>
+                                            <div class="stat-label">Errori</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="results-log">
+                                    <h5>Log Operazioni</h5>
+                                    <div id="sync-log" class="log-container">
+                                        <!-- I log verranno aggiunti qui -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 5: BACKUP -->
+                <div id="tab-backup" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>
+                                <span class="material-symbols-rounded">backup</span>
+                                Backup e Ripristino
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <p>Funzionalità in sviluppo...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 6: LOGS -->
+                <div id="tab-logs" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>
+                                <span class="material-symbols-rounded">list_alt</span>
+                                Logs di Sistema
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <p>Funzionalità in sviluppo...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL ANTEPRIMA CSV -->
+    <div id="modal-preview" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Anteprima CSV</h3>
+                <button class="btn-icon-small" onclick="closePreview()">
+                    <span class="material-symbols-rounded">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="preview-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CREAZIONE TABELLA -->
+    <div id="modal-create-table" class="modal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3>Crea Nuova Tabella</h3>
+                <button class="btn-icon-small" onclick="closeCreateTableModal()">
+                    <span class="material-symbols-rounded">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Funzionalità in sviluppo...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL LOADING -->
+    <div id="modal-loading" class="modal">
+        <div class="modal-content small">
+            <div class="modal-body">
+                <div class="loading-spinner">
+                    <span class="material-symbols-rounded">sync</span>
+                </div>
+                <h4 id="loading-title">Caricamento in corso...</h4>
+                <p id="loading-message">Attendere prego</p>
+
+<!-- AGGIUNGI QUESTI 3 ELEMENTI -->
+            <h4 id="titolo-elaborazione" style="display: none;">Caricamento...</h4>
+            <p id="dettaglio-elaborazione" style="display: none;">Attendere...</p>
+            <div id="stato-elaborazione" style="display: none;"></div>
+            <!-- FINE ELEMENTI AGGIUNTI -->
+
+
+                <div class="progress-bar">
+                    <div id="loading-progress"></div>
+                </div>
+                <div class="progress-text">
+                    <span id="loading-percent">0%</span>
+                    <span id="loading-detail"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT -->
+    <script src="db-config.js"></script>
+    <script src="admin_database.js"></script>
+
+<!-- Aggiungi in fondo, PRIMA del tag </body> -->
+<div style="position: fixed; bottom: 10px; right: 10px; z-index: 1000;">
+    <button onclick="testAdminState()" style="padding: 5px 10px; font-size: 12px; background: #4CAF50; color: white; border: none; border-radius: 4px;">
+        DEBUG
+    </button>
+</div>
+
+<script>
+function testAdminState() {
+    console.log('=== DEBUG ADMIN ===');
+    console.log('window.comparisonResults:', window.comparisonResults);
+    console.log('comparisonResults (locale):', typeof comparisonResults !== 'undefined' ? comparisonResults : 'non definita');
+    console.log('Sono uguali?', window.comparisonResults === comparisonResults);
+    console.log('Modalità sync:', document.querySelector('input[name="sync-mode"]:checked')?.value);
+    console.log('Tabella:', currentTable);
+    console.log('Chiave:', currentKey);
+    
+    if (window.comparisonResults) {
+        const newCount = window.comparisonResults.new?.length || 0;
+        const updateCount = window.comparisonResults.update?.length || 0;
+        const deleteCount = window.comparisonResults.delete?.length || 0;
+        console.log(`Dati: ${newCount} nuovi, ${updateCount} aggiornamenti, ${deleteCount} eliminazioni`);
+    }
+}
+</script>
+
+
+
+
+</body>
+</html>

@@ -176,6 +176,11 @@ async function caricaTurniTecnico() {
         if (error) throw error;
         
         turniList = turni || [];
+
+        // Recupera cessioni parziali attive per i turni e agganciale
+        const parzialiMap = await caricaParzialiPerTurni(turniList);
+        turniList = (turniList || []).map(t => ({ ...t, parziali: parzialiMap[t.id] || [] }));
+        
         console.log(`✅ Turni caricati: ${turniList.length}`);
         
         // Calcola peso turni (se non già calcolato)
@@ -184,6 +189,39 @@ async function caricaTurniTecnico() {
     } catch (error) {
         console.error('❌ Errore caricamento turni:', error);
         mostraMessaggio('Errore nel caricamento dei turni', 'error');
+    }
+}
+
+// Nuova funzione: carica parziali per i turni caricati
+async function caricaParzialiPerTurni(turni) {
+    try {
+        const supabase = getSupabaseClient();
+        if (!supabase || !turni || turni.length === 0) return {};
+
+        const ids = turni.map(t => t.id).filter(Boolean);
+        if (ids.length === 0) return {};
+
+        const { data: parziali, error } = await supabase
+            .from('turni_parziali')
+            .select('*')
+            .in('turno_originale_id', ids)
+            .eq('stato', 'attivo');
+
+        if (error) {
+            console.warn('❌ Errore caricamento parziali:', error);
+            return {};
+        }
+
+        const mappa = {};
+        (parziali || []).forEach(p => {
+            if (!mappa[p.turno_originale_id]) mappa[p.turno_originale_id] = [];
+            mappa[p.turno_originale_id].push(p);
+        });
+
+        return mappa;
+    } catch (err) {
+        console.error('❌ caricaParzialiPerTurni error:', err);
+        return {};
     }
 }
 
@@ -324,27 +362,50 @@ function generaCalendario(mese, anno) {
         numeroSpan.textContent = giorno;
         cella.appendChild(numeroSpan);
         
-        // Cerca turni per questa data
-     // CON:
-// SOSTITUISCI la logica di controllo turni:
-const turniOggi = turniList.filter(turno => {
-    const inizio = new Date(turno.data_inizio);
-    const fine = new Date(turno.data_fine);
-    
-    // Per il calendario, consideriamo il giorno INTERO
-    // Crea date a mezzanotte per confronto di giorni
-    const giornoData = new Date(data.getFullYear(), data.getMonth(), data.getDate());
-    const giornoInizio = new Date(inizio.getFullYear(), inizio.getMonth(), inizio.getDate());
-    const giornoFine = new Date(fine.getFullYear(), fine.getMonth(), fine.getDate());
-    
-    // Se è il giorno ESATTO di fine → escludi
-    if (giornoData.getTime() === giornoFine.getTime()) {
-        return false;
-    }
-    
-    // Altrimenti, controllo se il giorno è >= inizio e < fine
-    return giornoData >= giornoInizio && giornoData < giornoFine;
-});
+        // Nuova logica: costruisco un array di view-turni per il giorno (tenendo conto delle cessioni parziali)
+        const turniOggi = [];
+        turniList.forEach(turno => {
+            const inizio = new Date(turno.data_inizio);
+            const fine = new Date(turno.data_fine);
+            
+            // Date a mezzanotte per confronto di giorni (end escluso)
+            const giornoData = new Date(data.getFullYear(), data.getMonth(), data.getDate());
+            const giornoInizio = new Date(inizio.getFullYear(), inizio.getMonth(), inizio.getDate());
+            const giornoFine = new Date(fine.getFullYear(), fine.getMonth(), fine.getDate());
+            
+            // Se è il giorno ESATTO di fine → escludi
+            if (giornoData.getTime() === giornoFine.getTime()) {
+                return;
+            }
+            
+            // Controlla se il giorno è nel range del turno
+            const nelTurno = giornoData >= giornoInizio && giornoData < giornoFine;
+            if (!nelTurno) return;
+            
+            // Se il turno ha parziali attive, verifica se il giorno rientra in una cessione
+            const parziali = turno.parziali || [];
+            const parzialeMatch = parziali.find(p => {
+                const pInizio = new Date(p.data_inizio_cessione);
+                const pFine = new Date(p.data_fine_cessione);
+                const giornoPInizio = new Date(pInizio.getFullYear(), pInizio.getMonth(), pInizio.getDate());
+                const giornoPFine = new Date(pFine.getFullYear(), pFine.getMonth(), pFine.getDate());
+                // Manteniamo end escluso per coerenza: se il giorno === giornoPFine => escluso
+                return giornoData >= giornoPInizio && giornoData < giornoPFine;
+            });
+
+            if (parzialeMatch) {
+                // aggiungi una "view" del turno per la giornata con il tecnico cessionario
+                turniOggi.push({
+                    ...turno,
+                    tecnico_id: parzialeMatch.tecnico_cessionario_id || parzialeMatch.tecnico_cessionario,
+                    _isParziale: true,
+                    _parzialeInfo: parzialeMatch
+                });
+            } else {
+                // giorno normale del turno (titolare)
+                turniOggi.push(turno);
+            }
+        });
         
         // Se ci sono turni, aggiungi indicatori
         if (turniOggi.length > 0) {
@@ -352,7 +413,7 @@ const turniOggi = turniList.filter(turno => {
             
             // Colore del primo turno (per semplicità)
             const primoTurno = turniOggi[0];
-            const zona = zoneList.find(z => z.id === primoTurno.zona_id);
+            const zona = zoneList.find(z => z.id === primoTurno.zona_id) || primoTurno.zone_reperibilita;
             
             if (zona) {
                 cella.style.borderColor = zona.colore_hex;
