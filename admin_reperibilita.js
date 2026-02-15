@@ -25,16 +25,19 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Controlla connessione DB
         const configInfo = getDbConfigInfo();
-        const indicator = document.getElementById('db-status-indicator');
-        
-        if (configInfo.configured) {
-            indicator.style.background = '#22c55e';
-            indicator.title = `DB configurato • ${configInfo.urlShort || 'N/A'}`;
-        } else {
-            indicator.style.background = '#f59e0b';
-            indicator.title = 'Database non configurato';
-            mostraMessaggio('Database non configurato', 'error');
-        }
+       const indicator = document.getElementById('db-status-indicator');
+if (indicator) {
+    if (configInfo.configured) {
+        indicator.style.background = '#22c55e';
+        indicator.style.title = `DB configurato • ${configInfo.urlShort || 'N/A'}`;
+    } else {
+        indicator.style.background = '#f59e0b';
+        indicator.style.title = 'Database non configurato';
+        mostraMessaggio('Database non configurato', 'error');
+    }
+} else {
+    console.warn('⚠️ db-status-indicator non trovato (normale se integrato in admin_database)');
+}
         
         // Inizializza le tab
         inizializzaTabs();

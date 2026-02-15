@@ -2771,3 +2771,452 @@ body {
         justify-content: center;
     }
 }
+
+.btn-success-small {
+    background: #d1fae5; color: #065f46; border: none; padding: 4px 8px; 
+    border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 4px;
+}
+.btn-danger-small {
+    background: #fee2e2; color: #991b1b; border: none; padding: 4px 8px; 
+    border-radius: 6px; cursor: pointer;
+}
+.badge-targa {
+    background: #f1f5f9; border: 1px solid #cbd5e1; padding: 2px 6px; 
+    border-radius: 4px; font-family: monospace; font-weight: bold;
+}
+
+
+/* Stili aggiuntivi per modulo veicoli */
+.vehicle-view {
+    display: none;
+}
+
+.vehicle-view.active {
+    display: block;
+}
+
+.badge-success {
+    background: #d1fae5;
+    color: #065f46;
+    padding: 4px 8px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.badge-danger {
+    background: #fee2e2;
+    color: #991b1b;
+    padding: 4px 8px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 4px;
+    justify-content: flex-start;
+}
+
+.btn-icon-small {
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    border-radius: 4px;
+    color: #64748b;
+}
+
+.btn-icon-small:hover {
+    background: #f1f5f9;
+    color: #3b82f6;
+}
+
+.btn-success {
+    color: #10b981;
+}
+
+.btn-danger {
+    color: #ef4444;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #94a3b8;
+}
+
+.empty-state .btn {
+    margin-top: 1rem;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+/* Mantieni coerenza con form esistenti */
+.form-control {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+}
+
+.filter-select {
+    padding: 0.5rem 2rem 0.5rem 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: white;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+}
+
+/* Stili per i sottotab della reperibilità */
+.reperibilita-tab-content {
+    display: none;
+}
+
+.reperibilita-tab-content.active {
+    display: block;
+}
+
+/* Stili per le liste elementi */
+.lista-elementi {
+    margin-top: 1.5rem;
+}
+
+.elemento-item {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s;
+}
+
+.elemento-item:hover {
+    background: #f1f5f9;
+    border-color: var(--primary-light);
+}
+
+/* Stili per i badge stato */
+.stato-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    margin-left: 0.5rem;
+}
+
+.stato-badge.approved {
+    background: #22c55e;
+    color: white;
+}
+
+.stato-badge.rejected {
+    background: #ef4444;
+    color: white;
+}
+
+.stato-badge.stato-pending {
+    background: #f59e0b;
+    color: white;
+}
+
+.stato-badge.stato-peer {
+    background: #8B5CF6;
+    color: white;
+}
+
+/* Stili per turno zona */
+.turno-zona {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    background: #f1f5f9;
+}
+
+/* Stili per storico card */
+.storico-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--border);
+    border-left: 4px solid #3B82F6;
+}
+
+.storico-card.approved {
+    border-left-color: #22c55e;
+    background: linear-gradient(to right, #f0fdf4 0.5%, white 2%);
+}
+
+.storico-card.rejected {
+    border-left-color: #ef4444;
+    background: linear-gradient(to right, #fef2f2 0.5%, white 2%);
+}
+
+/* Stili per area upload CSV */
+.file-upload-area {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.3s;
+    background: white;
+}
+
+.file-upload-area:hover {
+    border-color: var(--primary);
+    background: rgba(37, 99, 235, 0.02);
+}
+
+/* Stili per messaggi */
+.message-success {
+    background: #f0fdf4;
+    color: #166534;
+    border-left: 4px solid #22c55e;
+}
+
+.message-error {
+    background: #fef2f2;
+    color: #991b1b;
+    border-left: 4px solid #ef4444;
+}
+
+.message-warning {
+    background: #fffbeb;
+    color: #92400e;
+    border-left: 4px solid #f59e0b;
+}
+
+
+/* Stili per Parco Impianti */
+
+/* Stili per Parco Impianti - Barra giri */
+/* Stili per Parco Impianti - Barra giri */
+#barra-giri {
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) var(--border);
+    display: flex;
+    gap: 0.75rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+}
+
+#barra-giri > div {
+    min-width: 90px;  /* Leggermente ridotto */
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 0.75rem;  /* Ridotto da 1rem */
+    text-align: center;
+    border: 1px solid var(--border);
+}
+
+#barra-giri > div div:first-child {
+    font-size: 0.9rem;  /* Ridotto da 1.25rem (circa -30%) */
+    font-weight: 700;    /* Leggermente meno bold */
+    color: var(--text-main);
+}
+
+#barra-giri > div div:last-child {
+    font-size: 1.1rem;  /* Ridotto da 1.5rem (circa -27%) */
+    font-weight: 700;
+    color: var(--primary);
+    margin-top: 0.25rem;
+}
+
+#barra-giri::-webkit-scrollbar {
+    height: 6px;
+}
+
+#barra-giri::-webkit-scrollbar-track {
+    background: var(--border);
+    border-radius: 3px;
+}
+
+#barra-giri::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 3px;
+}
+
+/* Checkbox nella tabella */
+.data-table td:first-child,
+.data-table th:first-child {
+    text-align: center;
+    vertical-align: middle;
+}
+
+/* Form control per parco */
+.form-control {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Dettaglio analisi import */
+#dettaglio-analisi-parco {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 1rem;
+    border: 1px solid var(--border);
+}
+
+#dettaglio-analisi-parco h4 {
+    font-size: 1rem;
+    margin: 0 0 0.5rem 0;
+}
+
+/* Categorie analisi */
+#dettaglio-analisi-parco input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--primary);
+}
+
+/* Messaggi notifica */
+.notifica {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    z-index: 9999;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+}
+
+/* Stili per Admin Annotazioni */
+
+/* Bottoni tipo (copiati dalla versione mobile ma adattati) */
+.selettore-tipo-container {
+    margin-bottom: 1.5rem;
+}
+
+.btn-tipo-opzione {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+    font-family: inherit;
+}
+
+.btn-tipo-opzione:hover {
+    border-color: #94a3b8;
+    background: #f8fafc;
+}
+
+.btn-tipo-opzione.selezionato {
+    border-color: #2563eb;
+    background: #eff6ff;
+}
+
+.icona-tipo {
+    width: 40px;
+    height: 40px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.icona-tipo[data-tipo-admin="0"] {
+    background: #eff6ff;
+    color: #3B82F6;
+}
+
+.icona-tipo[data-tipo-admin="1"] {
+    background: #d1fae5;
+    color: #10B981;
+}
+
+.icona-tipo[data-tipo-admin="2"] {
+    background: #ede9fe;
+    color: #8B5CF6;
+}
+
+.tipo-titolo {
+    font-weight: 700;
+    color: #1e293b;
+    font-size: 0.95rem;
+}
+
+.tipo-descrizione {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+.checkmark-selezione {
+    margin-left: auto;
+    color: #22c55e;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.btn-tipo-opzione.selezionato .checkmark-selezione {
+    opacity: 1;
+}
+
+/* Badge tipo nella tabella */
+.badge-tipo-annotazione {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.badge-tipo-0 {
+    background: #eff6ff;
+    color: #3B82F6;
+}
+
+.badge-tipo-1 {
+    background: #d1fae5;
+    color: #10B981;
+}
+
+.badge-tipo-2 {
+    background: #ede9fe;
+    color: #8B5CF6;
+}

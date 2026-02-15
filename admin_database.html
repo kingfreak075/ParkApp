@@ -9,6 +9,11 @@
     <link rel="stylesheet" href="style_admin.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+
+
+
+
 </head>
 <body>
     <div class="admin-container">
@@ -23,40 +28,81 @@
             </div>
             
            <!-- Modifica sidebar esistente -->
-<nav class="sidebar-nav">
-    <!-- Sezione DATABASE (esistente) -->
-    <div class="nav-section">
-        <h3>DATABASE</h3>
-        <button class="nav-btn" data-tab="config">...</button>
-        <button class="nav-btn" data-tab="tables">...</button>
-    </div>
+<!-- Sezione DATABASE -->
+<div class="nav-section">
+    <h3>DATABASE</h3>
+    <button class="nav-btn" data-tab="config">
+        <span class="material-symbols-rounded">settings</span>
+        Configurazione
+    </button>
+    <button class="nav-btn" data-tab="tables">
+        <span class="material-symbols-rounded">table_chart</span>
+        Tabelle
+    </button>
+</div>
     
-    <!-- NUOVA: Sezione GESTIONE MANUALE -->
-    <div class="nav-section">
-        <h3>GESTIONE MANUALE</h3>
-        <button class="nav-btn" data-tab="personnel">
-            <span class="material-symbols-rounded">groups</span>
-            Personale
-        </button>
-        <button class="nav-btn" data-tab="vehicles">
-            <span class="material-symbols-rounded">directions_car</span>
-            Veicoli
-        </button>
-    </div>
+<!-- NUOVA: Sezione GESTIONE MANUALE -->
+<div class="nav-section">
+    <h3>GESTIONE MANUALE</h3>
+    <button class="nav-btn" data-tab="personnel">
+        <span class="material-symbols-rounded">groups</span>
+        Personale
+    </button>
+    <button class="nav-btn" data-tab="vehicles">
+        <span class="material-symbols-rounded">directions_car</span>
+        Veicoli
+    </button>
+<!-- NUOVO: Pulsante Reperibilità -->
+    <button class="nav-btn" data-tab="reperibilita">
+        <span class="material-symbols-rounded">schedule</span>
+        Reperibilità
+    </button>
+<!-- Nella sezione GESTIONE MANUALE, dopo Reperibilità -->
+<button class="nav-btn" data-tab="parco">
+    <span class="material-symbols-rounded">elevator</span>
+    Parco Impianti
+</button>
+
+<!-- Dopo Parco Impianti, aggiungi: -->
+<button class="nav-btn" data-tab="fogli">
+    <span class="material-symbols-rounded">assignment</span>
+    Fogli Lavoro
+</button>
+
+
+</div>
     
-    <!-- Sezione SINCRONIZZAZIONE (esistente) -->
-    <div class="nav-section">
-        <h3>SINCRONIZZAZIONE</h3>
-        <button class="nav-btn" data-tab="analyze">...</button>
-        <button class="nav-btn" data-tab="sync">...</button>
-    </div>
+ <!-- Sezione SINCRONIZZAZIONE -->
+<div class="nav-section">
+    <h3>SINCRONIZZAZIONE</h3>
+    <button class="nav-btn" data-tab="analyze">
+        <span class="material-symbols-rounded">analytics</span>
+        Analisi
+    </button>
+    <button class="nav-btn" data-tab="sync">
+        <span class="material-symbols-rounded">sync</span>
+        CSV Sync
+    </button>
+</div>
     
-    <!-- Sezione UTILITIES (esistente) -->
-    <div class="nav-section">
-        <h3>UTILITIES</h3>
-        <button class="nav-btn" data-tab="backup">...</button>
-        <button class="nav-btn" data-tab="logs">...</button>
-    </div>
+    <!-- Sezione UTILITIES -->
+<div class="nav-section">
+    <h3>UTILITIES</h3>
+    <button class="nav-btn" data-tab="backup">
+        <span class="material-symbols-rounded">backup</span>
+        Backup
+    </button>
+    <button class="nav-btn" data-tab="logs">
+        <span class="material-symbols-rounded">list_alt</span>
+        Logs
+    </button>
+<!-- Dopo Logs, aggiungi: -->
+<button class="nav-btn" data-tab="annotazioni">
+    <span class="material-symbols-rounded">note_alt</span>
+    Annotazioni
+</button>
+
+</div>
 </nav>
             
             <div class="sidebar-footer">
@@ -669,19 +715,1374 @@
     </div>
 </div>
 
-<!-- NUOVO TAB: Gestione Veicoli -->
-
+<!-- NUOVO TAB: Gestione Veicoli (Integrato) -->
 <div id="tab-vehicles" class="tab-content">
+    <!-- Card Principale -->
     <div class="card">
         <div class="card-header">
-            <h3><span class="material-symbols-rounded">directions_car</span> Gestione Veicoli</h3>
+            <h3>
+                <span class="material-symbols-rounded">directions_car</span>
+                Gestione Flotta
+            </h3>
+            <div class="card-actions">
+                <button class="btn btn-primary" onclick="showAddVehicleModal()">
+                    <span class="material-symbols-rounded">add</span>
+                    Aggiungi Veicolo
+                </button>
+                <button class="btn btn-icon" onclick="loadVehicles()" title="Aggiorna">
+                    <span class="material-symbols-rounded">refresh</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <!-- Tabs interni -->
+            <div class="tabs-horizontal" id="vehicle-tabs">
+                <button class="tab-btn active" data-vehicle-view="fleet" onclick="switchVehicleView('fleet')">
+                    <span class="material-symbols-rounded">garage</span>
+                    Parco Auto
+                </button>
+                <button class="tab-btn" data-vehicle-view="approvals" onclick="switchVehicleView('approvals')">
+                    <span class="material-symbols-rounded">approval</span>
+                    Approvazioni
+                </button>
+            </div>
+            
+            <!-- View: Parco Auto -->
+            <div id="vehicle-view-fleet" class="vehicle-view active">
+                <div class="table-filters" style="margin: 1.5rem 0 1rem 0;">
+                    <div class="search-box">
+                        <span class="material-symbols-rounded">search</span>
+                        <input type="text" placeholder="Cerca per targa, modello o driver..." id="search-fleet" onkeyup="filterFleetTable()">
+                    </div>
+                    <select id="filter-fleet-status" onchange="filterFleetTable()">
+                        <option value="all">Tutti i veicoli</option>
+                        <option value="active">Solo attivi</option>
+                        <option value="inactive">Solo non attivi</option>
+                    </select>
+                </div>
+                
+                <div class="tables-container">
+                    <table class="data-table" id="fleet-table">
+                        <thead>
+                            <tr>
+                                <th>Targa</th>
+                                <th>Modello</th>
+                                <th>Driver Assegnato</th>
+                                <th>Data Assegnazione</th>
+                                <th>Stato</th>
+                                <th>Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fleet-table-body">
+                            <tr>
+                                <td colspan="6" class="text-center">
+                                    <div class="loading-spinner-small">
+                                        <span class="material-symbols-rounded">hourglass_top</span>
+                                        Caricamento veicoli...
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- View: Approvazioni Kilometri -->
+            <div id="vehicle-view-approvals" class="vehicle-view">
+                <div class="table-filters" style="margin: 1.5rem 0 1rem 0;">
+                    <div class="search-box">
+                        <span class="material-symbols-rounded">search</span>
+                        <input type="text" placeholder="Cerca per veicolo o tecnico..." id="search-approvals" onkeyup="filterApprovalsTable()">
+                    </div>
+                    <select id="filter-approvals-vehicle" class="filter-select" onchange="filterApprovalsTable()">
+                        <option value="all">Tutti i veicoli</option>
+                        <!-- Options verranno popolate dinamicamente -->
+                    </select>
+                </div>
+                
+                <div class="tables-container">
+                    <table class="data-table" id="approvals-table">
+                        <thead>
+                            <tr>
+                                <th>Data Inserimento</th>
+                                <th>Veicolo</th>
+                                <th>Tecnico</th>
+                                <th>Periodo</th>
+                                <th>Km Tachimetro</th>
+                                <th>Note</th>
+                                <th>Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody id="approvals-table-body">
+                            <tr>
+                                <td colspan="7" class="text-center">
+                                    <div class="loading-spinner-small">
+                                        <span class="material-symbols-rounded">hourglass_top</span>
+                                        Caricamento approvazioni...
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Card Statistiche (secondaria) -->
+    <div class="card" style="margin-top: 1.5rem;">
+        <div class="card-header">
+            <h3>
+                <span class="material-symbols-rounded">analytics</span>
+                Statistiche Flotta
+            </h3>
         </div>
         <div class="card-body">
-            <!-- Contenuto verrà popolato dinamicamente -->
-            <div id="vehicles-content"></div>
+            <div class="stats-grid" id="vehicle-stats">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-symbols-rounded">directions_car</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stats-total-vehicles">0</div>
+                        <div class="stat-label">Veicoli Totali</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-symbols-rounded">check_circle</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stats-active-vehicles">0</div>
+                        <div class="stat-label">Veicoli Attivi</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-symbols-rounded">pending_actions</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stats-pending-approvals">0</div>
+                        <div class="stat-label">Approvazioni in attesa</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-symbols-rounded">speed</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stats-total-km">0</div>
+                        <div class="stat-label">Km Totali (ultimo mese)</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
+<!-- NUOVO TAB: Gestione Reperibilità (integrato da admin_reperibilita.html) -->
+<div id="tab-reperibilita" class="tab-content">
+    <!-- Card Principale - Zone e Gestione -->
+    <div class="card">
+        <div class="card-header">
+            <h3>
+                <span class="material-symbols-rounded">schedule</span>
+                Gestione Reperibilità
+            </h3>
+            <div class="tabs-horizontal" id="reperibilita-tabs">
+                <button class="tab-btn active" data-reperibilita-tab="zone">Zone</button>
+                <button class="tab-btn" data-reperibilita-tab="csv">Carica CSV</button>
+                <button class="tab-btn" data-reperibilita-tab="festivita">Festività</button>
+                <button class="tab-btn" data-reperibilita-tab="turni">Turni</button>
+                <button class="tab-btn" data-reperibilita-tab="approvazioni">Approvazioni</button>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <!-- Contenitore per i sottotab della reperibilità -->
+            <div id="reperibilita-content">
+                <!-- ZONE TAB -->
+                <div id="reperibilita-zone" class="reperibilita-tab-content active">
+                    <div style="margin-bottom: 2rem;">
+                        <h4 style="margin: 0 0 1rem 0; color: var(--text-main); font-weight: 800;">Nuova Zona</h4>
+                        
+                        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1rem; align-items: end; margin-bottom: 1.5rem;">
+                            <div class="form-group">
+                                <label>Nome Zona *</label>
+                                <input type="text" id="nome-zona" class="form-control" placeholder="BO EST, BO CENTRO, ecc." maxlength="50">
+                            </div>
+                            <div class="form-group">
+                                <label>Colore</label>
+                                <input type="color" id="colore-zona" value="#3B82F6" style="width: 100%; height: 42px; border-radius: 8px; border: 2px solid var(--border); cursor: pointer;">
+                            </div>
+                            <div class="form-group">
+                                <button onclick="salvaZona()" class="btn btn-primary" style="width: 100%;">
+                                    <span class="material-symbols-rounded">save</span>
+                                    Salva Zona
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Descrizione (opzionale)</label>
+                            <textarea id="descrizione-zona" class="form-control" rows="2" placeholder="Descrizione della zona..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h4 style="margin: 0; color: var(--text-main); font-weight: 800;">Zone Esistenti</h4>
+                            <button onclick="caricaZone()" class="btn btn-icon">
+                                <span class="material-symbols-rounded">refresh</span>
+                            </button>
+                        </div>
+                        
+                        <div id="lista-zone" class="lista-elementi">
+                            <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                <span class="material-symbols-rounded">sync</span>
+                                <p style="margin-top: 0.5rem;">Caricamento zone...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- CSV TAB -->
+                <div id="reperibilita-csv" class="reperibilita-tab-content">
+                    <div style="margin-bottom: 2rem;">
+                        <h4 style="margin: 0 0 1rem 0; color: var(--text-main); font-weight: 800;">Caricamento Turni da CSV</h4>
+                        
+                        <div class="form-group">
+                            <label>Template CSV</label>
+                            <div style="background: #f8fafc; border-radius: 12px; padding: 1rem; border: 1px solid var(--border);">
+                                <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: var(--primary);">Scarica template:</p>
+                                <button onclick="scaricaTemplateCSV()" class="btn btn-secondary" style="width: auto;">
+                                    <span class="material-symbols-rounded">download</span>
+                                    Template_Reperibilita.csv
+                                </button>
+                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">
+                                    Formato: <code>DataInizio;Zona;Tecnico</code><br>
+                                    Esempio: <code>2025-01-03;BO EST;Mario Rossi</code>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>File CSV *</label>
+                            <div id="csv-drop-area" class="file-upload-area" onclick="document.getElementById('file-csv').click()" style="cursor: pointer;">
+                                <input type="file" id="file-csv" accept=".csv" style="display: none;">
+                                <span class="material-symbols-rounded" style="font-size: 3rem; color: var(--primary-light); margin-bottom: 1rem;">cloud_upload</span>
+                                <p style="font-weight: 800; color: var(--primary); margin: 0 0 0.5rem 0;">Clicca per selezionare file CSV</p>
+                                <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">Trascina qui il file o clicca per selezionare</p>
+                            </div>
+                            
+                            <div id="file-info" style="display: none; background: #f8fafc; border-radius: 12px; padding: 1rem; margin-top: 1rem; border: 1px solid var(--border);">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <p style="font-weight: 800; color: var(--text-main); margin: 0 0 0.25rem 0;" id="file-name"></p>
+                                        <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;" id="file-size"></p>
+                                    </div>
+                                    <button onclick="rimuoviFile()" style="background: none; border: none; color: #ef4444; cursor: pointer;">
+                                        <span class="material-symbols-rounded">delete</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Opzioni</label>
+                            <div style="display: flex; gap: 1rem;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                    <input type="checkbox" id="backup-csv" checked>
+                                    <span style="font-size: 0.9rem; font-weight: 600;">Crea backup prima dell'import</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                    <input type="checkbox" id="sovrascrivi-csv" checked>
+                                    <span style="font-size: 0.9rem; font-weight: 600;">Sovrascrivi turni esistenti</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div id="anteprima-csv" style="display: none;"></div>
+                        
+                        <button onclick="validaECaricaCSV()" class="btn btn-primary" id="btn-carica-csv" disabled style="margin-top: 1rem;">
+                            <span class="material-symbols-rounded">upload</span>
+                            Valida e Carica CSV
+                        </button>
+                    </div>
+                    
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h4 style="margin: 0; color: var(--text-main); font-weight: 800;">Storico Caricamenti</h4>
+                            <button onclick="caricaStoricoCSV()" class="btn btn-icon">
+                                <span class="material-symbols-rounded">refresh</span>
+                            </button>
+                        </div>
+                        
+                        <div id="storico-caricamenti" class="lista-elementi">
+                            <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                <span class="material-symbols-rounded">history</span>
+                                <p style="margin-top: 0.5rem;">Nessun caricamento effettuato</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- FESTIVITÀ TAB -->
+                <div id="reperibilita-festivita" class="reperibilita-tab-content">
+                    <div style="margin-bottom: 2rem;">
+                        <h4 style="margin: 0 0 1rem 0; color: var(--text-main); font-weight: 800;">Nuova Festività</h4>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                            <div class="form-group">
+                                <label>Data *</label>
+                                <input type="date" id="data-festivita" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label>Nome Festività *</label>
+                                <input type="text" id="nome-festivita" class="form-control" placeholder="Es: Capodanno">
+                            </div>
+                            <div class="form-group">
+                                <label>Tipo *</label>
+                                <select id="tipo-festivita" class="form-control">
+                                    <option value="nazionale">Nazionale</option>
+                                    <option value="regionale">Regionale</option>
+                                    <option value="locale">Locale (per zona)</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div id="zona-festivita-container" style="display: none; margin-top: 1rem;">
+                            <div class="form-group">
+                                <label>Zona (per festività locale)</label>
+                                <select id="zona-festivita" class="form-control">
+                                    <!-- Le zone verranno caricate dinamicamente -->
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group" style="margin-top: 1rem;">
+                            <label>Note (opzionali)</label>
+                            <textarea id="note-festivita" class="form-control" rows="2" placeholder="Note aggiuntive..."></textarea>
+                        </div>
+                        
+                        <button onclick="salvaFestivita()" class="btn btn-primary" style="margin-top: 1rem;">
+                            <span class="material-symbols-rounded">add_circle</span>
+                            Aggiungi Festività
+                        </button>
+                    </div>
+                    
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h4 style="margin: 0; color: var(--text-main); font-weight: 800;">Festività Esistenti</h4>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <select id="filtro-anno-festivita" class="form-control" style="width: 150px;" onchange="caricaFestivita()">
+                                    <option value="2025">2025</option>
+                                    <option value="2026" selected>2026</option>
+                                    <option value="tutti">Tutti gli anni</option>
+                                </select>
+                                <button onclick="caricaFestivita()" class="btn btn-icon">
+                                    <span class="material-symbols-rounded">refresh</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="lista-festivita" class="lista-elementi">
+                            <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                <span class="material-symbols-rounded">sync</span>
+                                <p style="margin-top: 0.5rem;">Caricamento festività...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- TURNI TAB -->
+                <div id="reperibilita-turni" class="reperibilita-tab-content">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h4 style="margin: 0; color: var(--text-main); font-weight: 800;">Visualizzazione Turni</h4>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button onclick="esportaTurniCSV()" class="btn btn-secondary">
+                                <span class="material-symbols-rounded">download</span>
+                                Esporta CSV
+                            </button>
+                            <button onclick="caricaTurni()" class="btn btn-icon">
+                                <span class="material-symbols-rounded">refresh</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                        <div class="form-group">
+                            <label>Filtra per zona</label>
+                            <select id="filtro-zona-turni" class="form-control" onchange="caricaTurni()">
+                                <option value="">Tutte le zone</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Filtra per mese</label>
+                            <select id="filtro-mese-turni" class="form-control" onchange="caricaTurni()">
+                                <option value="">Tutti i mesi</option>
+                                <option value="1">Gennaio</option>
+                                <option value="2">Febbraio</option>
+                                <option value="3">Marzo</option>
+                                <option value="4">Aprile</option>
+                                <option value="5">Maggio</option>
+                                <option value="6">Giugno</option>
+                                <option value="7">Luglio</option>
+                                <option value="8">Agosto</option>
+                                <option value="9">Settembre</option>
+                                <option value="10">Ottobre</option>
+                                <option value="11">Novembre</option>
+                                <option value="12">Dicembre</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="calendario-turni">
+                        <div style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                            <span class="material-symbols-rounded">calendar_month</span>
+                            <p style="margin-top: 0.5rem;">Seleziona i filtri per visualizzare i turni</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- APPROVAZIONI TAB -->
+                <div id="reperibilita-approvazioni" class="reperibilita-tab-content">
+                    <div style="margin-bottom: 2rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                            <h4 style="margin: 0; color: var(--text-main); font-weight: 800;">Richieste da Approvare</h4>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <select id="filtro-stato-approvazioni" class="form-control" style="width: 200px;" onchange="caricaRichiestePending()">
+                                    <option value="pending">In attesa</option>
+                                    <option value="peer_approval">Da collega</option>
+                                    <option value="admin_approval">Da admin</option>
+                                    <option value="tutti">Tutte le pendenti</option>
+                                </select>
+                                <button onclick="caricaRichiestePending()" class="btn btn-icon">
+                                    <span class="material-symbols-rounded">refresh</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="lista-richieste-pending" class="lista-elementi">
+                            <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                <span class="material-symbols-rounded">sync</span>
+                                <p style="margin-top: 0.5rem;">Caricamento richieste...</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                            <h4 style="margin: 0; color: var(--text-main); font-weight: 800;">Storico Approvazioni</h4>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <select id="filtro-anno-storico" class="form-control" style="width: 120px;" onchange="caricaStoricoApprovazioni()">
+                                    <option value="tutti">Tutti</option>
+                                    <option value="2025">2025</option>
+                                    <option value="2026" selected>2026</option>
+                                </select>
+                                <select id="filtro-tipo-storico" class="form-control" style="width: 150px;" onchange="caricaStoricoApprovazioni()">
+                                    <option value="tutti">Tutti i tipi</option>
+                                    <option value="scambio">Scambi</option>
+                                    <option value="sostituzione">Sostituzioni</option>
+                                    <option value="cessione_parziale">Cessioni</option>
+                                </select>
+                                <select id="filtro-stato-storico" class="form-control" style="width: 150px;" onchange="caricaStoricoApprovazioni()">
+                                    <option value="tutti">Tutti gli stati</option>
+                                    <option value="approved">Approvate</option>
+                                    <option value="rejected">Rifiutate</option>
+                                </select>
+                                <button onclick="caricaStoricoApprovazioni()" class="btn btn-icon">
+                                    <span class="material-symbols-rounded">refresh</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="storico-approvazioni" class="lista-elementi">
+                            <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                <span class="material-symbols-rounded">history</span>
+                                <p style="margin-top: 0.5rem;">Nessuna approvazione registrata</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- NUOVO TAB: Gestione Parco Impianti -->
+<div id="tab-parco" class="tab-content">
+    <script>
+    (function() {
+        // Verifica se siamo nel tab parco e carica i dati
+        setTimeout(function() {
+            if (document.getElementById('tab-parco').classList.contains('active')) {
+                if (typeof caricaImpianti === 'function') {
+                    caricaImpianti();
+                } else {
+                    console.warn('Attendo caricamento admin_parco.js...');
+                    // Prova ancora dopo 1 secondo
+                    setTimeout(function() {
+                        if (typeof caricaImpianti === 'function') {
+                            caricaImpianti();
+                        }
+                    }, 1000);
+                }
+            }
+        }, 500);
+    })();
+</script>
+    <!-- Card Principale -->
+    <div class="card">
+        <div class="card-header">
+            <h3>
+                <span class="material-symbols-rounded">elevator</span>
+                Gestione Parco Impianti
+            </h3>
+            <div class="card-actions">
+         
+                  <!-- A: -->
+<button class="btn btn-primary" id="btn-nuovo-impianto-unico" onclick="mostraModalAggiuntaParco()">
+    <span class="material-symbols-rounded">elevator</span>
+    Nuovo Impianto
+</button>
+              <button class="btn btn-icon" onclick="if(typeof caricaImpianti === 'function') caricaImpianti(); else console.error('caricaImpianti non definita')" title="Aggiorna">
+    <span class="material-symbols-rounded">refresh</span>
+</button>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <!-- STATISTICHE -->
+            <div style="margin-bottom: 2rem;">
+                <div style="font-size: 2.5rem; font-weight: 800; color: var(--primary); text-align: center; margin-bottom: 1.5rem;">
+                    <span id="totale-impianti">0</span> <span style="font-size: 1rem; color: var(--text-muted);">impianti totali</span>
+                </div>
+                
+                <div style="font-weight: 600; color: var(--text-muted); margin-bottom: 0.75rem;">Giri</div>
+                <div id="barra-giri" style="display: flex; gap: 0.75rem; overflow-x: auto; padding-bottom: 0.5rem;">
+                    <!-- I box giri verranno generati qui -->
+                    <div style="min-width: 100px; background: #f8fafc; border-radius: 12px; padding: 1rem; text-align: center; border: 1px solid var(--border);">
+                        <div style="font-size: 1.25rem; font-weight: 800;">Giro 1</div>
+                        <div style="font-size: 1.5rem; font-weight: 800; color: var(--primary);">0</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- FILTRI -->
+            <div style="display: grid; grid-template-columns: 1fr 200px 200px; gap: 1rem; margin-bottom: 1.5rem;">
+                <div class="search-box">
+                    <span class="material-symbols-rounded">search</span>
+                    <input type="text" id="search-parco" placeholder="Cerca impianto, cliente, indirizzo..." onkeyup="filtraImpianti()">
+                </div>
+                
+                <select id="filtro-giro-parco" class="form-control" onchange="filtraImpianti()">
+                    <option value="">Tutti i giri</option>
+                </select>
+                
+                <select id="filtro-tecnico-parco" class="form-control" onchange="filtraImpianti()">
+                    <option value="">Tutti i tecnici</option>
+                </select>
+            </div>
+            
+            <!-- TABELLA IMPIANTI -->
+            <div class="tables-container">
+                <table class="data-table" id="tabella-parco">
+                    <thead>
+                        <tr>
+                            <th style="width: 30px;">
+                                <input type="checkbox" id="select-all-parco" onchange="selezionaTuttiParco()">
+                            </th>
+                            <th>Impianto</th>
+                            <th>Tipo</th>
+                            <th>Zona</th>
+                            <th>Giro</th>
+                            <th>Tecnico</th>
+                            <th>Cliente</th>
+                            <th>Indirizzo</th>
+                            <th>Ult.Sem</th>
+                            <th>Ult.VP</th>
+                            <th>Ult.Man</th>
+                            <th>Note</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabella-parco-body">
+                        <tr>
+                            <td colspan="13" class="text-center">
+                                <div class="loading-spinner-small">
+                                    <span class="material-symbols-rounded">hourglass_top</span>
+                                    Caricamento impianti...
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- BOTTONI BULK OPERATIONS -->
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="esportaCSVParco()">
+                    <span class="material-symbols-rounded">download</span>
+                    Esporta CSV
+                </button>
+                <button class="btn btn-secondary" onclick="mostraImportParco()">
+                    <span class="material-symbols-rounded">upload</span>
+                    Importa CSV
+                </button>
+                <button class="btn btn-danger" onclick="eliminaSelezionatiParco()">
+                    <span class="material-symbols-rounded">delete</span>
+                    Elimina selezionati
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Card Import CSV (inizialmente nascosta) -->
+    <div id="card-import-parco" class="card" style="margin-top: 1.5rem; display: none;">
+        <div class="card-header">
+            <h3>
+                <span class="material-symbols-rounded">upload</span>
+                Importa CSV - Analisi
+            </h3>
+            <button class="btn-icon-small" onclick="chiudiImportParco()">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+        </div>
+        
+        <div class="card-body">
+            <!-- Area upload -->
+            <div id="import-parco-step1">
+                <div class="file-upload-area" id="drop-zone-parco">
+                    <input type="file" id="file-parco-csv" accept=".csv" hidden>
+                    <span class="material-symbols-rounded">cloud_upload</span>
+                    <p>Trascina il file CSV qui o <a href="#" onclick="document.getElementById('file-parco-csv').click()">clicca per selezionare</a></p>
+                    <small>Formato: CSV con separatore ;</small>
+                </div>
+                <!-- Dopo il drop zone, prima del bottone Analizza -->
+<div id="feedback-csv-parco" style="display: none; margin-top: 1rem; padding: 1rem; border-radius: 8px; background: #f8fafc; border-left: 4px solid #3B82F6;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <div style="font-weight: 800; color: var(--primary);" id="csv-feedback-titolo">File caricato</div>
+            <div style="font-size: 0.9rem; color: var(--text-main);" id="csv-feedback-nome"></div>
+            <div style="font-size: 0.8rem; color: var(--text-muted);" id="csv-feedback-dettagli"></div>
+        </div>
+        <div id="csv-feedback-icona" style="color: #22c55e;">
+            <span class="material-symbols-rounded">check_circle</span>
+        </div>
+    </div>
+</div>
+                <div style="margin-top: 1rem; display: flex; gap: 1rem; justify-content: center;">
+                    <button class="btn btn-secondary" onclick="scaricaTemplateParco()">
+                        <span class="material-symbols-rounded">download</span>
+                        Scarica Template
+                    </button>
+                    <button class="btn btn-primary" onclick="analizzaCSVParco()" id="btn-analizza-parco" disabled>
+                        <span class="material-symbols-rounded">analytics</span>
+                        Analizza CSV
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Risultati analisi (inizialmente nascosti) -->
+            <div id="import-parco-step2" style="display: none;">
+                <div id="riepilogo-analisi-parco" style="margin-bottom: 1.5rem;"></div>
+                <div id="dettaglio-analisi-parco" style="max-height: 400px; overflow-y: auto; margin-bottom: 1.5rem;"></div>
+                
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button class="btn btn-secondary" onclick="annullaImportParco()">
+                        Annulla
+                    </button>
+                    <button class="btn btn-primary" onclick="eseguiImportParco()" id="btn-import-parco">
+                        <span class="material-symbols-rounded">sync</span>
+                        Importa Selezionati
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- NUOVO TAB: Fogli Lavoro -->
+<div id="tab-fogli" class="tab-content">
+    <!-- Card Principale -->
+    <div class="card">
+        <div class="card-header">
+            <h3>
+                <span class="material-symbols-rounded">assignment</span>
+                Gestione Fogli Lavoro
+            </h3>
+            <div class="card-actions">
+                <button class="btn btn-primary" onclick="mostraModalNuovoFoglio()">
+                    <span class="material-symbols-rounded">add</span>
+                    Nuovo Foglio
+                </button>
+                <button class="btn btn-icon" onclick="caricaFogli()" title="Aggiorna">
+                    <span class="material-symbols-rounded">refresh</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <!-- SWITCH VISTA (RIEPILOGO / DETTAGLIO) -->
+            <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem;">
+                <button class="tab-btn active" id="btn-vista-riepilogo" onclick="switchVistaFogli('riepilogo')">
+                    <span class="material-symbols-rounded">summarize</span>
+                    Riepilogo
+                </button>
+                <button class="tab-btn" id="btn-vista-dettaglio" onclick="switchVistaFogli('dettaglio')">
+                    <span class="material-symbols-rounded">table_rows</span>
+                    Dettaglio
+                </button>
+            </div>
+
+            <!-- STATISTICHE GENERALI (sempre visibili) -->
+            <div class="stats-grid" style="margin-bottom: 2rem;" id="stats-fogli">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-symbols-rounded">assignment</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stat-totale-fogli">0</div>
+                        <div class="stat-label">Totale Fogli</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-symbols-rounded">schedule</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stat-ore-totali">0</div>
+                        <div class="stat-label">Ore Totali</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-symbols-rounded">group</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stat-tecnici-attivi">0</div>
+                        <div class="stat-label">Tecnici Attivi</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-symbols-rounded">today</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stat-oggi">0</div>
+                        <div class="stat-label">Oggi</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FILTRI (visibili in entrambe le viste) -->
+            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; align-items: end;">
+                <div class="form-group">
+                    <label>👤 Tecnico</label>
+                    <select id="filtro-tecnico-fogli" class="form-control" onchange="filtraFogli()">
+                        <option value="">Tutti</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>📅 Dal</label>
+                    <input type="date" id="filtro-data-da" class="form-control" onchange="filtraFogli()">
+                </div>
+                <div class="form-group">
+                    <label>📅 Al</label>
+                    <input type="date" id="filtro-data-a" class="form-control" onchange="filtraFogli()">
+                </div>
+                <div class="form-group">
+                    <label>🔢 Codice</label>
+                    <select id="filtro-codice-fogli" class="form-control" onchange="filtraFogli()">
+                        <option value="">Tutti</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>📋 Tipo</label>
+                    <select id="filtro-tipo-fogli" class="form-control" onchange="filtraFogli()">
+                        <option value="">Tutti</option>
+                        <option value="ORDINARIA">Ordinaria</option>
+                        <option value="STRAORDINARIO">Straordinario</option>
+                        <option value="REPERIBILITA">Reperibilità</option>
+                        <option value="MONTAGGIO">Montaggio</option>
+                        <option value="ALTRO">Altro</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- VISTA RIEPILOGO (inizialmente visibile) -->
+            <div id="vista-riepilogo-fogli" style="display: block;">
+                <!-- SOTTO-SWITCH per tipo riepilogo -->
+                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                    <button class="btn btn-small active" id="btn-riep-mensile" onclick="switchTipoRiepilogo('mensile')">
+                        Riepilogo Mensile
+                    </button>
+                    <button class="btn btn-small" id="btn-riep-giornaliero" onclick="switchTipoRiepilogo('giornaliero')">
+                        Riepilogo Giornaliero
+                    </button>
+                </div>
+
+                <!-- Riepilogo Mensile -->
+                <div id="riepilogo-mensile" style="display: block;">
+                    <div class="tables-container">
+                        <table class="data-table" id="tabella-riepilogo-mensile">
+                            <thead>
+                                <tr>
+                                    <th>Tecnico</th>
+                                    <th>Mese</th>
+                                    <th>Anno</th>
+                                    <th>Ore Ord</th>
+                                    <th>Ore Stra</th>
+                                    <th>Ore Viaggio</th>
+                                    <th>Totale Ore</th>
+                                    <th>N. Interventi</th>
+                                    <th>Azioni</th>
+                                </tr>
+                            </thead>
+                            <tbody id="riepilogo-mensile-body">
+                                <tr>
+                                    <td colspan="9" class="text-center">
+                                        <div class="loading-spinner-small">
+                                            <span class="material-symbols-rounded">hourglass_top</span>
+                                            Caricamento riepilogo...
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Riepilogo Giornaliero -->
+                <div id="riepilogo-giornaliero" style="display: none;">
+                    <div class="tables-container">
+                        <table class="data-table" id="tabella-riepilogo-giornaliero">
+                            <thead>
+                                <tr>
+                                    <th>Tecnico</th>
+                                    <th>Data</th>
+                                    <th>Ore Ord</th>
+                                    <th>Ore Stra</th>
+                                    <th>Ore Viaggio</th>
+                                    <th>Totale Ore</th>
+                                    <th>N. Interventi</th>
+                                    <th>Azioni</th>
+                                </tr>
+                            </thead>
+                            <tbody id="riepilogo-giornaliero-body">
+                                <tr>
+                                    <td colspan="8" class="text-center">
+                                        <div class="loading-spinner-small">
+                                            <span class="material-symbols-rounded">hourglass_top</span>
+                                            Caricamento riepilogo...
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VISTA DETTAGLIO (inizialmente nascosta) -->
+            <div id="vista-dettaglio-fogli" style="display: none;">
+                <div style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center;">
+                    <div class="search-box" style="flex: 1;">
+                        <span class="material-symbols-rounded">search</span>
+                        <input type="text" id="search-fogli" placeholder="Cerca in impianto, indirizzo, note..." onkeyup="filtraFogli()">
+                    </div>
+                    <button class="btn btn-secondary" onclick="esportaCSVFogli()">
+                        <span class="material-symbols-rounded">download</span>
+                        Esporta
+                    </button>
+                    <button class="btn btn-secondary" onclick="mostraImportFogli()">
+                        <span class="material-symbols-rounded">upload</span>
+                        Importa
+                    </button>
+                </div>
+
+                <div class="tables-container">
+                    <table class="data-table" id="tabella-fogli">
+                        <thead>
+                            <tr>
+                                <th style="width: 30px;">
+                                    <input type="checkbox" id="select-all-fogli" onchange="selezionaTuttiFogli()">
+                                </th>
+                                <th>Data</th>
+                                <th>Tecnico</th>
+                                <th>Codice</th>
+                                <th>Tipo</th>
+                                <th>Impianto</th>
+                                <th>Indirizzo</th>
+                                <th>Ore Ord</th>
+                                <th>Ore Stra</th>
+                                <th>Ore Viag</th>
+                                <th>Totale</th>
+                                <th>Note</th>
+                                <th>Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabella-fogli-body">
+                            <tr>
+                                <td colspan="13" class="text-center">
+                                    <div class="loading-spinner-small">
+                                        <span class="material-symbols-rounded">hourglass_top</span>
+                                        Caricamento fogli lavoro...
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODALI REPERIBILITÀ (da posizionare fuori dal tab, prima della chiusura del main) -->
+
+<!-- Modale Dettaglio Richiesta -->
+<div class="modal" id="modale-dettaglio-richiesta">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3>Dettaglio Richiesta</h3>
+            <button class="btn-icon-small" onclick="chiudiModaleDettaglioRichiesta()">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div id="dettaglio-richiesta-content"></div>
+        </div>
+        <div class="modal-footer">
+            <button onclick="rifiutaRichiestaSelezionata()" class="btn btn-danger" style="flex: 1;">
+                <span class="material-symbols-rounded">close</span>
+                Rifiuta
+            </button>
+            <button onclick="approvaRichiestaSelezionata()" class="btn btn-success" style="flex: 1;">
+                <span class="material-symbols-rounded">check</span>
+                Approva
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modale Conflitti -->
+<div class="modal" id="modale-conflitti">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+            <h3>
+                <span class="material-symbols-rounded" style="color: #f59e0b;">warning</span>
+                Conflitto di Richieste
+            </h3>
+            <button class="btn-icon-small" onclick="chiudiModaleConflitti()">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div style="background: #fffbeb; border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem; border-left: 4px solid #f59e0b;">
+                <p style="margin: 0; color: #92400e; font-weight: 600;">
+                    <span class="material-symbols-rounded" style="vertical-align: middle;">info</span>
+                    Più richieste per lo stesso turno. Puoi approvarne solo una.
+                </p>
+            </div>
+            <div id="contenuto-conflitti"></div>
+        </div>
+        <div class="modal-footer">
+            <button onclick="chiudiModaleConflitti()" class="btn btn-secondary" style="flex: 1;">Chiudi</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modale Modifica Turno -->
+<div class="modal" id="modale-modifica-turno">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3>Modifica Turno</h3>
+            <button class="btn-icon-small" onclick="chiudiModaleModificaTurno()">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div id="modifica-turno-content" data-turno-id=""></div>
+            <div id="modifica-errore-message" style="display: none; background: #fef2f2; color: #991b1b; padding: 1rem; border-radius: 8px; border-left: 4px solid #ef4444; margin-top: 1rem;"></div>
+        </div>
+        <div class="modal-footer">
+            <button onclick="chiudiModaleModificaTurno()" class="btn btn-secondary" style="flex: 1;">Annulla</button>
+            <button onclick="salvaModificaTurno()" class="btn btn-primary" style="flex: 2;">
+                <span class="material-symbols-rounded">save</span>
+                Salva Modifiche
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modale Dettaglio Decisione (Storico) -->
+<div class="modal" id="modale-dettaglio-decisione">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3>
+                <span class="material-symbols-rounded" id="decisione-icona">info</span>
+                Dettagli Decisione
+            </h3>
+            <button class="btn-icon-small" onclick="chiudiModaleDettaglioDecisione()">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div id="dettaglio-decisione-content"></div>
+        </div>
+        <div class="modal-footer">
+            <button onclick="mostraDettagliTurno()" class="btn btn-secondary" style="flex: 1;">
+                <span class="material-symbols-rounded">calendar_month</span>
+                Vedi Turno
+            </button>
+            <button onclick="chiudiModaleDettaglioDecisione()" class="btn btn-primary" style="flex: 1;">
+                Chiudi
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modale Dettaglio Turno Storico -->
+<div class="modal" id="modale-dettaglio-turno-storico">
+    <div class="modal-content" style="max-width: 450px;">
+        <div class="modal-header">
+            <h3>Dettagli Turno</h3>
+            <button class="btn-icon-small" onclick="chiudiModaleDettaglioTurnoStorico()">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div id="dettaglio-turno-storico-content"></div>
+        </div>
+        <div class="modal-footer">
+            <button onclick="chiudiModaleDettaglioTurnoStorico()" class="btn btn-primary" style="width: 100%;">Chiudi</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODALE NUOVO/MODIFICA FOGLIO LAVORO -->
+<div class="modal" id="modal-foglio">
+    <div class="modal-content large">
+        <div class="modal-header">
+            <h3 id="modal-foglio-titolo">Nuovo Foglio Lavoro</h3>
+            <button class="btn-icon-small" onclick="chiudiModalFoglio()">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="form-foglio" onsubmit="event.preventDefault(); salvaFoglio();">
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Tecnico *</label>
+                        <select id="foglio-tecnico" class="form-control" required>
+                            <option value="">Seleziona tecnico</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Data *</label>
+                        <input type="date" id="foglio-data" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Codice *</label>
+                        <select id="foglio-codice" class="form-control" required onchange="aggiornaTipoDaCodice()">
+                            <option value="">Seleziona codice</option>
+                            <optgroup label="Lavori">
+                                <option value="21">21 - Manutenzione</option>
+                                <option value="22">22 - Chiamata</option>
+                                <option value="24">24 - Enti</option>
+                                <option value="13">13 - Riparazione</option>
+                                <option value="10">10 - Q2SA</option>
+                            </optgroup>
+                            <optgroup label="Montaggi">
+                                <option value="001">001 - Montaggio</option>
+                                <option value="007">007 - Montaggio</option>
+                            </optgroup>
+                            <optgroup label="Assenze">
+                                <option value="072">072 - Assemblea</option>
+                                <option value="073">073 - Sciopero</option>
+                                <option value="075">075 - Ferie</option>
+                                <option value="076">076 - Festività</option>
+                                <option value="077">077 - Malattia</option>
+                                <option value="078">078 - Infortunio</option>
+                                <option value="079">079 - Donazione Sangue</option>
+                                <option value="080">080 - Allattamento</option>
+                                <option value="081">081 - Congedo Matrimoniale</option>
+                                <option value="082">082 - Permesso Retribuito</option>
+                                <option value="083">083 - Permesso NON Retribuito</option>
+                                <option value="084">084 - Permesso Legge 104</option>
+                                <option value="085">085 - Permesso Elettorale</option>
+                                <option value="086">086 - Permesso Lutto</option>
+                                <option value="087">087 - Permesso Sindacale</option>
+                                <option value="088">088 - Permesso Studio</option>
+                                <option value="089">089 - Permesso Volontariato</option>
+                                <option value="090">090 - Spese Generali</option>
+                                <option value="091">091 - Altro Retribuito</option>
+                                <option value="092">092 - Addestramento</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                    <div class="form-group">
+                        <label>Impianto / Commessa</label>
+                        <input type="text" id="foglio-impianto" class="form-control" placeholder="Codice impianto o commessa">
+                    </div>
+                    <div class="form-group">
+                        <label>Indirizzo</label>
+                        <input type="text" id="foglio-indirizzo" class="form-control" placeholder="Via, città...">
+                    </div>
+                </div>
+
+                <div style="margin-top: 1rem;">
+                    <label class="label-field">Tipo Ore *</label>
+                    <div style="display: flex; gap: 1rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="radio" name="foglio-tipo-ore" value="ORDINARIA" checked onchange="toggleTipoOreFoglio()">
+                            <span>Ordinaria</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="radio" name="foglio-tipo-ore" value="STRAORDINARIO" onchange="toggleTipoOreFoglio()">
+                            <span>Straordinario</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="radio" name="foglio-tipo-ore" value="REPERIBILITA" onchange="toggleTipoOreFoglio()">
+                            <span>Reperibilità</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="radio" name="foglio-tipo-ore" value="MONTAGGIO" onchange="toggleTipoOreFoglio()">
+                            <span>Montaggio</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Box Ore Dirette (per ORDINARIA) -->
+                <div id="foglio-box-ore-dirette" style="margin-top: 1rem;">
+                    <div class="form-group">
+                        <label>Ore Lavorate</label>
+                        <input type="number" id="foglio-ore-ord" class="form-control" step="0.25" min="0" max="24" value="0">
+                        <small>Formato: 1.5 = 1 ora e 30 minuti</small>
+                    </div>
+                </div>
+
+                <!-- Box Orari (per STRAORDINARIO/REPERIBILITA) -->
+                <div id="foglio-box-orari" style="display: none; margin-top: 1rem;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label>Ora Inizio</label>
+                            <input type="time" id="foglio-ora-inizio" class="form-control" onchange="calcolaOreFoglio()">
+                        </div>
+                        <div class="form-group">
+                            <label>Ora Fine</label>
+                            <input type="time" id="foglio-ora-fine" class="form-control" onchange="calcolaOreFoglio()">
+                        </div>
+                    </div>
+                    <div style="background: #f8fafc; border-radius: 8px; padding: 1rem; margin-top: 0.5rem; display: flex; gap: 2rem;">
+                        <div><strong>Ordinarie:</strong> <span id="foglio-calcolo-ord">0.00</span></div>
+                        <div><strong>Straordinarie:</strong> <span id="foglio-calcolo-stra">0.00</span></div>
+                    </div>
+                </div>
+
+                <!-- Ore Viaggio -->
+                <div style="margin-top: 1rem;">
+                    <div class="form-group">
+                        <label>Ore Viaggio</label>
+                        <input type="number" id="foglio-ore-viaggio" class="form-control" step="0.5" min="0" max="8" value="0">
+                    </div>
+                </div>
+
+                <!-- Note -->
+                <div style="margin-top: 1rem;">
+                    <div class="form-group">
+                        <label>Note</label>
+                        <textarea id="foglio-note" class="form-control" rows="3" placeholder="Descrizione intervento..."></textarea>
+                    </div>
+                </div>
+
+                <input type="hidden" id="foglio-id">
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="chiudiModalFoglio()">Annulla</button>
+            <button class="btn btn-primary" onclick="salvaFoglio()">Salva Foglio</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODALE IMPORT FOGLI -->
+<div class="modal" id="modal-import-fogli">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+            <h3>Importa Fogli Lavoro</h3>
+            <button class="btn-icon-small" onclick="chiudiImportFogli()">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="file-upload-area" id="drop-zone-fogli">
+                <input type="file" id="file-fogli-csv" accept=".csv" hidden>
+                <span class="material-symbols-rounded">cloud_upload</span>
+                <p>Trascina il file CSV qui o <a href="#" onclick="document.getElementById('file-fogli-csv').click()">clicca per selezionare</a></p>
+                <small>Formato: CSV con separatore ;</small>
+            </div>
+            
+            <div style="margin-top: 1rem; display: flex; gap: 1rem; justify-content: center;">
+                <button class="btn btn-secondary" onclick="scaricaTemplateFogli()">
+                    <span class="material-symbols-rounded">download</span>
+                    Scarica Template
+                </button>
+                <button class="btn btn-primary" onclick="analizzaCSVFogli()" id="btn-analizza-fogli" disabled>
+                    <span class="material-symbols-rounded">analytics</span>
+                    Analizza CSV
+                </button>
+            </div>
+
+            <div id="anteprima-import-fogli" style="margin-top: 1.5rem; display: none;"></div>
+        </div>
+    </div>
+</div>
+
+
+<!-- MODALE AGGIUNTA/MODIFICA IMPIANTO -->
+<div class="modal" id="modal-parco">
+    <div class="modal-content large">
+        <div class="modal-header">
+            <h3 id="modal-parco-titolo">Nuovo Impianto</h3>
+            <button class="btn-icon-small" onclick="chiudiModalParco()">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="form-parco" onsubmit="event.preventDefault(); salvaImpianto();">
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                    <div class="form-group">
+                        <label>Impianto *</label>
+                        <input type="text" id="parco-impianto" class="form-control" required maxlength="255">
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo</label>
+                        <input type="text" id="parco-tipo" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Zona</label>
+                        <input type="text" id="parco-zona" class="form-control">
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem;">
+                    <div class="form-group">
+                        <label>Giro</label>
+                        <select id="parco-giro" class="form-control">
+                            <option value="">Seleziona giro</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tecnico</label>
+                        <input type="text" id="parco-tecnico" class="form-control" list="tecnici-parco">
+                        <datalist id="tecnici-parco"></datalist>
+                    </div>
+                    <div class="form-group">
+                        <label>Periodicità (giorni)</label>
+                        <input type="number" id="parco-periodicit" class="form-control" min="1" step="1">
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem;">
+                    <div class="form-group">
+                        <label>Venditore</label>
+                        <input type="text" id="parco-venditore" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Manutenzione</label>
+                        <input type="text" id="parco-manut" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Mese semestrale</label>
+                        <select id="parco-mese-sem" class="form-control">
+                            <option value="">Seleziona mese</option>
+                            <option value="1">Gennaio</option>
+                            <option value="2">Febbraio</option>
+                            <option value="3">Marzo</option>
+                            <option value="4">Aprile</option>
+                            <option value="5">Maggio</option>
+                            <option value="6">Giugno</option>
+                            <option value="7">Luglio</option>
+                            <option value="8">Agosto</option>
+                            <option value="9">Settembre</option>
+                            <option value="10">Ottobre</option>
+                            <option value="11">Novembre</option>
+                            <option value="12">Dicembre</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem;">
+                    <div class="form-group">
+                        <label>Amministratore</label>
+                        <input type="text" id="parco-amministratore" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Esattore</label>
+                        <input type="text" id="parco-esattore" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Cliente</label>
+                        <input type="text" id="parco-cliente" class="form-control">
+                    </div>
+                </div>
+                
+                <div style="margin-top: 1rem;">
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label>Indirizzo</label>
+                            <input type="text" id="parco-indirizzo" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Località</label>
+                            <input type="text" id="parco-localit" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Provincia</label>
+                            <input type="text" id="parco-prov" class="form-control" maxlength="2">
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem;">
+                    <div class="form-group">
+                        <label>Ultima semestrale</label>
+                        <input type="date" id="parco-ult-sem" class="form-control">
+                        <small>Formato: gg/mm/aaaa</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Ultima verifica periodica</label>
+                        <input type="date" id="parco-ult-vp" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Ultima manutenzione</label>
+                        <input type="date" id="parco-ult-man" class="form-control">
+                    </div>
+                </div>
+                
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label>Note</label>
+                    <textarea id="parco-note" class="form-control" rows="3"></textarea>
+                </div>
+                
+                <input type="hidden" id="parco-id">
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="chiudiModalParco()">Annulla</button>
+            <button class="btn btn-primary" onclick="salvaImpianto()">Salva Impianto</button>
+        </div>
+    </div>
+</div>
+
                 <!-- TAB 5: BACKUP -->
                 <div id="tab-backup" class="tab-content">
                     <div class="card">
@@ -711,9 +2112,163 @@
                         </div>
                     </div>
                 </div>
+
+<!-- NUOVO TAB: Annotazioni -->
+<div id="tab-annotazioni" class="tab-content">
+    <!-- Card Principale -->
+    <div class="card">
+        <div class="card-header">
+            <h3>
+                <span class="material-symbols-rounded">note_alt</span>
+                Gestione Annotazioni
+            </h3>
+            <div class="card-actions">
+                <button class="btn btn-primary" onclick="mostraModalNuovaAnnotazioneAdmin()">
+                    <span class="material-symbols-rounded">add</span>
+                    Nuova Annotazione
+                </button>
+                <button class="btn btn-icon" onclick="caricaAnnotazioniAdmin()" title="Aggiorna">
+                    <span class="material-symbols-rounded">refresh</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <!-- STATISTICHE -->
+            <div class="stats-grid" style="margin-bottom: 2rem;" id="stats-annotazioni">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-symbols-rounded">note_alt</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stat-totale">0</div>
+                        <div class="stat-label">Totale Annotazioni</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-symbols-rounded">build</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stat-manutenzioni">0</div>
+                        <div class="stat-label">Manutenzioni</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-symbols-rounded">calendar_today</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stat-appuntamenti">0</div>
+                        <div class="stat-label">Appuntamenti</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-symbols-rounded">info</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stat-note">0</div>
+                        <div class="stat-label">Note</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- FILTRI AVANZATI -->
+            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; align-items: end;">
+                <div class="form-group">
+                    <label>🔍 Cerca nelle note</label>
+                    <input type="text" id="filtro-testo-annotazioni" class="form-control" placeholder="Parola chiave..." onkeyup="filtraAnnotazioniAdmin()">
+                </div>
+                
+                <div class="form-group">
+                    <label>📋 Tipo</label>
+                    <select id="filtro-tipo-annotazioni" class="form-control" onchange="filtraAnnotazioniAdmin()">
+                        <option value="tutti">Tutti</option>
+                        <option value="0">Manutenzione</option>
+                        <option value="1">Appuntamento</option>
+                        <option value="2">Nota</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>📅 Dal</label>
+                    <input type="date" id="filtro-data-da" class="form-control" onchange="filtraAnnotazioniAdmin()">
+                </div>
+                
+                <div class="form-group">
+                    <label>📅 Al</label>
+                    <input type="date" id="filtro-data-a" class="form-control" onchange="filtraAnnotazioniAdmin()">
+                </div>
+                
+                <div class="form-group">
+                    <label>🏢 Impianto</label>
+                    <input type="text" id="filtro-impianto-annotazioni" class="form-control" placeholder="Codice impianto..." list="impianti-annotazioni-list" onkeyup="filtraAnnotazioniAdmin()">
+                    <datalist id="impianti-annotazioni-list"></datalist>
+                </div>
+            </div>
+            
+            <!-- TABELLA ANNOTAZIONI -->
+            <div class="tables-container">
+                <table class="data-table" id="tabella-annotazioni">
+                    <thead>
+                        <tr>
+                            <th style="width: 30px;">
+                                <input type="checkbox" id="select-all-annotazioni" onchange="selezionaTutteAnnotazioni()">
+                            </th>
+                            <th>Data</th>
+                            <th>Impianto</th>
+                            <th>Tipo</th>
+                            <th>Note</th>
+                            <th>Tecnico</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabella-annotazioni-body">
+                        <tr>
+                            <td colspan="7" class="text-center">
+                                <div class="loading-spinner-small">
+                                    <span class="material-symbols-rounded">hourglass_top</span>
+                                    Caricamento annotazioni...
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- BOTTONI BULK OPERATIONS -->
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="esportaCSVAnnotazioni()">
+                    <span class="material-symbols-rounded">download</span>
+                    Esporta CSV
+                </button>
+                <button class="btn btn-danger" onclick="eliminaSelezionateAnnotazioni()">
+                    <span class="material-symbols-rounded">delete</span>
+                    Elimina selezionate
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+
+
             </div>
         </main>
     </div>
+
+
+
+
+
+
+    
 
     <!-- MODAL ANTEPRIMA CSV -->
     <div id="modal-preview" class="modal">
@@ -772,13 +2327,121 @@
             </div>
         </div>
     </div>
+<!-- MODALE NUOVA/MODIFICA ANNOTAZIONE (ADMIN) -->
+<div class="modal" id="modal-annotazione-admin">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3 id="modal-annotazione-titolo">Nuova Annotazione</h3>
+            <button class="btn-icon-small" onclick="chiudiModalAnnotazioneAdmin()">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <!-- SELEZIONE IMPIANTO -->
+            <div class="form-group">
+                <label>Impianto *</label>
+                <input type="text" id="ann-impianto" class="form-control" placeholder="Codice impianto..." list="impianti-annotazioni-modal-list" required>
+                <datalist id="impianti-annotazioni-modal-list"></datalist>
+            </div>
+            
+            <!-- SELEZIONE TIPO (come nella versione mobile) -->
+            <div class="selettore-tipo-container" style="margin-bottom: 1.5rem;">
+                <div style="font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 8px;">
+                    Tipo annotazione *
+                </div>
+                
+                <button type="button" onclick="selezionaTipoAdmin('0')" class="btn-tipo-opzione" data-tipo-admin="0">
+                    <div class="icona-tipo" data-tipo-admin="0">
+                        <span class="material-symbols-rounded">build</span>
+                    </div>
+                    <div class="testo-tipo">
+                        <div class="tipo-titolo">Manutenzione</div>
+                        <div class="tipo-descrizione">Aggiorna data ultima manutenzione</div>
+                    </div>
+                    <div class="checkmark-selezione">
+                        <span class="material-symbols-rounded">check_circle</span>
+                    </div>
+                </button>
+                
+                <button type="button" onclick="selezionaTipoAdmin('1')" class="btn-tipo-opzione" data-tipo-admin="1">
+                    <div class="icona-tipo" data-tipo-admin="1">
+                        <span class="material-symbols-rounded">calendar_today</span>
+                    </div>
+                    <div class="testo-tipo">
+                        <div class="tipo-titolo">Appuntamento</div>
+                        <div class="tipo-descrizione">Pianifica visita futura</div>
+                    </div>
+                    <div class="checkmark-selezione">
+                        <span class="material-symbols-rounded">check_circle</span>
+                    </div>
+                </button>
+                
+                <button type="button" onclick="selezionaTipoAdmin('2')" class="btn-tipo-opzione" data-tipo-admin="2">
+                    <div class="icona-tipo" data-tipo-admin="2">
+                        <span class="material-symbols-rounded">note</span>
+                    </div>
+                    <div class="testo-tipo">
+                        <div class="tipo-titolo">Nota</div>
+                        <div class="tipo-descrizione">Annotazione informativa</div>
+                    </div>
+                    <div class="checkmark-selezione">
+                        <span class="material-symbols-rounded">check_circle</span>
+                    </div>
+                </button>
+                
+                <input type="hidden" id="ann-tipo" value="">
+            </div>
+            
+            <!-- DATA -->
+            <div class="form-group">
+                <label>Data *</label>
+                <input type="date" id="ann-data" class="form-control" required>
+            </div>
+            
+            <!-- NOTE -->
+            <div class="form-group">
+                <label id="ann-note-label">Note</label>
+                <textarea id="ann-note" class="form-control" rows="4" placeholder="Seleziona un tipo..."></textarea>
+                <div id="ann-validazione-note" style="font-size: 0.75rem; color: #64748b; margin-top: 5px; display: none;">
+                    <span class="material-symbols-rounded" style="font-size: 14px; vertical-align: middle;">info</span>
+                    <span id="ann-testo-validazione"></span>
+                </div>
+            </div>
+            
+            <!-- TECNICO -->
+            <div class="form-group">
+                <label>Tecnico</label>
+                <input type="text" id="ann-tecnico" class="form-control" value="Admin" readonly>
+                <small style="color: #64748b;">Il tecnico verrà registrato come Admin</small>
+            </div>
+            
+            <input type="hidden" id="ann-id">
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="chiudiModalAnnotazioneAdmin()">Annulla</button>
+            <button class="btn btn-primary" onclick="salvaAnnotazioneAdmin()" id="btn-salva-annotazione-admin">Salva Annotazione</button>
+        </div>
+    </div>
+</div>
 
-    <!-- SCRIPT -->
-    <script src="db-config.js"></script>
-    <script src="admin_database.js"></script>
-<script src="db-rules.js"></script>  
+<!-- MODALE CONFERMA CANCELLAZIONE (per singola) -->
+<div class="modal" id="modal-conferma-cancellazione-ann">
+    <div class="modal-content" style="max-width: 350px;">
+        <div class="modal-body" style="text-align: center; padding: 2rem;">
+            <span class="material-symbols-rounded" style="font-size: 48px; color: #ef4444; margin-bottom: 1rem;">warning</span>
+            <h3 style="margin: 0 0 0.5rem 0;">Conferma cancellazione</h3>
+            <p style="color: #64748b; margin-bottom: 1.5rem;">Sei sicuro di voler cancellare questa annotazione?</p>
+            <div style="display: flex; gap: 0.5rem;">
+                <button class="btn btn-secondary" style="flex: 1;" onclick="chiudiModalCancellazioneAnn()">Annulla</button>
+                <button class="btn btn-danger" style="flex: 1;" onclick="confermaCancellazioneAnn()">Cancella</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
  </body>
-<!-- Aggiungi in fondo, PRIMA del tag </body> -->
+<!-- Poi il bottone di debug -->
 <div style="position: fixed; bottom: 10px; right: 10px; z-index: 1000;">
     <button onclick="testAdminState()" style="padding: 5px 10px; font-size: 12px; background: #4CAF50; color: white; border: none; border-radius: 4px;">
         DEBUG
@@ -804,6 +2467,162 @@ function testAdminState() {
 }
 </script>
 
+<script>
+// Gestione sottotab Reperibilità
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔄 Inizializzazione sottotab reperibilità...');
+    
+    // Gestione cambio tab principale (già esistente in admin_database.js)
+    // Questa parte dovrebbe già funzionare con i data-tab
+    
+    // Gestione sottotab interni della reperibilità
+    const reperibilitaTabs = document.querySelectorAll('[data-reperibilita-tab]');
+    const reperibilitaContents = document.querySelectorAll('.reperibilita-tab-content');
+    
+    if (reperibilitaTabs.length > 0) {
+        console.log(`✅ Trovati ${reperibilitaTabs.length} sottotab reperibilità`);
+        
+        reperibilitaTabs.forEach(tab => {
+            tab.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Rimuovi active da tutti i tab
+                reperibilitaTabs.forEach(t => t.classList.remove('active'));
+                // Active al tab cliccato
+                this.classList.add('active');
+                
+                // Nascondi tutti i contenuti
+                reperibilitaContents.forEach(content => {
+                    content.classList.remove('active');
+                });
+                
+                // Mostra il contenuto corretto
+                const targetId = 'reperibilita-' + this.dataset.reperibilitaTab;
+                const targetContent = document.getElementById(targetId);
+                if (targetContent) {
+                    targetContent.classList.add('active');
+                    
+                    // Carica dati specifici in base al tab
+                    switch(this.dataset.reperibilitaTab) {
+                        case 'zone':
+                            if (typeof caricaZone === 'function') caricaZone();
+                            break;
+                        case 'csv':
+                            if (typeof caricaStoricoCSV === 'function') {
+                                caricaStoricoCSV();
+                                caricaZonePerSelect();
+                            }
+                            break;
+                        case 'festivita':
+                            if (typeof caricaFestivita === 'function') {
+                                caricaFestivita();
+                                caricaZonePerSelect();
+                            }
+                            break;
+                        case 'turni':
+                            if (typeof caricaTurni === 'function') {
+                                caricaZonePerSelect();
+                                caricaTurni();
+                            }
+                            break;
+                        case 'approvazioni':
+                            if (typeof caricaRichiestePending === 'function') {
+                                caricaRichiestePending();
+                            }
+                            break;
+                    }
+                }
+            });
+        });
+    }
+    
+    // Setup event listener per tipo festività
+    const tipoFestivita = document.getElementById('tipo-festivita');
+    if (tipoFestivita) {
+        tipoFestivita.addEventListener('change', function() {
+            const mostraZona = this.value === 'locale';
+            document.getElementById('zona-festivita-container').style.display = mostraZona ? 'block' : 'none';
+            if (mostraZona && typeof caricaZonePerSelect === 'function') {
+                caricaZonePerSelect();
+            }
+        });
+    }
+    
+    // Setup CSV upload
+    setupCSVUploadWrapper();
+});
+
+// Wrapper per setup CSV upload (richiama la funzione esistente se disponibile)
+function setupCSVUploadWrapper() {
+    const dropArea = document.getElementById('csv-drop-area');
+    const fileInput = document.getElementById('file-csv');
+    
+    if (!dropArea || !fileInput) return;
+    
+    dropArea.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', handleFileSelectWrapper);
+    
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, preventDefaults, false);
+    });
+    
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    dropArea.addEventListener('drop', handleDropWrapper, false);
+}
+
+function handleFileSelectWrapper(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+        alert('Seleziona un file CSV');
+        rimuoviFileWrapper();
+        return;
+    }
+    
+    document.getElementById('file-info').style.display = 'block';
+    document.getElementById('file-name').textContent = file.name;
+    document.getElementById('file-size').textContent = `Dimensione: ${(file.size / 1024).toFixed(1)} KB`;
+    document.getElementById('btn-carica-csv').disabled = false;
+}
+
+function handleDropWrapper(e) {
+    e.preventDefault();
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    
+    if (files.length > 0) {
+        document.getElementById('file-csv').files = files;
+        handleFileSelectWrapper({ target: { files: files } });
+    }
+}
+
+function rimuoviFileWrapper() {
+    document.getElementById('file-csv').value = '';
+    document.getElementById('file-info').style.display = 'none';
+    document.getElementById('btn-carica-csv').disabled = true;
+    document.getElementById('anteprima-csv').style.display = 'none';
+    document.getElementById('anteprima-csv').innerHTML = '';
+}
+
+// Esponi le funzioni necessarie
+window.rimuoviFile = rimuoviFileWrapper;
+</script>
+
+
+<script src="db-config.js"></script>
+<script src="admin_database.js"></script>
+<script src="db-rules.js"></script>  
+<script src="admin_veicoli_manager.js"></script>
+<script src="admin_reperibilita.js"></script>
+
+<script src="admin_parco.js"></script>
+<script src="admin_annotazioni.js"></script>
+<script src="admin_foglio.js"></script>  
 
 
 

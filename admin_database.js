@@ -15,10 +15,16 @@ let csvFile = null;
 let syncResults = null;
 let isInitialized = false;
 
+// All'inizio del file, dopo le altre variabili globali, aggiungi:
+let vehiclesManagerActive = false;
+
+
+
 // Inizializza la variabile globale una sola volta
 window.comparisonResults = null;
 
 
+// Inizializzazione gestione personale
 // Inizializzazione gestione personale
 function initializePersonnelManagement() {
     console.log('🚀 Inizializzazione gestione personale...');
@@ -31,10 +37,28 @@ function initializePersonnelManagement() {
             personnelTabs.forEach(t => t.classList.remove('active'));
             this.classList.add('active');
             
-            // Load new table
-            currentPersonnelTable = this.dataset.personnelTable;
+            // Load new table usando le funzioni specifiche
+            const tableName = this.dataset.personnelTable;
+            currentPersonnelTable = tableName;
             currentPage = 1; // Reset paginazione
-            loadPersonnelData();
+            
+            // Chiama la funzione di caricamento specifica per ogni tabella
+            switch(tableName) {
+                case 'tecnici':
+                    loadTecniciData();
+                    break;
+                case 'manutentori':
+                    loadManutentoriData();
+                    break;
+                case 'supervisori':
+                    loadSupervisoriData();
+                    break;
+                case 'venditori':
+                    loadVenditoriData();
+                    break;
+                default:
+                    loadPersonnelData(); // fallback
+            }
         });
     });
     
@@ -42,7 +66,25 @@ function initializePersonnelManagement() {
     document.getElementById('btn-add-personnel')?.addEventListener('click', showAddPersonnelModal);
     document.getElementById('btn-upload-csv-personnel')?.addEventListener('click', () => uploadCSVToPersonnelTable(currentPersonnelTable));
     document.getElementById('btn-download-csv-personnel')?.addEventListener('click', () => downloadPersonnelCSV(currentPersonnelTable));
-    document.getElementById('btn-refresh-personnel')?.addEventListener('click', loadPersonnelData);
+    document.getElementById('btn-refresh-personnel')?.addEventListener('click', function() {
+        // Ricarica la tabella corrente con la funzione specifica
+        switch(currentPersonnelTable) {
+            case 'tecnici':
+                loadTecniciData();
+                break;
+            case 'manutentori':
+                loadManutentoriData();
+                break;
+            case 'supervisori':
+                loadSupervisoriData();
+                break;
+            case 'venditori':
+                loadVenditoriData();
+                break;
+            default:
+                loadPersonnelData();
+        }
+    });
     
     // Setup search
     const searchInput = document.getElementById('personnel-search');
@@ -54,9 +96,10 @@ function initializePersonnelManagement() {
     document.getElementById('btn-prev-personnel')?.addEventListener('click', prevPersonnelPage);
     document.getElementById('btn-next-personnel')?.addEventListener('click', nextPersonnelPage);
     
-    // Load initial data
+    // Load initial data se il tab è attivo
     if (document.getElementById('tab-personnel').classList.contains('active')) {
-        loadPersonnelData();
+        // Carica la tabella iniziale (tecnici)
+        loadTecniciData();
     }
 }
 
@@ -579,13 +622,13 @@ const TABLE_CONFIGS = {
                 placeholder: '1001'
             },
             { 
-                name: 'telefono', 
+                name: 'Telefono', 
                 label: 'Telefono', 
                 type: 'tel',
                 placeholder: '3331234567'
             },
             { 
-                name: 'email', 
+                name: 'Mail', 
                 label: 'Email', 
                 type: 'email',
                 placeholder: 'mario.rossi@azienda.it'
@@ -976,15 +1019,28 @@ async function openEditModal(tableName, recordId) {
             throw new Error(`Configurazione non trovata per ${tableName}`);
         }
         
-        currentEditTable = tableName;
-        currentEditId = recordId;
-        currentEditKeyField = config.primaryKey;
+        // MAPPA DELLE CHIAVI PRIMARIE (stessa della delete)
+        const primaryKeys = {
+            'tecnici': 'id',
+            'manutentori': 'Giro',
+            'supervisori': 'Cod',
+            'venditori': 'Cod',
+            'veicoli': 'id'
+        };
+        
+        const keyField = primaryKeys[tableName] || 'id';
+        
+        // Converti in numero se necessario
+        let recordValue = recordId;
+        if (typeof recordId === 'string' && !isNaN(recordId) && keyField !== 'targa') {
+            recordValue = parseInt(recordId, 10);
+        }
         
         // Recupera il record esistente
         const { data, error } = await client
             .from(tableName)
             .select('*')
-            .eq(config.primaryKey, recordId)
+            .eq(keyField, recordValue)
             .single();
         
         if (error) throw error;
@@ -1087,46 +1143,97 @@ function openEditModalWithData(tableName, recordData) {
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 }
 
-// 8. ELIMINAZIONE CON CONFERMA
-async function deleteRecord(tableName, recordId) {
-    console.log(`🗑️ Richiesta eliminazione: ${tableName} - ID: ${recordId}`);
+// ELIMINAZIONE CON CONFERMA - VERSIONE DEFINITIVA CON DEBUG COMPLETO
+// ELIMINAZIONE CON CONFERMA - VERSIONE FINALE CON APPROCCIO RADICALE
+async function deleteRecord(tableName, recordId, recordName = 'questo record') {
+    console.log('%c========== DELETE RECORD INIZIO ==========', 'background: #ff0000; color: white; font-size: 12px;');
+    console.log('📋 Parametri:', { tableName, recordId, recordName });
     
+    // Verifica configurazione
     const config = TABLE_CONFIGS[tableName];
     if (!config) {
         showNotification('Tabella non configurata', 'error');
         return;
     }
     
-    // Mostra dialog di conferma
+    // Dialog conferma
     const confirmed = await showConfirmDialog(
         'Conferma eliminazione',
-        `Sei sicuro di voler eliminare questo ${config.displayName.toLowerCase()}?`,
-        'Questa azione non può essere annullata.',
+        `Sei sicuro di voler eliminare ${recordName}?`,
+        `Questa azione non può essere annullata.`,
         'delete'
     );
     
-    if (!confirmed) {
-        console.log('❌ Eliminazione annullata dall\'utente');
-        return;
-    }
+    if (!confirmed) return;
     
     showLoading('Eliminazione', 'Elimino record...');
     
     try {
         const client = getSupabaseClient();
         
-        console.log(`🗑️ Eliminazione: ${tableName}, Chiave: ${config.primaryKey}, Valore: ${recordId}`);
+        // FORZA l'uso della chiave primaria corretta
+        const keyField = 'id';  // <-- FORZATO a id
+        let recordValue = recordId;
         
-        const { error } = await client
+        console.log(`🔑 Chiave: ${keyField} = ${recordValue}`);
+        
+        // 1. VERIFICA RECORD PRIMA
+        const { data: beforeData, error: beforeError } = await client
+            .from(tableName)
+            .select('*')
+            .eq(keyField, recordValue);
+        
+        console.log('📊 Record prima della DELETE:', beforeData);
+        
+        if (!beforeData || beforeData.length === 0) {
+            showNotification('Record non trovato', 'warning');
+            hideLoading();
+            return;
+        }
+        
+        // 2. PROVA DIVERSI APPROCCI
+        
+        // Approccio 1: DELETE con filtro semplice
+        console.log('🔄 Approccio 1: DELETE semplice');
+        const { error: error1 } = await client
             .from(tableName)
             .delete()
-            .eq(config.primaryKey, recordId);
+            .eq(keyField, recordValue);
         
-        if (error) throw error;
+        if (error1) console.error('❌ Approccio 1 fallito:', error1);
         
-        showNotification('✅ Record eliminato con successo!', 'success');
+        // Attendi un po'
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Ricarica i dati
+        // 3. VERIFICA RECORD DOPO
+        const { data: afterData, error: afterError } = await client
+            .from(tableName)
+            .select('*')
+            .eq(keyField, recordValue);
+        
+        console.log('📊 Record dopo la DELETE:', afterData);
+        
+        if (!afterData || afterData.length === 0) {
+            console.log('✅✅✅ RECORD ELIMINATO!');
+            showNotification(`✅ ${recordName} eliminato!`, 'success');
+        } else {
+            console.log('❌❌❌ RECORD ANCORA PRESENTE');
+            showNotification(`❌ Eliminazione fallita`, 'error');
+            
+            // TENTATIVO DISPERATO: usa raw SQL
+            console.log('🔄 Tentativo con raw SQL...');
+            const { error: sqlError } = await client.rpc('exec_sql', {
+                query: `DELETE FROM ${tableName} WHERE id = ${recordValue} RETURNING *;`
+            });
+            
+            if (sqlError) {
+                console.error('❌ Anche raw SQL fallito:', sqlError);
+            } else {
+                console.log('✅ Raw SQL eseguito?');
+            }
+        }
+        
+        // Ricarica dati
         setTimeout(() => {
             if (currentPersonnelTable === tableName) {
                 loadCurrentTableData();
@@ -1134,12 +1241,16 @@ async function deleteRecord(tableName, recordId) {
         }, 500);
         
     } catch (error) {
-        console.error('❌ Errore eliminazione:', error);
-        showNotification(`Errore eliminazione: ${error.message}`, 'error');
+        console.error('❌ ERRORE:', error);
+        showNotification(`Errore: ${error.message}`, 'error');
     } finally {
         hideLoading();
+        console.log('========== DELETE RECORD FINE ==========');
     }
 }
+
+
+
 
 // 9. DIALOG DI CONFERMA
 function showConfirmDialog(title, message, detail, icon = 'warning') {
@@ -1183,7 +1294,22 @@ function showConfirmDialog(title, message, detail, icon = 'warning') {
     });
 }
 
-// 10. FUNZIONE HELPER PER CARICARE LA TABELLA CORRENTE
+async function loadTecniciData() {
+    try {
+        const client = getSupabaseClient();
+        const { data } = await client
+            .from('tecnici')
+            .select('id, nome_completo, pin, ruolo, cod_supervisore, Telefono, Mail')
+            .order('nome_completo', { ascending: true });
+        
+        window.tecniciData = data || [];
+        renderTecniciTable();
+    } catch (error) {
+        console.error('Errore caricamento tecnici:', error);
+    }
+}
+
+// FUNZIONE HELPER PER CARICARE LA TABELLA CORRENTE
 function loadCurrentTableData() {
     if (!currentPersonnelTable) return;
     
@@ -1212,8 +1338,13 @@ async function loadManutentoriData() {
         const client = getSupabaseClient();
         const { data } = await client
             .from('manutentori')
-            .select('Titolo, Giro, Manutentore, Mail, Telefono, Supervisore')
+            .select('id, Titolo, Giro, Manutentore, Mail, Telefono, Supervisore')
             .order('Giro', { ascending: true });
+        
+        console.log('📊 DATI MANUTENTORI CARICATI:');
+        data?.forEach(m => {
+            console.log(`   ID: ${m.id}, Giro: ${m.Giro}, Nome: ${m.Manutentore}`);
+        });
         
         window.manutentoriData = data || [];
         renderManutentoriTable();
@@ -1227,7 +1358,7 @@ async function loadSupervisoriData() {
         const client = getSupabaseClient();
         const { data } = await client
             .from('supervisori')
-            .select('Titolo, Cod, Nome, Mail, Telefono')
+            .select('id, Titolo, Cod, Nome, Mail, Telefono')  // AGGIUNTO id
             .order('Cod', { ascending: true });
         
         window.supervisoriData = data || [];
@@ -1242,7 +1373,7 @@ async function loadVenditoriData() {
         const client = getSupabaseClient();
         const { data } = await client
             .from('venditori')
-            .select('Titolo, Cod, Nome, Mail, Telefono')
+            .select('id, Titolo, Cod, Nome, Mail, Telefono')  // AGGIUNTO id
             .order('Cod', { ascending: true });
         
         window.venditoriData = data || [];
@@ -1506,7 +1637,7 @@ async function downloadPersonnelCSV(tableName) {
 // Inizializzazione gestione veicoli - VERSIONE CORRETTA
 function initializeVehiclesManagement() {
     console.log('🚗 Inizializzazione gestione veicoli...');
-    
+     vehiclesManagerActive = true;
     // Setup buttons
     const vehiclesTab = document.getElementById('tab-vehicles');
     if (vehiclesTab && vehiclesTab.classList.contains('active')) {
@@ -1522,80 +1653,13 @@ function initializeVehiclesManagement() {
     }
 }
 
-// Carica dati veicoli - VERSIONE CORRETTA
-async function loadVehiclesData() {
-    console.log('🚗 Caricamento veicoli...');
-    
-    if (!hasDbConfig()) {
-        showNotification('Configura prima il database', 'warning');
-        return;
-    }
-    
-    showLoading('Caricamento veicoli', 'Recupero dati...');
-    
-    try {
-        const client = getSupabaseClient();
-        const tableName = 'veicoli';
-        
-        // Carica tutti i dati
-        const { data, error } = await client
-            .from(tableName)
-            .select('*')
-            .order('targa', { ascending: true })
-            .limit(500);
-        
-        if (error) throw error;
-        
-        console.log(`✅ Veicoli caricati: ${data.length} record`);
-        renderVehiclesTable(data || []);
-        
-        showNotification(`✅ Caricati ${data.length} veicoli`, 'success');
-        
-    } catch (error) {
-        console.error('❌ Errore caricamento veicoli:', error);
-        showNotification(`Errore: ${error.message}`, 'error');
-        
-        // Mostra stato vuoto
-        renderVehiclesTable([]);
-    } finally {
-        hideLoading();
-    }
-}
 
-// Carica dati veicoli
+// SOSTITUISCI la funzione loadVehiclesData() esistente con questa:
 async function loadVehiclesData() {
-    if (!hasDbConfig()) {
-        showNotification('Configura prima il database', 'warning');
-        return;
-    }
-    
-    showLoading('Caricamento veicoli', 'Recupero dati...');
-    
-    try {
-        const client = getSupabaseClient();
-        const tableName = 'veicoli';
-        
-        // Carica tutti i dati
-        const { data, error } = await client
-            .from(tableName)
-            .select(`
-                *,
-                tecnici:nome_completo
-            `)
-            .order('targa', { ascending: true });
-        
-        if (error) throw error;
-        
-        renderVehiclesTable(data || []);
-        
-        showNotification(`Caricati ${data.length} veicoli`, 'success');
-        
-    } catch (error) {
-        console.error('❌ Errore caricamento veicoli:', error);
-        showNotification(`Errore: ${error.message}`, 'error');
-    } finally {
-        hideLoading();
-    }
+    // Non fare nulla - il modulo veicoli è gestito da admin_veicoli_manager.js
+    // Questa funzione è mantenuta solo per compatibilità
+    console.log('🚗 Caricamento veicoli delegato a admin_veicoli_manager.js');
+    return;
 }
 
 // Render tabella veicoli
@@ -2544,6 +2608,7 @@ async function checkDefaultTables(client) {
 }
 
 // FUNZIONE UNIFICATA PER CARICARE QUALSIASI TABELLA
+// FUNZIONE UNIFICATA PER CARICARE QUALSIASI TABELLA - VERSIONE CORRETTA
 async function loadTableData(tableName) {
     console.log(`📥 Caricamento: ${tableName}`);
     
@@ -2560,25 +2625,26 @@ async function loadTableData(tableName) {
         // Configurazioni per ogni tabella
         const tableConfig = {
             'tecnici': {
-                select: 'id, nome_completo, pin, ruolo, cod_supervisore, telefono, email',
+                select: 'id, nome_completo, pin, ruolo, cod_supervisore, Telefono, Mail',
                 orderBy: 'nome_completo',
                 limit: 100
             },
             'manutentori': {
-                select: 'Titolo, Giro, Manutentore, Mail, Telefono, Supervisore',
-                orderBy: 'Giro',
-                limit: 100
-            },
-            'supervisori': {
-                select: 'Titolo, Cod, Nome, Mail, Telefono',
-                orderBy: 'Cod',
-                limit: 100
-            },
-            'venditori': {
-                select: 'Titolo, Cod, Nome, Mail, Telefono',
-                orderBy: 'Cod',
-                limit: 100
-            }
+    select: 'id, Titolo, Giro, Manutentore, Mail, Telefono, Supervisore',  // AGGIUNTO id
+    orderBy: 'Giro',
+    limit: 100
+},
+'supervisori': {
+    select: 'id, Titolo, Cod, Nome, Mail, Telefono',  // AGGIUNTO id
+    orderBy: 'Cod',
+    limit: 100
+},
+'venditori': {
+    select: 'id, Titolo, Cod, Nome, Mail, Telefono',  // AGGIUNTO id
+    orderBy: 'Cod',
+    limit: 100
+}
+
         };
         
         const config = tableConfig[tableName] || {
@@ -2603,21 +2669,38 @@ async function loadTableData(tableName) {
         
         if (error) throw error;
         
-        // Aggiorna lo stato globale
-        window[`${tableName}Data`] = data || [];
-        currentPersonnelTable = tableName;
-        
-        // Renderizza la tabella
-        renderTable(tableName, data || []);
+        // Aggiorna lo stato globale in base alla tabella
+        switch(tableName) {
+            case 'tecnici':
+                window.tecniciData = data || [];
+                currentPersonnelTable = 'tecnici';
+                renderTecniciTable();
+                break;
+            case 'manutentori':
+                window.manutentoriData = data || [];
+                currentPersonnelTable = 'manutentori';
+                renderManutentoriTable();
+                break;
+            case 'supervisori':
+                window.supervisoriData = data || [];
+                currentPersonnelTable = 'supervisori';
+                renderSupervisoriTable();
+                break;
+            case 'venditori':
+                window.venditoriData = data || [];
+                currentPersonnelTable = 'venditori';
+                renderVenditoriTable();
+                break;
+            default:
+                // Per altre tabelle, usa un render generico
+                console.warn(`Nessun render specifico per ${tableName}`);
+        }
         
         showNotification(`✅ ${data.length} record da ${tableName}`, 'success');
         
     } catch (error) {
         console.error(`❌ Errore caricamento ${tableName}:`, error);
         showNotification(`Errore: ${error.message}`, 'error');
-        
-        // Mostra stato di errore
-        renderTable(tableName, [], true);
     } finally {
         hideLoading();
     }
@@ -3241,7 +3324,263 @@ function renderTecniciTable() {
         </div>
     `;
 }
-// MODAL PER AGGIUNTA RECORD
+
+// RENDER MANUTENTORI TABLE
+function renderManutentoriTable() {
+    console.log('🔄 Render manutentori');
+    const container = document.getElementById('personnel-content');
+    if (!container) return;
+    
+    if (!manutentoriData || manutentoriData.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <span class="material-symbols-rounded">construction</span>
+                <h3>Nessun manutentore registrato</h3>
+                <p>La tabella manutentori è vuota</p>
+                <button class="btn btn-primary" onclick="openAddModal('manutentori')">
+                    <span class="material-symbols-rounded">add</span>
+                    Aggiungi primo manutentore
+                </button>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = `
+        <div class="section-header">
+            <div>
+                <h2 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                    <span class="material-symbols-rounded">construction</span>
+                    Gestione Manutentori
+                </h2>
+                <p style="margin: 4px 0 0 0; color: #64748b;">
+                    ${manutentoriData.length} manutentori registrati • Ultimo aggiornamento: ${new Date().toLocaleTimeString('it-IT')}
+                </p>
+            </div>
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="openAddModal('manutentori')">
+                    <span class="material-symbols-rounded">add</span>
+                    Nuovo Manutentore
+                </button>
+                <button class="btn btn-secondary" onclick="downloadTableCSV('manutentori')">
+                    <span class="material-symbols-rounded">download</span>
+                    Esporta CSV
+                </button>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <table class="styled-table">
+                <thead>
+                    <tr>
+                        <th>Giro</th>
+                        <th>Manutentore</th>
+                        <th>Supervisore</th>
+                        <th>Email</th>
+                        <th>Telefono</th>
+                        <th>Titolo</th>
+                        <th style="width: 120px;">Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${manutentoriData.map(manutentore => {
+                        const recordName = (manutentore.Manutentore || 'Senza nome').replace(/'/g, "\\'");
+                        
+                        return `
+                        <tr>
+                            <td><strong>${manutentore.Giro || '-'}</strong></td>
+                            <td>${manutentore.Manutentore || '-'}</td>
+                            <td>${manutentore.Supervisore || '-'}</td>
+                            <td>${manutentore.Mail ? `<a href="mailto:${manutentore.Mail}">${manutentore.Mail}</a>` : '-'}</td>
+                            <td>${manutentore.Telefono || '-'}</td>
+                            <td>${manutentore.Titolo || '-'}</td>
+                            <td class="action-cells">
+                                <button class="btn-icon edit" title="Modifica" 
+                                    onclick="openEditModal('manutentori', ${manutentore.id})">
+                                    <span class="material-symbols-rounded">edit</span>
+                                </button>
+                                <button class="btn-icon delete" title="Elimina" 
+                                    onclick="deleteRecord('manutentori', ${manutentore.id}, '${recordName}')">
+                                    <span class="material-symbols-rounded">delete</span>
+                                </button>
+                            </td>
+                        </tr>
+                    `}).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+// RENDER SUPERVISORI TABLE
+function renderSupervisoriTable() {
+    console.log('🔄 Render supervisori');
+    const container = document.getElementById('personnel-content');
+    if (!container) return;
+    
+    if (!supervisoriData || supervisoriData.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <span class="material-symbols-rounded">supervisor_account</span>
+                <h3>Nessun supervisore registrato</h3>
+                <p>La tabella supervisori è vuota</p>
+                <button class="btn btn-primary" onclick="openAddModal('supervisori')">
+                    <span class="material-symbols-rounded">add</span>
+                    Aggiungi primo supervisore
+                </button>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = `
+        <div class="section-header">
+            <div>
+                <h2 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                    <span class="material-symbols-rounded">supervisor_account</span>
+                    Gestione Supervisori
+                </h2>
+                <p style="margin: 4px 0 0 0; color: #64748b;">
+                    ${supervisoriData.length} supervisori registrati • Ultimo aggiornamento: ${new Date().toLocaleTimeString('it-IT')}
+                </p>
+            </div>
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="openAddModal('supervisori')">
+                    <span class="material-symbols-rounded">add</span>
+                    Nuovo Supervisore
+                </button>
+                <button class="btn btn-secondary" onclick="downloadTableCSV('supervisori')">
+                    <span class="material-symbols-rounded">download</span>
+                    Esporta CSV
+                </button>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <table class="styled-table">
+                <thead>
+                    <tr>
+                        <th>Codice</th>
+                        <th>Nome</th>
+                        <th>Email</th>
+                        <th>Telefono</th>
+                        <th>Titolo</th>
+                        <th style="width: 120px;">Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${supervisoriData.map(supervisore => {
+                        const recordName = (supervisore.Nome || 'Senza nome').replace(/'/g, "\\'");
+                        
+                        return `
+                        <tr>
+                            <td><strong>${supervisore.Cod || '-'}</strong></td>
+                            <td>${supervisore.Nome || '-'}</td>
+                            <td>${supervisore.Mail ? `<a href="mailto:${supervisore.Mail}">${supervisore.Mail}</a>` : '-'}</td>
+                            <td>${supervisore.Telefono || '-'}</td>
+                            <td>${supervisore.Titolo || '-'}</td>
+                            <td class="action-cells">
+                                <button class="btn-icon edit" title="Modifica" 
+                                    onclick="openEditModal('supervisori', ${supervisore.id})">
+                                    <span class="material-symbols-rounded">edit</span>
+                                </button>
+                                <button class="btn-icon delete" title="Elimina" 
+                                    onclick="deleteRecord('supervisori', ${supervisore.id}, '${recordName}')">
+                                    <span class="material-symbols-rounded">delete</span>
+                                </button>
+                            </td>
+                        </tr>
+                    `}).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+// RENDER VENDITORI TABLE
+function renderVenditoriTable() {
+    console.log('🔄 Render venditori');
+    const container = document.getElementById('personnel-content');
+    if (!container) return;
+    
+    if (!venditoriData || venditoriData.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <span class="material-symbols-rounded">storefront</span>
+                <h3>Nessun venditore registrato</h3>
+                <p>La tabella venditori è vuota</p>
+                <button class="btn btn-primary" onclick="openAddModal('venditori')">
+                    <span class="material-symbols-rounded">add</span>
+                    Aggiungi primo venditore
+                </button>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = `
+        <div class="section-header">
+            <div>
+                <h2 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                    <span class="material-symbols-rounded">storefront</span>
+                    Gestione Venditori
+                </h2>
+                <p style="margin: 4px 0 0 0; color: #64748b;">
+                    ${venditoriData.length} venditori registrati • Ultimo aggiornamento: ${new Date().toLocaleTimeString('it-IT')}
+                </p>
+            </div>
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="openAddModal('venditori')">
+                    <span class="material-symbols-rounded">add</span>
+                    Nuovo Venditore
+                </button>
+                <button class="btn btn-secondary" onclick="downloadTableCSV('venditori')">
+                    <span class="material-symbols-rounded">download</span>
+                    Esporta CSV
+                </button>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <table class="styled-table">
+                <thead>
+                    <tr>
+                        <th>Codice</th>
+                        <th>Nome</th>
+                        <th>Email</th>
+                        <th>Telefono</th>
+                        <th>Titolo</th>
+                        <th style="width: 120px;">Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${venditoriData.map(venditore => {
+                        const recordName = (venditore.Nome || 'Senza nome').replace(/'/g, "\\'");
+                        
+                        return `
+                        <tr>
+                            <td><strong>${venditore.Cod || '-'}</strong></td>
+                            <td>${venditore.Nome || '-'}</td>
+                            <td>${venditore.Mail ? `<a href="mailto:${venditore.Mail}">${venditore.Mail}</a>` : '-'}</td>
+                            <td>${venditore.Telefono || '-'}</td>
+                            <td>${venditore.Titolo || '-'}</td>
+                            <td class="action-cells">
+                                <button class="btn-icon edit" title="Modifica" 
+                                    onclick="openEditModal('venditori', ${venditore.id})">
+                                    <span class="material-symbols-rounded">edit</span>
+                                </button>
+                                <button class="btn-icon delete" title="Elimina" 
+                                    onclick="deleteRecord('venditori', ${venditore.id}, '${recordName}')">
+                                    <span class="material-symbols-rounded">delete</span>
+                                </button>
+                            </td>
+                        </tr>
+                    `}).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
 
 
 // CHIUDI MODAL
@@ -3255,80 +3594,8 @@ function closeModal() {
 // GESTIONE SALVATAGGIO RECORD
 
 
-// ELIMINAZIONE RECORD CON CONFERMA
-async function deleteRecord(tableName, recordId) {
-    console.log(`🗑️ Eliminazione: ${tableName} - ID: ${recordId}`);
-    
-    // Conferma all'utente
-    const confirmation = await showConfirmDialog(
-        'Conferma eliminazione',
-        `Sei sicuro di voler eliminare questo record dalla tabella "${tableName}"?`,
-        'delete_forever'
-    );
-    
-    if (!confirmation) {
-        console.log('❌ Eliminazione annullata');
-        return;
-    }
-    
-    showLoading('Eliminazione', `Elimino record da ${tableName}...`);
-    
-    try {
-        const client = getSupabaseClient();
-        
-        // Determina il campo chiave in base alla tabella
-        let keyField = 'id'; // default
-        
-        const keyMapping = {
-            'tecnici': 'id',
-            'manutentori': 'Giro',
-            'supervisori': 'Cod',
-            'venditori': 'Cod',
-            'veicoli': 'targa'
-        };
-        
-        keyField = keyMapping[tableName] || 'id';
-        
-        // Se recordId è numerico, convertilo
-        let recordValue = recordId;
-        if (!isNaN(recordId) && keyField !== 'nome_completo' && keyField !== 'targa') {
-            recordValue = parseInt(recordId, 10);
-        }
-        
-        console.log(`🔑 Campo: ${keyField}, Valore: ${recordValue}`);
-        
-        const { error } = await client
-            .from(tableName)
-            .delete()
-            .eq(keyField, recordValue);
-        
-        if (error) {
-            // Fallback: prova con 'id'
-            if (keyField !== 'id') {
-                console.log('🔄 Tentativo con campo "id"...');
-                const { error: error2 } = await client
-                    .from(tableName)
-                    .delete()
-                    .eq('id', recordId);
-                
-                if (error2) throw error2;
-            } else {
-                throw error;
-            }
-        }
-        
-        showNotification(`✅ Record eliminato con successo`, 'success');
-        
-        // Ricarica i dati
-        await loadTableData(tableName);
-        
-    } catch (error) {
-        console.error('❌ Errore eliminazione:', error);
-        showNotification(`Errore eliminazione: ${error.message}`, 'error');
-    } finally {
-        hideLoading();
-    }
-}
+
+
 
 // MODIFICA RECORD (VERSIONE SEMPLICE)
 async function editRecord(tableName, recordId) {
@@ -4355,13 +4622,8 @@ function updateAnalysisStatus(hasAnalysis = false, results = null) {
     const statusElement = document.getElementById('analysis-status');
     const statusText = document.getElementById('analysis-status-text');
     
-    if (!statusElement || !statusText) {
-        console.warn('Elementi UI per stato analisi non trovati');
-        console.log('Cercati: #analysis-status e #analysis-status-text');
-        console.log('Elementi trovati:', {
-            statusElement: document.getElementById('analysis-status'),
-            statusText: document.getElementById('analysis-status-text')
-        });
+  if (!statusElement || !statusText) {
+        // Silenzia l'errore se gli elementi non esistono
         return;
     }
     
@@ -5486,3 +5748,6 @@ window.deleteManutentore = deleteManutentore;
 window.deleteSupervisore = deleteSupervisore;
 window.deleteVenditore = deleteVenditore;
 window.deleteVehicle = deleteVehicle;
+window.renderManutentoriTable = renderManutentoriTable;
+window.renderSupervisoriTable = renderSupervisoriTable;
+window.renderVenditoriTable = renderVenditoriTable;
