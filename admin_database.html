@@ -1406,19 +1406,19 @@
 </div>
 
 <!-- NUOVO TAB: Fogli Lavoro -->
+<!-- NUOVO TAB: Fogli Lavoro - STILE FOGLIOLAVORO -->
 <div id="tab-fogli" class="tab-content">
-    <!-- Card Principale -->
     <div class="card">
         <div class="card-header">
             <h3>
                 <span class="material-symbols-rounded">assignment</span>
-                Gestione Fogli Lavoro
+                Monitor Presenze
             </h3>
             <div class="card-actions">
                 <button class="btn btn-primary" onclick="mostraModalNuovoFoglio()">
-                    <span class="material-symbols-rounded">add</span>
-                    Nuovo Foglio
-                </button>
+    <span class="material-symbols-rounded">add</span>
+    Nuovo Intervento
+</button>
                 <button class="btn btn-icon" onclick="caricaFogli()" title="Aggiorna">
                     <span class="material-symbols-rounded">refresh</span>
                 </button>
@@ -1426,27 +1426,24 @@
         </div>
         
         <div class="card-body">
-            <!-- SWITCH VISTA (RIEPILOGO / DETTAGLIO) -->
-            <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem;">
-                <button class="tab-btn active" id="btn-vista-riepilogo" onclick="switchVistaFogli('riepilogo')">
-                    <span class="material-symbols-rounded">summarize</span>
-                    Riepilogo
-                </button>
-                <button class="tab-btn" id="btn-vista-dettaglio" onclick="switchVistaFogli('dettaglio')">
-                    <span class="material-symbols-rounded">table_rows</span>
-                    Dettaglio
-                </button>
-            </div>
-
-            <!-- STATISTICHE GENERALI (sempre visibili) -->
-            <div class="stats-grid" style="margin-bottom: 2rem;" id="stats-fogli">
+            <!-- STATISTICHE MENSILI (in alto) -->
+            <div class="stats-grid" style="margin-bottom: 2rem;" id="stats-fogli-mensili">
                 <div class="stat-card">
                     <div class="stat-icon">
-                        <span class="material-symbols-rounded">assignment</span>
+                        <span class="material-symbols-rounded">work</span>
                     </div>
                     <div class="stat-content">
-                        <div class="stat-value" id="stat-totale-fogli">0</div>
-                        <div class="stat-label">Totale Fogli</div>
+                        <div class="stat-value" id="sumOrd">0,00</div>
+                        <div class="stat-label">Lavorate</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-symbols-rounded">beach_access</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="sumAss">0,00</div>
+                        <div class="stat-label">Assenze</div>
                     </div>
                 </div>
                 <div class="stat-card">
@@ -1454,189 +1451,82 @@
                         <span class="material-symbols-rounded">schedule</span>
                     </div>
                     <div class="stat-content">
-                        <div class="stat-value" id="stat-ore-totali">0</div>
-                        <div class="stat-label">Ore Totali</div>
+                        <div class="stat-value" id="sumStra">0,00</div>
+                        <div class="stat-label">Straord.</div>
                     </div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon">
-                        <span class="material-symbols-rounded">group</span>
+                        <span class="material-symbols-rounded">directions_car</span>
                     </div>
                     <div class="stat-content">
-                        <div class="stat-value" id="stat-tecnici-attivi">0</div>
-                        <div class="stat-label">Tecnici Attivi</div>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <span class="material-symbols-rounded">today</span>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-value" id="stat-oggi">0</div>
-                        <div class="stat-label">Oggi</div>
+                        <div class="stat-value" id="sumVgg">0,00</div>
+                        <div class="stat-label">Viaggio</div>
                     </div>
                 </div>
             </div>
 
-            <!-- FILTRI (visibili in entrambe le viste) -->
-            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; align-items: end;">
+            <!-- RIGA CON TOTALE / PREVISTE -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <div style="display: flex; gap: 1rem;" id="decadeStatus"></div>
+                <div class="bg-white px-4 py-2 rounded-full border shadow-sm">
+                    <span id="totalRatio" class="text-sm font-black italic">-- / --</span>
+                </div>
+            </div>
+
+            <!-- FILTRI: Tecnico + Mese + Anno + Cerca -->
+            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 2fr; gap: 1rem; margin-bottom: 1.5rem;">
                 <div class="form-group">
                     <label>👤 Tecnico</label>
-                    <select id="filtro-tecnico-fogli" class="form-control" onchange="filtraFogli()">
-                        <option value="">Tutti</option>
+                    <select id="selectTecnico" class="form-control" onchange="renderVistaMensile()">
+                        <option value="">-- Seleziona Tecnico --</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>📅 Dal</label>
-                    <input type="date" id="filtro-data-da" class="form-control" onchange="filtraFogli()">
-                </div>
-                <div class="form-group">
-                    <label>📅 Al</label>
-                    <input type="date" id="filtro-data-a" class="form-control" onchange="filtraFogli()">
-                </div>
-                <div class="form-group">
-                    <label>🔢 Codice</label>
-                    <select id="filtro-codice-fogli" class="form-control" onchange="filtraFogli()">
-                        <option value="">Tutti</option>
+                    <label>📅 Mese</label>
+                    <select id="selectMese" class="form-control" onchange="renderVistaMensile()">
+                        <option value="1">Gennaio</option>
+                        <option value="2">Febbraio</option>
+                        <option value="3">Marzo</option>
+                        <option value="4">Aprile</option>
+                        <option value="5">Maggio</option>
+                        <option value="6">Giugno</option>
+                        <option value="7">Luglio</option>
+                        <option value="8">Agosto</option>
+                        <option value="9">Settembre</option>
+                        <option value="10">Ottobre</option>
+                        <option value="11">Novembre</option>
+                        <option value="12">Dicembre</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>📋 Tipo</label>
-                    <select id="filtro-tipo-fogli" class="form-control" onchange="filtraFogli()">
-                        <option value="">Tutti</option>
-                        <option value="ORDINARIA">Ordinaria</option>
-                        <option value="STRAORDINARIO">Straordinario</option>
-                        <option value="REPERIBILITA">Reperibilità</option>
-                        <option value="MONTAGGIO">Montaggio</option>
-                        <option value="ALTRO">Altro</option>
+                    <label>📅 Anno</label>
+                    <select id="selectAnno" class="form-control" onchange="renderVistaMensile()">
+                        <option value="2025">2025</option>
+                        <option value="2026" selected>2026</option>
                     </select>
+                </div>
+                <div class="form-group">
+                    <label>🔍 Cerca</label>
+                    <input type="text" id="search-fogli" class="form-control" placeholder="Impianto o indirizzo..." onkeyup="filtraTabella()">
                 </div>
             </div>
 
-            <!-- VISTA RIEPILOGO (inizialmente visibile) -->
-            <div id="vista-riepilogo-fogli" style="display: block;">
-                <!-- SOTTO-SWITCH per tipo riepilogo -->
-                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-                    <button class="btn btn-small active" id="btn-riep-mensile" onclick="switchTipoRiepilogo('mensile')">
-                        Riepilogo Mensile
-                    </button>
-                    <button class="btn btn-small" id="btn-riep-giornaliero" onclick="switchTipoRiepilogo('giornaliero')">
-                        Riepilogo Giornaliero
-                    </button>
-                </div>
-
-                <!-- Riepilogo Mensile -->
-                <div id="riepilogo-mensile" style="display: block;">
-                    <div class="tables-container">
-                        <table class="data-table" id="tabella-riepilogo-mensile">
-                            <thead>
-                                <tr>
-                                    <th>Tecnico</th>
-                                    <th>Mese</th>
-                                    <th>Anno</th>
-                                    <th>Ore Ord</th>
-                                    <th>Ore Stra</th>
-                                    <th>Ore Viaggio</th>
-                                    <th>Totale Ore</th>
-                                    <th>N. Interventi</th>
-                                    <th>Azioni</th>
-                                </tr>
-                            </thead>
-                            <tbody id="riepilogo-mensile-body">
-                                <tr>
-                                    <td colspan="9" class="text-center">
-                                        <div class="loading-spinner-small">
-                                            <span class="material-symbols-rounded">hourglass_top</span>
-                                            Caricamento riepilogo...
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Riepilogo Giornaliero -->
-                <div id="riepilogo-giornaliero" style="display: none;">
-                    <div class="tables-container">
-                        <table class="data-table" id="tabella-riepilogo-giornaliero">
-                            <thead>
-                                <tr>
-                                    <th>Tecnico</th>
-                                    <th>Data</th>
-                                    <th>Ore Ord</th>
-                                    <th>Ore Stra</th>
-                                    <th>Ore Viaggio</th>
-                                    <th>Totale Ore</th>
-                                    <th>N. Interventi</th>
-                                    <th>Azioni</th>
-                                </tr>
-                            </thead>
-                            <tbody id="riepilogo-giornaliero-body">
-                                <tr>
-                                    <td colspan="8" class="text-center">
-                                        <div class="loading-spinner-small">
-                                            <span class="material-symbols-rounded">hourglass_top</span>
-                                            Caricamento riepilogo...
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- VISTA DETTAGLIO (inizialmente nascosta) -->
-            <div id="vista-dettaglio-fogli" style="display: none;">
-                <div style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center;">
-                    <div class="search-box" style="flex: 1;">
-                        <span class="material-symbols-rounded">search</span>
-                        <input type="text" id="search-fogli" placeholder="Cerca in impianto, indirizzo, note..." onkeyup="filtraFogli()">
-                    </div>
-                    <button class="btn btn-secondary" onclick="esportaCSVFogli()">
-                        <span class="material-symbols-rounded">download</span>
-                        Esporta
-                    </button>
-                    <button class="btn btn-secondary" onclick="mostraImportFogli()">
-                        <span class="material-symbols-rounded">upload</span>
-                        Importa
-                    </button>
-                </div>
-
-                <div class="tables-container">
-                    <table class="data-table" id="tabella-fogli">
-                        <thead>
-                            <tr>
-                                <th style="width: 30px;">
-                                    <input type="checkbox" id="select-all-fogli" onchange="selezionaTuttiFogli()">
-                                </th>
-                                <th>Data</th>
-                                <th>Tecnico</th>
-                                <th>Codice</th>
-                                <th>Tipo</th>
-                                <th>Impianto</th>
-                                <th>Indirizzo</th>
-                                <th>Ore Ord</th>
-                                <th>Ore Stra</th>
-                                <th>Ore Viag</th>
-                                <th>Totale</th>
-                                <th>Note</th>
-                                <th>Azioni</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabella-fogli-body">
-                            <tr>
-                                <td colspan="13" class="text-center">
-                                    <div class="loading-spinner-small">
-                                        <span class="material-symbols-rounded">hourglass_top</span>
-                                        Caricamento fogli lavoro...
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+            <!-- TABELLA MENSILE -->
+            <div class="tables-container" style="overflow-x: auto;">
+                <table class="data-table" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-[10px] uppercase font-black border-b">
+                            <th style="width: 110px; text-align: left;">Data</th>
+                            <th style="width: 90px; text-align: center;">Giorno</th>
+                            <th style="width: 65px; text-align: center;">Ord.</th>
+                            <th style="width: 65px; text-align: center;">Stra.</th>
+                            <th style="width: 65px; text-align: center;">Vgg.</th>
+                            <th style="text-align: left;">Dettaglio Codici</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="text-sm"></tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -1827,16 +1717,20 @@
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
-                    <div class="form-group">
-                        <label>Impianto / Commessa</label>
-                        <input type="text" id="foglio-impianto" class="form-control" placeholder="Codice impianto o commessa">
-                    </div>
-                    <div class="form-group">
-                        <label>Indirizzo</label>
-                        <input type="text" id="foglio-indirizzo" class="form-control" placeholder="Via, città...">
-                    </div>
-                </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+  <div class="form-group">
+    <label>Impianto / Commessa</label>
+    <input type="text" id="foglio-impianto" class="form-control" 
+           placeholder="Codice impianto o commessa" 
+           list="lista-impianti"
+           onblur="cercaIndirizzoImpianto()">
+    <datalist id="lista-impianti"></datalist>
+</div>
+    <div class="form-group">
+        <label>Indirizzo</label>
+        <input type="text" id="foglio-indirizzo" class="form-control" placeholder="Via, città...">
+    </div>
+</div>
 
                 <div style="margin-top: 1rem;">
                     <label class="label-field">Tipo Ore *</label>
@@ -2082,6 +1976,26 @@
         </div>
     </div>
 </div>
+
+
+<!-- MODALE CONFERMA CANCELLAZIONE (per singola) -->
+<div class="modal" id="modal-conferma-cancellazione-ann">
+    <div class="modal-content" style="max-width: 350px;">
+        <div class="modal-body" style="text-align: center; padding: 2rem;">
+            <span class="material-symbols-rounded" style="font-size: 48px; color: #ef4444; margin-bottom: 1rem;">warning</span>
+            <h3 style="margin: 0 0 0.5rem 0;">Conferma cancellazione</h3>
+            <p style="color: #64748b; margin-bottom: 1.5rem;">Sei sicuro di voler cancellare questo intervento?</p>
+            <div style="display: flex; gap: 0.5rem;">
+                <button class="btn btn-secondary" style="flex: 1;" onclick="chiudiModalCancellazioneIntervento()">Annulla</button>
+                <button class="btn btn-danger" style="flex: 1;" onclick="confermaCancellazioneIntervento()">Cancella</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
 
                 <!-- TAB 5: BACKUP -->
                 <div id="tab-backup" class="tab-content">

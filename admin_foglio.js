@@ -1,828 +1,481 @@
-// ============================================
-// ADMIN FOGLI LAVORO - FLOX ADMIN
-// GESTIONE COMPLETA FOGLI LAVORO CON RIEPILOGHI
-// ============================================
+console.log('🚀 ADMIN FOGLI - AVVIO');
 
-console.log('🚀 ADMIN FOGLI - CARICAMENTO IN CORSO');
-
-// Variabili globali
 let fogliList = [];
-let fogliFiltrati = [];
-let foglioTecniciList = [];  // <-- RINOMINATO
-let foglioCodiciList = [];    // <-- RINOMINATO
-let fogliSelezionati = new Set();
-let vistaCorrente = 'riepilogo';
-let tipoRiepilogoCorrente = 'mensile';
 
-// ============================================
-// ESPOSIZIONE FUNZIONI GLOBALI IMMEDIATA
-// ============================================
-
-// DICHIARAZIONE FUNZIONI VUOTE (verranno sovrascritte dopo)
-
-
-
-
-console.log('✅ Funzioni globali placeholder registrate');
-// Mappe colori
-const coloriCodice = {
-    // Lavori (blu)
-    '21': { bg: '#3B82F620', text: '#1E40AF' },
-    '22': { bg: '#3B82F620', text: '#1E40AF' },
-    '24': { bg: '#3B82F620', text: '#1E40AF' },
-    '13': { bg: '#3B82F620', text: '#1E40AF' },
-    '10': { bg: '#3B82F620', text: '#1E40AF' },
-    // Montaggi (viola)
-    '001': { bg: '#8B5CF620', text: '#6B21A8' },
-    '007': { bg: '#8B5CF620', text: '#6B21A8' },
-    // Assenze (arancione)
-    '072': { bg: '#F59E0B20', text: '#92400E' },
-    '073': { bg: '#F59E0B20', text: '#92400E' },
-    '075': { bg: '#F59E0B20', text: '#92400E' },
-    '076': { bg: '#F59E0B20', text: '#92400E' },
-    '077': { bg: '#F59E0B20', text: '#92400E' },
-    '078': { bg: '#F59E0B20', text: '#92400E' },
-    '079': { bg: '#F59E0B20', text: '#92400E' },
-    '080': { bg: '#F59E0B20', text: '#92400E' },
-    '081': { bg: '#F59E0B20', text: '#92400E' },
-    '082': { bg: '#F59E0B20', text: '#92400E' },
-    '083': { bg: '#F59E0B20', text: '#92400E' },
-    '084': { bg: '#F59E0B20', text: '#92400E' },
-    '085': { bg: '#F59E0B20', text: '#92400E' },
-    '086': { bg: '#F59E0B20', text: '#92400E' },
-    '087': { bg: '#F59E0B20', text: '#92400E' },
-    '088': { bg: '#F59E0B20', text: '#92400E' },
-    '089': { bg: '#F59E0B20', text: '#92400E' },
-    '090': { bg: '#F59E0B20', text: '#92400E' },
-    '091': { bg: '#F59E0B20', text: '#92400E' },
-    '092': { bg: '#F59E0B20', text: '#92400E' }
+const foglioParseNum = (v) => v ? parseFloat(v.toString().replace(',', '.')) || 0 : 0;
+const foglioFormatVal = (v, fz) => {
+    if (v === undefined || v === null) return "0,00";
+    if (v === 0) return (fz ? "0,00" : "");
+    return v.toLocaleString('it-IT', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 };
 
-const coloriTipo = {
-    'ORDINARIA': { bg: '#22C55E20', text: '#166534' },
-    'STRAORDINARIO': { bg: '#F9731620', text: '#9A3412' },
-    'REPERIBILITA': { bg: '#EF444420', text: '#991B1B' },
-    'MONTAGGIO': { bg: '#8B5CF620', text: '#6B21A8' },
-    'ALTRO': { bg: '#F59E0B20', text: '#92400E' }
+const foglioGetFestivi = () => ["01-01", "06-01", "25-04", "01-05", "02-06", "15-08", "01-11", "08-12", "25-12", "26-12"];
+
+const foglioDescCodici = {
+    "072": "Assemblea", "073": "Sciopero", "075": "Ferie", "076": "Festività", "077": "Malattia", 
+    "078": "Infortunio", "079": "Donazione Sangue", "080": "Allattamento", "081": "Congedo Matr.",
+    "082": "Permesso Retr.", "083": "Permesso NON Retr.", "084": "Legge 104", "085": "Elettorale",
+    "086": "Lutto", "087": "Sindacale", "088": "Studio", "089": "Volontariato", 
+    "090": "Malattia Figlio <3", "091": "Malattia Figlio >3", "092": "Corso Formazione"
 };
 
-// ============================================
-// INIZIALIZZAZIONE
-// ============================================
+function popolaTecnici() {
+    const tecnici = [...new Set(fogliList.map(d => d.tecnico))].filter(Boolean).sort();
+    const sel = document.getElementById('selectTecnico');
+    if (!sel) return;
+    
+    sel.innerHTML = '<option value="">-- Seleziona Tecnico --</option>';
+    tecnici.forEach(t => {
+        const option = document.createElement('option');
+        option.value = t;
+        option.textContent = t;
+        sel.appendChild(option);
+    });
+}
 
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🔄 Inizializzazione Admin Fogli Lavoro...');
+function renderVistaMensile() {
+    console.log('📅 renderVistaMensile eseguita');
     
-    // Imposta date di default per i filtri (ultimi 30 giorni)
-    const oggi = new Date().toISOString().split('T')[0];
-    const trentaGiorniFa = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const tbody = document.getElementById('tableBody');
+    if (!tbody) return;
     
-    document.getElementById('filtro-data-da').value = trentaGiorniFa;
-    document.getElementById('filtro-data-a').value = oggi;
+    const tecnico = document.getElementById('selectTecnico')?.value;
+    const mese = parseInt(document.getElementById('selectMese')?.value) || new Date().getMonth() + 1;
+    const anno = parseInt(document.getElementById('selectAnno')?.value) || new Date().getFullYear();
     
-    // Setup drop zone per CSV
-    setupDropZoneFogli();
+    console.log('🔍 Filtri:', { tecnico, mese, anno });
     
-    // Event listener per file input
-    document.getElementById('file-fogli-csv').addEventListener('change', handleFileSelectFogli);
+    if (!tecnico) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center">
+                    <div style="padding: 2rem; color: var(--text-muted);">
+                        <span class="material-symbols-rounded" style="font-size: 3rem;">person_search</span>
+                        <p style="margin-top: 1rem;">Seleziona un tecnico</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
     
-    console.log('✅ Admin Fogli Lavoro inizializzato');
-});
-
-// ============================================
-// CARICAMENTO DATI
-// ============================================
-
-async function caricaFogli() {
-    try {
-        console.log('📥 Caricamento fogli lavoro...');
+    // Filtra i dati per tecnico, mese e anno
+    const datiFiltrati = fogliList.filter(f => 
+        f.tecnico === tecnico && 
+        f.mese === mese && 
+        f.anno === anno
+    );
+    
+    if (datiFiltrati.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center">
+                    <div style="padding: 2rem; color: var(--text-muted);">
+                        <span class="material-symbols-rounded" style="font-size: 3rem;">calendar_month</span>
+                        <p>Nessun dato per questo periodo</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    // Raggruppa per giorno
+    const raggruppati = {};
+    datiFiltrati.forEach(r => {
+        const g = r.giorno;
+        if (!raggruppati[g]) {
+            raggruppati[g] = { 
+                ord: 0, ass: 0, stra: 0, vgg: 0, 
+                desc: new Set(), 
+                list: [] 
+            };
+        }
         
+        const oreR = foglioParseNum(r.ore_ord);
+        const codR = parseInt(r.codice);
+        
+        // Distingui tra lavoro e assenza
+        if (codR >= 72 && codR <= 91) {
+            raggruppati[g].ass += oreR;
+        } else {
+            raggruppati[g].ord += oreR;
+        }
+        
+        raggruppati[g].stra += foglioParseNum(r.ore_stra);
+        raggruppati[g].vgg += foglioParseNum(r.ore_viaggio);
+        
+        // Aggiungi descrizione codice
+        const cKey = codR.toString().padStart(3, '0');
+        if (foglioDescCodici[cKey]) {
+            raggruppati[g].desc.add(foglioDescCodici[cKey] + ` (${cKey})`);
+        }
+        
+        raggruppati[g].list.push(r);
+    });
+    
+    // Costruisci tabella
+    const festivi = foglioGetFestivi();
+    const ultimoGiorno = new Date(anno, mese, 0).getDate();
+    
+    let html = '';
+    let totLavorate = 0, totAssenze = 0, totStra = 0, totVgg = 0, totPreviste = 0;
+    
+    for (let i = 1; i <= ultimoGiorno; i++) {
+        const dataC = new Date(anno, mese - 1, i);
+        const giornoSettimana = dataC.getDay();
+        const isSabato = giornoSettimana === 6;
+        const isDomenica = giornoSettimana === 0;
+        const dataStr = `${i.toString().padStart(2, '0')}-${mese.toString().padStart(2, '0')}`;
+        const isFestivo = festivi.includes(dataStr);
+        
+        // Ore previste (8 per giorni feriali, 0 per weekend/festivi)
+        const orePreviste = (isSabato || isDomenica || isFestivo) ? 0 : 8;
+        totPreviste += orePreviste;
+        
+        const day = raggruppati[i] || { ord: 0, ass: 0, stra: 0, vgg: 0, desc: new Set(), list: [] };
+        
+        totLavorate += day.ord;
+        totAssenze += day.ass;
+        totStra += day.stra;
+        totVgg += day.vgg;
+        
+        const totGiorno = day.ord + day.ass;
+        
+        // Classi CSS per colori
+        let rowClass = '';
+        if (isFestivo) rowClass = 'bg-festivo';
+        else if (isDomenica) rowClass = 'bg-domenica';
+        else if (isSabato) rowClass = 'bg-sabato';
+        
+        // Evidenzia anomalie
+        let ordStyle = '';
+        if (orePreviste > 0) {
+            ordStyle = (totGiorno === 8) ? 'text-ok' : 'text-anomaly';
+        } else {
+            ordStyle = (totGiorno > 0) ? 'text-anomaly' : '';
+        }
+        
+        const fz = (orePreviste === 8 && totGiorno === 0);
+        
+        // Formatta descrizione codici
+        const descrizione = Array.from(day.desc).join(' / ');
+        
+        html += `
+            <tr class="${rowClass} row-hover" onclick='openDettaglioGiorno(${JSON.stringify(day.list)}, "${dataC.toLocaleDateString('it-IT')}", "${tecnico}")'>
+                <td class="text-slate-400 font-medium">${dataC.toLocaleDateString('it-IT')}</td>
+                <td class="text-[10px] uppercase font-black text-slate-400 text-center">${dataC.toLocaleDateString('it-IT', {weekday: 'short'}).toUpperCase()}</td>
+                <td class="text-center ${ordStyle}">${foglioFormatVal(totGiorno, fz)}</td>
+                <td class="text-center font-medium">${foglioFormatVal(day.stra)}</td>
+                <td class="text-center font-medium text-slate-500">${foglioFormatVal(day.vgg)}</td>
+                <td class="text-left text-blue-700 font-bold text-[11px]">${descrizione}</td>
+            </tr>
+        `;
+    }
+    
+    tbody.innerHTML = html;
+    
+    // Aggiorna statistiche
+    foglioAggiornaStatistiche(totLavorate, totAssenze, totStra, totVgg, totPreviste);
+}
+
+window.caricaFogli = async function() {
+    console.log('📥 Caricamento fogli lavoro...');
+    
+    try {
         const supabase = getSupabaseClient();
         if (!supabase) throw new Error('DB non configurato');
         
-        const { data, error } = await supabase
-            .from('fogliolavoro')
-            .select('*')
-            .order('anno', { ascending: false })
-            .order('mese', { ascending: false })
-            .order('giorno', { ascending: false });
+        let allData = [];
+        let page = 0;
+        const pageSize = 1000;
+        let hasMore = true;
         
-        if (error) throw error;
-        
-        fogliList = data || [];
-        fogliFiltrati = [...fogliList];
-        
-        console.log(`✅ Caricati ${fogliList.length} fogli lavoro`);
-        
-        // Estrai tecnici e codici unici
-        aggiornaListeUniche();
-        
-        // Aggiorna UI
-        aggiornaStatisticheFogli();
-        aggiornaFiltriFogli();
-        
-        if (vistaCorrente === 'riepilogo') {
-            aggiornaRiepilogo();
-        } else {
-            renderizzaTabellaFogli();
+        while(hasMore) {
+            console.log(`📄 Caricamento pagina ${page + 1}...`);
+            
+            const { data, error } = await supabase
+                .from('fogliolavoro')
+                .select('*')
+                .range(page * pageSize, (page + 1) * pageSize - 1)
+                .order('anno', { ascending: false })
+                .order('mese', { ascending: false })
+                .order('giorno', { ascending: false });
+            
+            if (error) throw error;
+            
+            if (data && data.length > 0) {
+                allData = [...allData, ...data];
+                page++;
+                
+                if (data.length < pageSize) {
+                    hasMore = false;
+                    console.log(`✅ Ultima pagina raggiunta (${data.length} record)`);
+                }
+            } else {
+                hasMore = false;
+            }
         }
         
+        fogliList = allData;
+        fogliFiltrati = [...fogliList];
+        
+        console.log(`✅ Caricati TUTTI i ${fogliList.length} fogli lavoro`);
+
+        // Popola la datalist degli impianti
+        const impianti = [...new Set(fogliList.map(f => f.impianto).filter(Boolean))].sort();
+        const datalist = document.getElementById('lista-impianti');
+        if (datalist) {
+            datalist.innerHTML = impianti.map(i => `<option value="${i}">`).join('');
+        }
+        
+        // Popola select tecnici
+        popolaTecnici();
+        
+        // Render iniziale
+        renderVistaMensile();
+        
+        mostraNotifica(`Caricati ${fogliList.length} fogli lavoro`, 'success');
+
     } catch (error) {
         console.error('❌ Errore caricamento fogli:', error);
         mostraNotifica('Errore nel caricamento dei fogli lavoro', 'error');
     }
+};
+console.log('✅ Fine file');
+
+
+function mostraNotifica(messaggio, tipo = 'info') {
+    console.log(`🔔 ${tipo}: ${messaggio}`);
+    alert(messaggio); // Temporaneo, poi lo sostituiremo con toast
 }
 
-function aggiornaListeUniche() {
-    const tecniciSet = new Set();
-    const codiciSet = new Set();
+
+
+function foglioAggiornaStatistiche(lavorate, assenze, stra, vgg, previste) {
+    const sumOrd = document.getElementById('sumOrd');
+    const sumAss = document.getElementById('sumAss');
+    const sumStra = document.getElementById('sumStra');
+    const sumVgg = document.getElementById('sumVgg');
+    const totalRatio = document.getElementById('totalRatio');
     
-    fogliList.forEach(f => {
-        if (f.tecnico && f.tecnico.trim() !== '') {
-            tecniciSet.add(f.tecnico);
-        }
-        if (f.codice) {
-            codiciSet.add(f.codice.toString());
-        }
-    });
+    if (sumOrd) sumOrd.innerText = foglioFormatVal(lavorate);
+    if (sumAss) sumAss.innerText = foglioFormatVal(assenze);
+    if (sumStra) sumStra.innerText = foglioFormatVal(stra);
+    if (sumVgg) sumVgg.innerText = foglioFormatVal(vgg);
     
-    foglioTecniciList = Array.from(tecniciSet).sort();
-    foglioCodiciList = Array.from(codiciSet).sort((a, b) => {
-        // Ordina: numeri prima, poi lettere
-        const aNum = parseInt(a);
-        const bNum = parseInt(b);
-        if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
-        if (!isNaN(aNum)) return -1;
-        if (!isNaN(bNum)) return 1;
-        return a.localeCompare(b);
-    });
+    const totale = lavorate + assenze;
+    if (totalRatio) {
+        totalRatio.innerText = `${foglioFormatVal(totale)} / ${foglioFormatVal(previste)}`;
+        totalRatio.className = `text-sm font-black italic ${Math.abs(totale - previste) < 0.01 ? 'text-green-600' : 'text-red-600'}`;
+    }
 }
 
-function aggiornaStatisticheFogli() {
-    // Totale fogli
-    document.getElementById('stat-totale-fogli').textContent = fogliList.length;
-    
-    // Ore totali
-    const oreTotali = fogliList.reduce((sum, f) => {
-        return sum + (parseFloat(f.ore) || 0);
-    }, 0);
-    document.getElementById('stat-ore-totali').textContent = formatOre(oreTotali);
-    
-    // Tecnici attivi (ultimi 30 giorni)
-    const trentaGiorniFa = new Date();
-    trentaGiorniFa.setDate(trentaGiorniFa.getDate() - 30);
-    
-    const tecniciAttivi = new Set();
-    fogliList.forEach(f => {
-        const dataFoglio = new Date(f.anno, f.mese - 1, f.giorno);
-        if (dataFoglio >= trentaGiorniFa && f.tecnico) {
-            tecniciAttivi.add(f.tecnico);
-        }
-    });
-    document.getElementById('stat-tecnici-attivi').textContent = tecniciAttivi.size;
-    
-    // Ore oggi
-    const oggi = new Date();
-    const oggiStr = `${oggi.getDate()}/${oggi.getMonth()+1}/${oggi.getFullYear()}`;
-    const oreOggi = fogliList.reduce((sum, f) => {
-        if (f.giorno === oggi.getDate() && 
-            f.mese === oggi.getMonth() + 1 && 
-            f.anno === oggi.getFullYear()) {
-            return sum + (parseFloat(f.ore) || 0);
-        }
-        return sum;
-    }, 0);
-    document.getElementById('stat-oggi').textContent = formatOre(oreOggi);
-}
 
-function aggiornaFiltriFogli() {
-    // Filtro tecnico
-    const selectTecnico = document.getElementById('filtro-tecnico-fogli');
-    let htmlTecnico = '<option value="">Tutti</option>';
-    foglioTecniciList.forEach(t => {
-        htmlTecnico += `<option value="${t}">${t}</option>`;
-    });
-    selectTecnico.innerHTML = htmlTecnico;
-    
-    // Filtro codice
-    const selectCodice = document.getElementById('filtro-codice-fogli');
-    let htmlCodice = '<option value="">Tutti</option>';
-    foglioCodiciList.forEach(c => {
-        let descrizione = getDescrizioneCodice(c);
-        htmlCodice += `<option value="${c}">${c} - ${descrizione}</option>`;
-    });
-    selectCodice.innerHTML = htmlCodice;
-    
-    // Select tecnico nel modal
-    const modalTecnico = document.getElementById('foglio-tecnico');
-    let htmlModalTecnico = '<option value="">Seleziona tecnico</option>';
-    foglioTecniciList.forEach(t => {
-        htmlModalTecnico += `<option value="${t}">${t}</option>`;
-    });
-    modalTecnico.innerHTML = htmlModalTecnico;
-}
+// ============================================
+// DETTAGLIO GIORNALIERO
+// ============================================
 
-function getDescrizioneCodice(codice) {
-    const descrizioni = {
-        '21': 'Manutenzione',
-        '22': 'Chiamata',
-        '24': 'Enti',
-        '13': 'Riparazione',
-        '10': 'Q2SA',
-        '001': 'Montaggio',
-        '007': 'Montaggio',
-        '072': 'Assemblea',
-        '073': 'Sciopero',
-        '075': 'Ferie',
-        '076': 'Festività',
-        '077': 'Malattia',
-        '078': 'Infortunio',
-        '079': 'Donazione Sangue',
-        '080': 'Allattamento',
-        '081': 'Congedo Matrimoniale',
-        '082': 'Permesso Retribuito',
-        '083': 'Permesso NON Retribuito',
-        '084': 'Permesso Legge 104',
-        '085': 'Permesso Elettorale',
-        '086': 'Permesso Lutto',
-        '087': 'Permesso Sindacale',
-        '088': 'Permesso Studio',
-        '089': 'Permesso Volontariato',
-        '090': 'Spese Generali',
-        '091': 'Altro Retribuito',
-        '092': 'Addestramento'
+function openDettaglioGiorno(interventi, dataStr, tecnico) {
+    console.log('📅 openDettaglioGiorno', dataStr, tecnico);
+    
+    if (!interventi || interventi.length === 0) return;
+    
+    // Configurazione tipi con colori
+    const configTipi = {
+        "MONTAGGIO": { bg: "#f0f9ff", border: "#bae6fd", icon: "🔧" },
+        "ORDINARIA": { bg: "#f8fafc", border: "#e2e8f0", icon: "🟢" },
+        "ALTRO": { bg: "#f0fdf4", border: "#a7f3d0", icon: "📌" },
+        "REPERIBILITA": { bg: "#fef2f2", border: "#fecaca", icon: "🚨" },
+        "STRAORDINARIO": { bg: "#fff7ed", border: "#fed7aa", icon: "⏱️" }
     };
-    return descrizioni[codice] || 'Altro';
-}
-
-// ============================================
-// FUNZIONI VISTA
-// ============================================
-
-function switchVistaFogli(vista) {
-    vistaCorrente = vista;
     
-    // Aggiorna bottoni
-    document.getElementById('btn-vista-riepilogo').classList.toggle('active', vista === 'riepilogo');
-    document.getElementById('btn-vista-dettaglio').classList.toggle('active', vista === 'dettaglio');
-    
-    // Mostra/nascondi viste
-    document.getElementById('vista-riepilogo-fogli').style.display = vista === 'riepilogo' ? 'block' : 'none';
-    document.getElementById('vista-dettaglio-fogli').style.display = vista === 'dettaglio' ? 'block' : 'none';
-    
-    // Aggiorna contenuto
-    if (vista === 'riepilogo') {
-        aggiornaRiepilogo();
-    } else {
-        renderizzaTabellaFogli();
-    }
-}
-
-function switchTipoRiepilogo(tipo) {
-    tipoRiepilogoCorrente = tipo;
-    
-    document.getElementById('btn-riep-mensile').classList.toggle('active', tipo === 'mensile');
-    document.getElementById('btn-riep-giornaliero').classList.toggle('active', tipo === 'giornaliero');
-    
-    document.getElementById('riepilogo-mensile').style.display = tipo === 'mensile' ? 'block' : 'none';
-    document.getElementById('riepilogo-giornaliero').style.display = tipo === 'giornaliero' ? 'block' : 'none';
-    
-    aggiornaRiepilogo();
-}
-
-function filtraFogli() {
-    const tecnico = document.getElementById('filtro-tecnico-fogli').value;
-    const dataDa = document.getElementById('filtro-data-da').value;
-    const dataA = document.getElementById('filtro-data-a').value;
-    const codice = document.getElementById('filtro-codice-fogli').value;
-    const tipo = document.getElementById('filtro-tipo-fogli').value;
-    const search = document.getElementById('search-fogli')?.value.toLowerCase() || '';
-    
-    fogliFiltrati = fogliList.filter(f => {
-        // Filtro tecnico
-        if (tecnico && f.tecnico !== tecnico) return false;
-        
-        // Filtro codice
-        if (codice && f.codice?.toString() !== codice) return false;
-        
-        // Filtro tipo
-        if (tipo && f.ch_rep !== tipo) return false;
-        
-        // Filtro data
-        if (dataDa || dataA) {
-            const dataF = new Date(f.anno, f.mese - 1, f.giorno);
-            if (dataDa) {
-                const dataDaObj = new Date(dataDa);
-                if (dataF < dataDaObj) return false;
-            }
-            if (dataA) {
-                const dataAObj = new Date(dataA);
-                if (dataF > dataAObj) return false;
-            }
-        }
-        
-        // Filtro ricerca
-        if (search) {
-            const searchable = [
-                f.impianto || '',
-                f.indirizzo || '',
-                f.note || ''
-            ].join(' ').toLowerCase();
-            return searchable.includes(search);
-        }
-        
-        return true;
-    });
-    
-    if (vistaCorrente === 'riepilogo') {
-        aggiornaRiepilogo();
-    } else {
-        renderizzaTabellaFogli();
-    }
-}
-
-// ============================================
-// FUNZIONI RIEPILOGO
-// ============================================
-
-function aggiornaRiepilogo() {
-    if (tipoRiepilogoCorrente === 'mensile') {
-        aggiornaRiepilogoMensile();
-    } else {
-        aggiornaRiepilogoGiornaliero();
-    }
-}
-
-function aggiornaRiepilogoMensile() {
-    const riepilogo = {};
-    
-    fogliFiltrati.forEach(f => {
-        const key = `${f.tecnico}|${f.mese}|${f.anno}`;
-        
-        if (!riepilogo[key]) {
-            riepilogo[key] = {
-                tecnico: f.tecnico,
-                mese: f.mese,
-                anno: f.anno,
-                oreOrd: 0,
-                oreStra: 0,
-                oreViaggio: 0,
-                totaleOre: 0,
-                interventi: 0
-            };
-        }
-        
-        riepilogo[key].oreOrd += parseFloat(f.ore_ord) || 0;
-        riepilogo[key].oreStra += parseFloat(f.ore_stra) || 0;
-        riepilogo[key].oreViaggio += parseFloat(f.ore_viaggio) || 0;
-        riepilogo[key].totaleOre += parseFloat(f.ore) || 0;
-        riepilogo[key].interventi++;
-    });
-    
-    const riepilogoArray = Object.values(riepilogo).sort((a, b) => {
- // Gestisci null
-    const tecnicoA = a.tecnico || '';
-    const tecnicoB = b.tecnico || '';
-    
-    if (tecnicoA !== tecnicoB) return tecnicoA.localeCompare(tecnicoB);
-    if (a.anno !== b.anno) return b.anno - a.anno;
-    return b.mese - a.mese;
-});
-    
-    renderizzaRiepilogoMensile(riepilogoArray);
-}
-
-function aggiornaRiepilogoGiornaliero() {
-    const riepilogo = {};
-    
-    fogliFiltrati.forEach(f => {
-        const key = `${f.tecnico}|${f.anno}|${f.mese}|${f.giorno}`;
-        
-        if (!riepilogo[key]) {
-            riepilogo[key] = {
-                tecnico: f.tecnico,
-                giorno: f.giorno,
-                mese: f.mese,
-                anno: f.anno,
-                data: new Date(f.anno, f.mese - 1, f.giorno),
-                oreOrd: 0,
-                oreStra: 0,
-                oreViaggio: 0,
-                totaleOre: 0,
-                interventi: 0
-            };
-        }
-        
-        riepilogo[key].oreOrd += parseFloat(f.ore_ord) || 0;
-        riepilogo[key].oreStra += parseFloat(f.ore_stra) || 0;
-        riepilogo[key].oreViaggio += parseFloat(f.ore_viaggio) || 0;
-        riepilogo[key].totaleOre += parseFloat(f.ore) || 0;
-        riepilogo[key].interventi++;
-    });
-    
-    const riepilogoArray = Object.values(riepilogo).sort((a, b) => {
-        if (a.tecnico !== b.tecnico) return a.tecnico.localeCompare(b.tecnico);
-        return b.data - a.data;
-    });
-    
-    renderizzaRiepilogoGiornaliero(riepilogoArray);
-}
-
-function renderizzaRiepilogoMensile(dati) {
-    const tbody = document.getElementById('riepilogo-mensile-body');
-    
-    if (dati.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="9" class="text-center">
-                    <div style="padding: 2rem; color: var(--text-muted);">
-                        <span class="material-symbols-rounded">info</span>
-                        <p>Nessun dato disponibile</p>
-                    </div>
-                </td>
-            </tr>
-        `;
-        return;
-    }
-    
-    let html = '';
-    dati.forEach(item => {
-        const meseNome = new Date(item.anno, item.mese - 1, 1).toLocaleString('it-IT', { month: 'long' });
-        
-        html += `
-            <tr>
-                <td><strong>${item.tecnico}</strong></td>
-                <td>${meseNome}</td>
-                <td>${item.anno}</td>
-                <td>${formatOre(item.oreOrd)}</td>
-                <td>${formatOre(item.oreStra)}</td>
-                <td>${formatOre(item.oreViaggio)}</td>
-                <td><strong>${formatOre(item.totaleOre)}</strong></td>
-                <td>${item.interventi}</td>
-                <td>
-                    <button class="btn-icon-small" onclick="filtraPerTecnicoEMese('${item.tecnico}', ${item.mese}, ${item.anno})" title="Vedi dettagli">
-                        <span class="material-symbols-rounded">visibility</span>
-                    </button>
-                </td>
-            </tr>
-        `;
-    });
-    
-    tbody.innerHTML = html;
-}
-
-function renderizzaRiepilogoGiornaliero(dati) {
-    const tbody = document.getElementById('riepilogo-giornaliero-body');
-    
-    if (dati.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="8" class="text-center">
-                    <div style="padding: 2rem; color: var(--text-muted);">
-                        <span class="material-symbols-rounded">info</span>
-                        <p>Nessun dato disponibile</p>
-                    </div>
-                </td>
-            </tr>
-        `;
-        return;
-    }
-    
-    let html = '';
-    dati.forEach(item => {
-        const dataFormattata = `${item.giorno.toString().padStart(2,'0')}/${item.mese.toString().padStart(2,'0')}/${item.anno}`;
-        
-        html += `
-            <tr>
-                <td><strong>${item.tecnico}</strong></td>
-                <td>${dataFormattata}</td>
-                <td>${formatOre(item.oreOrd)}</td>
-                <td>${formatOre(item.oreStra)}</td>
-                <td>${formatOre(item.oreViaggio)}</td>
-                <td><strong>${formatOre(item.totaleOre)}</strong></td>
-                <td>${item.interventi}</td>
-                <td>
-                    <button class="btn-icon-small" onclick="filtraPerTecnicoEGiorno('${item.tecnico}', ${item.giorno}, ${item.mese}, ${item.anno})" title="Vedi dettagli">
-                        <span class="material-symbols-rounded">visibility</span>
-                    </button>
-                </td>
-            </tr>
-        `;
-    });
-    
-    tbody.innerHTML = html;
-}
-
-function filtraPerTecnicoEMese(tecnico, mese, anno) {
-    document.getElementById('filtro-tecnico-fogli').value = tecnico;
-    
-    const dataDa = new Date(anno, mese - 1, 1);
-    const dataA = new Date(anno, mese, 0);
-    
-    document.getElementById('filtro-data-da').value = dataDa.toISOString().split('T')[0];
-    document.getElementById('filtro-data-a').value = dataA.toISOString().split('T')[0];
-    
-    switchVistaFogli('dettaglio');
-    filtraFogli();
-}
-
-function filtraPerTecnicoEGiorno(tecnico, giorno, mese, anno) {
-    document.getElementById('filtro-tecnico-fogli').value = tecnico;
-    
-    const data = new Date(anno, mese - 1, giorno);
-    document.getElementById('filtro-data-da').value = data.toISOString().split('T')[0];
-    document.getElementById('filtro-data-a').value = data.toISOString().split('T')[0];
-    
-    switchVistaFogli('dettaglio');
-    filtraFogli();
-}
-
-// ============================================
-// RENDERING TABELLA DETTAGLIO
-// ============================================
-
-function renderizzaTabellaFogli() {
-    const tbody = document.getElementById('tabella-fogli-body');
-    
-    if (fogliFiltrati.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="13" class="text-center">
-                    <div style="padding: 2rem; color: var(--text-muted);">
-                        <span class="material-symbols-rounded">info</span>
-                        <p>Nessun foglio lavoro trovato</p>
-                    </div>
-                </td>
-            </tr>
-        `;
-        return;
-    }
-    
-    let html = '';
-    fogliFiltrati.forEach((f, index) => {
-        const selezionato = fogliSelezionati.has(f.ID) ? 'checked' : '';
-        const dataFormattata = `${f.giorno.toString().padStart(2,'0')}/${f.mese.toString().padStart(2,'0')}/${f.anno}`;
-        
-        const coloreCodice = coloriCodice[f.codice?.toString()] || { bg: '#64748b20', text: '#334155' };
-        const coloreTipo = coloriTipo[f.ch_rep] || { bg: '#64748b20', text: '#334155' };
-        
-        html += `
-            <tr>
-                <td>
-                    <input type="checkbox" class="select-foglio" value="${f.ID}" ${selezionato} onchange="toggleSelezionaFoglio('${f.ID}')">
-                </td>
-                <td>${dataFormattata}</td>
-                <td><strong>${f.tecnico || ''}</strong></td>
-                <td>
-                    <span style="display: inline-block; padding: 4px 8px; border-radius: 12px; background: ${coloreCodice.bg}; color: ${coloreCodice.text}; font-weight: 600;">
-                        ${f.codice || ''}
-                    </span>
-                </td>
-                <td>
-                    <span style="display: inline-block; padding: 4px 8px; border-radius: 12px; background: ${coloreTipo.bg}; color: ${coloreTipo.text}; font-weight: 600;">
-                        ${f.ch_rep || ''}
-                    </span>
-                </td>
-                <td>${f.impianto || ''}</td>
-                <td>${f.indirizzo || ''}</td>
-                <td>${formatOre(f.ore_ord)}</td>
-                <td>${formatOre(f.ore_stra)}</td>
-                <td>${formatOre(f.ore_viaggio)}</td>
-                <td><strong>${formatOre(f.ore)}</strong></td>
-                <td>
-                    ${f.note ? `<span class="material-symbols-rounded" title="${f.note}" style="color: #64748b; cursor: help;">info</span>` : ''}
-                </td>
-                <td>
-                    <button class="btn-icon-small" onclick="mostraModalModificaFoglio('${f.ID}')" title="Modifica">
-                        <span class="material-symbols-rounded">edit</span>
-                    </button>
-                    <button class="btn-icon-small" onclick="mostraConfermaCancellazioneFoglio('${f.ID}')" title="Elimina">
-                        <span class="material-symbols-rounded">delete</span>
-                    </button>
-                </td>
-            </tr>
-        `;
-    });
-    
-    tbody.innerHTML = html;
-    
-    // Aggiorna checkbox "seleziona tutti"
-    const selectAll = document.getElementById('select-all-fogli');
-    if (selectAll) {
-        const tuttiSelezionati = fogliFiltrati.length > 0 && 
-            fogliFiltrati.every(f => fogliSelezionati.has(f.ID));
-        selectAll.checked = tuttiSelezionati;
-        selectAll.indeterminate = !tuttiSelezionati && 
-            fogliFiltrati.some(f => fogliSelezionati.has(f.ID));
-    }
-}
-
-// ============================================
-// FUNZIONI SELEZIONE MULTIPLA
-// ============================================
-
-function selezionaTuttiFogli() {
-    const selectAll = document.getElementById('select-all-fogli');
-    const checkboxes = document.querySelectorAll('.select-foglio');
-    
-    checkboxes.forEach(cb => {
-        cb.checked = selectAll.checked;
-        if (selectAll.checked) {
-            fogliSelezionati.add(cb.value);
+    // Calcola totali
+    let totOrd = 0, totStra = 0, totVgg = 0;
+    interventi.forEach(i => {
+        const codNum = parseInt(i.codice);
+        if (codNum >= 72 && codNum <= 92) {
+            totOrd += foglioParseNum(i.ore_ord);
         } else {
-            fogliSelezionati.delete(cb.value);
+            if (i.ch_rep === 'ORDINARIA') {
+                totOrd += foglioParseNum(i.ore_ord) + foglioParseNum(i.ore_stra);
+            } else {
+                totStra += foglioParseNum(i.ore_stra);
+                totOrd += foglioParseNum(i.ore_ord);
+            }
         }
+        totVgg += foglioParseNum(i.ore_viaggio);
     });
+    const totGiorno = totOrd + totStra;
+    
+    // Crea modal se non esiste
+    let modal = document.getElementById('modal-dettaglio-giorno');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'modal-dettaglio-giorno';
+        modal.className = 'modal';
+        modal.setAttribute('onclick', 'chiudiDettaglioGiorno()');
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 700px;" onclick="event.stopPropagation()">
+                <div class="modal-header">
+                    <h3 id="modal-giorno-titolo">Dettaglio Giornata</h3>
+                    <button class="btn-icon-small" onclick="chiudiDettaglioGiorno()">
+                        <span class="material-symbols-rounded">close</span>
+                    </button>
+                </div>
+                <div class="modal-body" id="modal-giorno-body" style="max-height: 60vh; overflow-y: auto;"></div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="chiudiDettaglioGiorno()">Chiudi</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+    
+    // Header con totali
+    const headerHtml = `
+        <div style="width: 100%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <div>
+                    <h2 style="font-size: 1.5rem; font-weight: 800; margin: 0;">${dataStr}</h2>
+                    <p style="font-size: 0.75rem; color: #64748b; margin: 0;">${tecnico}</p>
+                </div>
+                <div style="padding: 0.5rem 1rem; background: #1e293b; color: white; border-radius: 16px;">
+                    <p style="font-size: 0.65rem; margin: 0;">Totale Giorno</p>
+                    <p style="font-size: 1.25rem; font-weight: 800; margin: 0;">${foglioFormatVal(totGiorno)}</p>
+                </div>
+            </div>
+            <div style="display: flex; gap: 1rem; padding: 0.5rem; background: #f8fafc; border-radius: 8px; margin-top: 0.5rem;">
+                <div><span style="font-size: 0.7rem; color: #64748b;">ORDINARIE</span><br><span style="font-size: 1.1rem; font-weight: 700;">${foglioFormatVal(totOrd)}</span></div>
+                <div><span style="font-size: 0.7rem; color: #64748b;">STRAORD.</span><br><span style="font-size: 1.1rem; font-weight: 700; color: #f97316;">${foglioFormatVal(totStra)}</span></div>
+                <div><span style="font-size: 0.7rem; color: #64748b;">VIAGGIO</span><br><span style="font-size: 1.1rem; font-weight: 700; color: #3b82f6;">${foglioFormatVal(totVgg)}</span></div>
+            </div>
+        </div>
+    `;
+    
+    // Body con timeline
+    let bodyHtml = '';
+    interventi.forEach((item, index) => {
+        const tipo = String(item.ch_rep || "ALTRO").trim().toUpperCase();
+        const style = configTipi[tipo] || { bg: "#f8fafc", border: "#e2e8f0", icon: "📄" };
+        
+        const oreOrd = foglioParseNum(item.ore_ord);
+        const oreStra = foglioParseNum(item.ore_stra);
+        const oreVgg = foglioParseNum(item.ore_viaggio);
+        
+        // Formatta orario
+        let orarioHtml = '';
+        if (item.inizio_int && item.fine_int) {
+            const inizio = item.inizio_int.split(':').slice(0,2).join(':');
+            const fine = item.fine_int.split(':').slice(0,2).join(':');
+            if (inizio !== '00:00' && fine !== '00:00') {
+                orarioHtml = `<p style="margin: 0.25rem 0 0 0; font-size: 0.8rem;">🕒 ${inizio} - ${fine}</p>`;
+            }
+        }
+        
+        bodyHtml += `
+            <div style="position: relative; padding-left: 40px; margin-bottom: 20px;">
+                ${index < interventi.length - 1 ? '<div style="position: absolute; left: 19px; top: 30px; bottom: -20px; width: 2px; background: #e2e8f0;"></div>' : ''}
+                <div style="position: absolute; left: 0; top: 0; width: 40px; height: 40px; background: white; border: 2px solid #e2e8f0; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                    <span>${style.icon}</span>
+                </div>
+                
+                <div style="background: ${style.bg}; border: 2px solid ${style.border}; border-radius: 16px; padding: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <span style="font-size: 0.7rem; font-weight: 800; padding: 0.25rem 0.5rem; background: white; border-radius: 4px;">${tipo}</span>
+                            <h3 style="margin: 0.5rem 0 0 0; font-size: 1rem;">${item.impianto || '---'}</h3>
+                            <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem;">📍 ${item.indirizzo || '---'}</p>
+                        </div>
+                        <div style="text-align: right;">
+
+<!-- PENNA E CESTINO AGGIUNTI QUI -->
+<div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-bottom: 0.25rem;">
+    <button onclick="event.stopPropagation(); modificaIntervento('${item.ID}')" 
+            style="background: none; border: none; cursor: pointer; color: #3b82f6; padding: 2px;">
+        <span class="material-symbols-rounded" style="font-size: 18px;">edit</span>
+    </button>
+    <button onclick="event.stopPropagation(); eliminaIntervento('${item.ID}', '${dataStr}')" 
+            style="background: none; border: none; cursor: pointer; color: #ef4444; padding: 2px;">
+        <span class="material-symbols-rounded" style="font-size: 18px;">delete</span>
+    </button>
+</div>
+
+
+                            <span style="background: #1e293b; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem;">Cod. ${item.codice}</span>
+                            ${orarioHtml}
+                        </div>
+                    </div>
+                    
+                    ${item.note ? `
+                    <div style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(255,255,255,0.7); border-radius: 8px;">
+                        <p style="margin: 0; font-size: 0.85rem; font-style: italic;">"${item.note}"</p>
+                    </div>
+                    ` : ''}
+                    
+                    <div style="display: flex; gap: 1.5rem; margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px dashed rgba(0,0,0,0.1);">
+                        <div>
+                            <span style="font-size: 0.65rem; color: #64748b;">ORD</span>
+                            <br><span style="font-size: 1.1rem; font-weight: 600;">${foglioFormatVal(oreOrd, true)}</span>
+                        </div>
+                        <div>
+                            <span style="font-size: 0.65rem; color: #64748b;">STRA</span>
+                            <br><span style="font-size: 1.1rem; font-weight: 600; color: #f97316;">${foglioFormatVal(oreStra, true)}</span>
+                        </div>
+                        <div>
+                            <span style="font-size: 0.65rem; color: #64748b;">VIAG</span>
+                            <br><span style="font-size: 1.1rem; font-weight: 600; color: #3b82f6;">${foglioFormatVal(oreVgg, true)}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    document.getElementById('modal-giorno-titolo').innerHTML = headerHtml;
+    document.getElementById('modal-giorno-body').innerHTML = bodyHtml;
+    modal.style.display = 'flex';
 }
 
-function toggleSelezionaFoglio(id) {
-    if (fogliSelezionati.has(id)) {
-        fogliSelezionati.delete(id);
+function chiudiDettaglioGiorno() {
+    const modal = document.getElementById('modal-dettaglio-giorno');
+    if (modal) modal.style.display = 'none';
+}
+
+// ============================================
+// TOGGLE GIORNATA INTERA (per assenze)
+// ============================================
+
+function toggleGiornataIntera(checked) {
+    const oreInput = document.getElementById('foglio-ore-ord');
+    if (!oreInput) return;
+    
+    if (checked) {
+        oreInput.value = '8';
+        oreInput.disabled = true;
     } else {
-        fogliSelezionati.add(id);
-    }
-    
-    const selectAll = document.getElementById('select-all-fogli');
-    if (selectAll) {
-        const tuttiSelezionati = fogliFiltrati.length > 0 && 
-            fogliFiltrati.every(f => fogliSelezionati.has(f.ID));
-        selectAll.checked = tuttiSelezionati;
-        selectAll.indeterminate = !tuttiSelezionati && 
-            fogliFiltrati.some(f => fogliSelezionati.has(f.ID));
+        oreInput.value = '0';
+        oreInput.disabled = false;
     }
 }
-
 // ============================================
-// FUNZIONI MODAL
+// SALVA INTERVENTO (INSERIMENTO/MODIFICA)
 // ============================================
-
-function mostraModalNuovoFoglio() {
-    document.getElementById('modal-foglio-titolo').textContent = 'Nuovo Foglio Lavoro';
-    document.getElementById('foglio-id').value = '';
-    document.getElementById('foglio-data').value = new Date().toISOString().split('T')[0];
-    document.getElementById('foglio-ore-ord').value = '0';
-    document.getElementById('foglio-ore-viaggio').value = '0';
-    document.getElementById('foglio-note').value = '';
-    document.getElementById('foglio-ora-inizio').value = '';
-    document.getElementById('foglio-ora-fine').value = '';
-    
-    // Reset radio
-    document.querySelector('input[name="foglio-tipo-ore"][value="ORDINARIA"]').checked = true;
-    toggleTipoOreFoglio();
-    
-    document.getElementById('modal-foglio').style.display = 'flex';
-}
-
-async function mostraModalModificaFoglio(id) {
-    try {
-        let foglio = fogliList.find(f => f.ID == id);
-        
-        if (!foglio) {
-            const supabase = getSupabaseClient();
-            const { data, error } = await supabase
-                .from('fogliolavoro')
-                .select('*')
-                .eq('ID', id)
-                .single();
-            
-            if (error) throw error;
-            foglio = data;
-        }
-        
-        document.getElementById('modal-foglio-titolo').textContent = 'Modifica Foglio Lavoro';
-        document.getElementById('foglio-id').value = foglio.ID;
-        document.getElementById('foglio-tecnico').value = foglio.tecnico || '';
-        document.getElementById('foglio-codice').value = foglio.codice?.toString() || '';
-        
-        // Data
-        const data = `${foglio.anno}-${foglio.mese.toString().padStart(2,'0')}-${foglio.giorno.toString().padStart(2,'0')}`;
-        document.getElementById('foglio-data').value = data;
-        
-        document.getElementById('foglio-impianto').value = foglio.impianto || '';
-        document.getElementById('foglio-indirizzo').value = foglio.indirizzo || '';
-        
-        // Tipo ore
-        const tipoOre = foglio.ch_rep || 'ORDINARIA';
-        const radio = document.querySelector(`input[name="foglio-tipo-ore"][value="${tipoOre}"]`);
-        if (radio) {
-            radio.checked = true;
-        }
-        toggleTipoOreFoglio();
-        
-        // Ore
-        document.getElementById('foglio-ore-ord').value = foglio.ore_ord || 0;
-        document.getElementById('foglio-ore-viaggio').value = foglio.ore_viaggio || 0;
-        document.getElementById('foglio-ora-inizio').value = foglio.inizio_int || '';
-        document.getElementById('foglio-ora-fine').value = foglio.fine_int || '';
-        
-        if (foglio.inizio_int && foglio.fine_int) {
-            calcolaOreFoglio();
-        }
-        
-        document.getElementById('foglio-note').value = foglio.note || '';
-        
-        document.getElementById('modal-foglio').style.display = 'flex';
-        
-    } catch (error) {
-        console.error('❌ Errore caricamento foglio:', error);
-        mostraNotifica('Errore nel caricamento dei dati', 'error');
-    }
-}
-
-function chiudiModalFoglio() {
-    document.getElementById('modal-foglio').style.display = 'none';
-}
-
-function toggleTipoOreFoglio() {
-    const tipo = document.querySelector('input[name="foglio-tipo-ore"]:checked').value;
-    const isOrdinaria = tipo === 'ORDINARIA' || tipo === 'ALTRO';
-    
-    document.getElementById('foglio-box-ore-dirette').style.display = isOrdinaria ? 'block' : 'none';
-    document.getElementById('foglio-box-orari').style.display = isOrdinaria ? 'none' : 'block';
-}
-
-function calcolaOreFoglio() {
-    const inizio = document.getElementById('foglio-ora-inizio').value;
-    const fine = document.getElementById('foglio-ora-fine').value;
-    const dataVal = document.getElementById('foglio-data').value;
-    const tipo = document.querySelector('input[name="foglio-tipo-ore"]:checked').value;
-    
-    if (!inizio || !fine || !dataVal) return;
-    
-    const res = processHours(inizio, fine, tipo, new Date(dataVal).getDay());
-    
-    document.getElementById('foglio-calcolo-ord').textContent = res.ord.toFixed(2);
-    document.getElementById('foglio-calcolo-stra').textContent = res.stra.toFixed(2);
-}
-
-function processHours(inizio, fine, tipo, dayOfWeek) {
-    // Weekend: tutto straordinario
-    if (dayOfWeek === 0 || dayOfWeek === 6) {
-        const total = calculateTotalDiff(inizio, fine);
-        return { ord: 0, stra: total };
-    }
-    
-    if (tipo === 'REPERIBILITA') {
-        const total = calculateTotalDiff(inizio, fine);
-        return { ord: 0, stra: total };
-    }
-    
-    // Calcolo fasce orarie
-    let [hIn, mIn] = inizio.split(':').map(Number);
-    let [hFi, mFi] = fine.split(':').map(Number);
-    let startMin = hIn * 60 + mIn;
-    let endMin = hFi * 60 + mFi;
-    
-    if (endMin < startMin) endMin += 1440; // attraversa mezzanotte
-    
-    let ord = 0, stra = 0;
-    for (let m = startMin; m < endMin; m++) {
-        const hh = (m / 60) % 24;
-        
-        // Fasce ordinarie: 8-12 e 13-17
-        const isOrd = (hh >= 8 && hh < 12) || (hh >= 13 && hh < 17);
-        
-        if (isOrd) ord++;
-        else stra++;
-    }
-    
-    return { ord: ord / 60, stra: stra / 60 };
-}
-
-function calculateTotalDiff(i, f) {
-    let [h1, m1] = i.split(':').map(Number);
-    let [h2, m2] = f.split(':').map(Number);
-    let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
-    return (diff < 0 ? diff + 1440 : diff) / 60;
-}
-
-function aggiornaTipoDaCodice() {
-    const codice = document.getElementById('foglio-codice').value;
-    
-    // Se è un'assenza, forza tipo ALTRO
-    if (codice >= '072' && codice <= '092') {
-        const radio = document.querySelector('input[name="foglio-tipo-ore"][value="ALTRO"]');
-        if (radio) {
-            radio.checked = true;
-            toggleTipoOreFoglio();
-        }
-    }
-}
 
 async function salvaFoglio() {
     try {
         const supabase = getSupabaseClient();
         if (!supabase) throw new Error('DB non configurato');
         
-        const id = document.getElementById('foglio-id').value;
-        const tecnico = document.getElementById('foglio-tecnico').value;
-        const codice = document.getElementById('foglio-codice').value;
-        const dataInput = document.getElementById('foglio-data').value;
-        const impianto = document.getElementById('foglio-impianto').value;
-        const indirizzo = document.getElementById('foglio-indirizzo').value;
-        const tipo = document.querySelector('input[name="foglio-tipo-ore"]:checked').value;
-        const note = document.getElementById('foglio-note').value;
-        const oreViaggio = parseFloat(document.getElementById('foglio-ore-viaggio').value) || 0;
+        const id = document.getElementById('foglio-id')?.value;
+        const tecnico = document.getElementById('foglio-tecnico')?.value;
+        const codice = document.getElementById('foglio-codice')?.value;
+        const dataInput = document.getElementById('foglio-data')?.value;
+        const impianto = document.getElementById('foglio-impianto')?.value;
+        const indirizzo = document.getElementById('foglio-indirizzo')?.value;
+        const tipo = document.querySelector('input[name="foglio-tipo-ore"]:checked')?.value;
+        const note = document.getElementById('foglio-note')?.value;
+        const oreViaggio = parseFloat(document.getElementById('foglio-ore-viaggio')?.value) || 0;
         
         // Validazioni
         if (!tecnico) {
@@ -837,6 +490,10 @@ async function salvaFoglio() {
             mostraNotifica('Inserisci una data', 'error');
             return;
         }
+        if (!tipo) {
+            mostraNotifica('Seleziona un tipo ore', 'error');
+            return;
+        }
         
         const data = new Date(dataInput);
         const giorno = data.getDate();
@@ -847,11 +504,11 @@ async function salvaFoglio() {
         let inizioInt = null, fineInt = null;
         
         if (tipo === 'ORDINARIA' || tipo === 'ALTRO') {
-            oreOrd = parseFloat(document.getElementById('foglio-ore-ord').value) || 0;
+            oreOrd = parseFloat(document.getElementById('foglio-ore-ord')?.value) || 0;
             oreTotali = oreOrd;
         } else {
-            inizioInt = document.getElementById('foglio-ora-inizio').value;
-            fineInt = document.getElementById('foglio-ora-fine').value;
+            inizioInt = document.getElementById('foglio-ora-inizio')?.value;
+            fineInt = document.getElementById('foglio-ora-fine')?.value;
             
             if (!inizioInt || !fineInt) {
                 mostraNotifica('Inserisci ora inizio e fine', 'error');
@@ -897,7 +554,7 @@ async function salvaFoglio() {
                 .eq('ID', id);
             
             if (error) throw error;
-            mostraNotifica('Foglio aggiornato con successo', 'success');
+            mostraNotifica('Intervento aggiornato con successo', 'success');
         } else {
             // Insert
             const { error } = await supabase
@@ -905,11 +562,17 @@ async function salvaFoglio() {
                 .insert([payload]);
             
             if (error) throw error;
-            mostraNotifica('Foglio salvato con successo', 'success');
+            mostraNotifica('Intervento salvato con successo', 'success');
         }
         
+        // Chiudi modal
         chiudiModalFoglio();
+        
+        // Ricarica i dati
         await caricaFogli();
+        
+        // Aggiorna la vista
+        renderVistaMensile();
         
     } catch (error) {
         console.error('❌ Errore salvataggio:', error);
@@ -917,19 +580,36 @@ async function salvaFoglio() {
     }
 }
 
+
 // ============================================
-// FUNZIONI CANCELLAZIONE
+// FUNZIONI ELIMINAZIONE INTERVENTO
 // ============================================
 
-let foglioDaCancellare = null;
+let interventoDaEliminare = null;
+let dataInterventoDaEliminare = null;
 
-function mostraConfermaCancellazioneFoglio(id) {
-    foglioDaCancellare = id;
-    document.getElementById('modal-conferma-cancellazione-ann').style.display = 'flex';
+function eliminaIntervento(id, dataStr) {
+    console.log('🗑️ eliminaIntervento', id, dataStr);
+    
+    // Chiudi il modal giornaliero
+    const modalGiornaliero = document.getElementById('modal-dettaglio-giorno');
+    if (modalGiornaliero) {
+        modalGiornaliero.style.display = 'none';
+    }
+    
+    // Salva i dati per la conferma
+    interventoDaEliminare = id;
+    dataInterventoDaEliminare = dataStr;
+    
+    // Mostra il modal di conferma
+    const modal = document.getElementById('modal-conferma-cancellazione-ann');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
 }
 
-async function confermaCancellazioneFoglio() {
-    if (!foglioDaCancellare) return;
+async function confermaCancellazioneIntervento() {
+    if (!interventoDaEliminare) return;
     
     try {
         const supabase = getSupabaseClient();
@@ -938,342 +618,561 @@ async function confermaCancellazioneFoglio() {
         const { error } = await supabase
             .from('fogliolavoro')
             .delete()
-            .eq('ID', foglioDaCancellare);
+            .eq('ID', interventoDaEliminare);
         
         if (error) throw error;
         
-        fogliSelezionati.delete(foglioDaCancellare);
-        chiudiModalCancellazioneAnn();
+        chiudiModalCancellazioneIntervento();
         await caricaFogli();
+        renderVistaMensile();
         
-        mostraNotifica('Foglio eliminato', 'success');
+        mostraNotifica('Intervento eliminato con successo', 'success');
         
     } catch (error) {
-        console.error('❌ Errore cancellazione:', error);
+        console.error('❌ Errore eliminazione:', error);
         mostraNotifica(`Errore: ${error.message}`, 'error');
     }
 }
 
-async function eliminaSelezionatiFogli() {
-    if (fogliSelezionati.size === 0) {
-        mostraNotifica('Nessun foglio selezionato', 'warning');
+function chiudiModalCancellazioneIntervento() {
+    interventoDaEliminare = null;
+    dataInterventoDaEliminare = null;
+    
+    const modal = document.getElementById('modal-conferma-cancellazione-ann');
+    if (modal) modal.style.display = 'none';
+}
+
+
+function modificaIntervento(id) {
+    console.log('✏️ modificaIntervento', id);
+    
+    const modalGiornaliero = document.getElementById('modal-dettaglio-giorno');
+    if (modalGiornaliero) {
+        modalGiornaliero.style.display = 'none';
+    }
+    
+    popolaSelectTecnici();
+    
+    const intervento = fogliList.find(f => f.ID == id);
+    if (!intervento) {
+        console.error('Intervento non trovato', id);
         return;
     }
     
-    if (!confirm(`Eliminare ${fogliSelezionati.size} fogli selezionati?`)) {
-        return;
+    document.getElementById('modal-foglio-titolo').textContent = 'Modifica Intervento';
+    document.getElementById('foglio-id').value = intervento.ID;
+    document.getElementById('foglio-tecnico').value = intervento.tecnico || '';
+    document.getElementById('foglio-codice').value = intervento.codice?.toString() || '';
+    
+    if (intervento.anno && intervento.mese && intervento.giorno) {
+        const data = `${intervento.anno}-${intervento.mese.toString().padStart(2,'0')}-${intervento.giorno.toString().padStart(2,'0')}`;
+        document.getElementById('foglio-data').value = data;
     }
     
-    try {
-        const supabase = getSupabaseClient();
-        if (!supabase) throw new Error('DB non configurato');
-        
-        const ids = Array.from(fogliSelezionati);
-        
-        const { error } = await supabase
-            .from('fogliolavoro')
-            .delete()
-            .in('ID', ids);
-        
-        if (error) throw error;
-        
-        mostraNotifica(`${fogliSelezionati.size} fogli eliminati`, 'success');
-        fogliSelezionati.clear();
-        await caricaFogli();
-        
-    } catch (error) {
-        console.error('❌ Errore eliminazione multipla:', error);
-        mostraNotifica(`Errore: ${error.message}`, 'error');
+    document.getElementById('foglio-impianto').value = intervento.impianto || '';
+    document.getElementById('foglio-indirizzo').value = intervento.indirizzo || '';
+    
+    const tipoOre = intervento.ch_rep || 'ORDINARIA';
+    const radio = document.querySelector(`input[name="foglio-tipo-ore"][value="${tipoOre}"]`);
+    if (radio) {
+        radio.checked = true;
     }
-}
-
-function chiudiModalCancellazioneAnn() {
-    foglioDaCancellare = null;
-    document.getElementById('modal-conferma-cancellazione-ann').style.display = 'none';
-}
-
-// ============================================
-// FUNZIONI EXPORT CSV
-// ============================================
-
-function esportaCSVFogli() {
-    try {
-        const datiDaEsportare = fogliFiltrati.length > 0 ? fogliFiltrati : fogliList;
-        
-        if (datiDaEsportare.length === 0) {
-            mostraNotifica('Nessun dato da esportare', 'warning');
-            return;
-        }
-        
-        const header = ['Data', 'Tecnico', 'Codice', 'Tipo', 'Impianto', 'Indirizzo', 
-                        'Ore Ord', 'Ore Stra', 'Ore Viaggio', 'Totale Ore', 'Note'];
-        
-        let csvContent = header.join(';') + '\n';
-        
-        datiDaEsportare.forEach(f => {
-            const data = `${f.giorno.toString().padStart(2,'0')}/${f.mese.toString().padStart(2,'0')}/${f.anno}`;
-            const riga = [
-                data,
-                f.tecnico || '',
-                f.codice || '',
-                f.ch_rep || '',
-                f.impianto || '',
-                f.indirizzo || '',
-                (f.ore_ord || 0).toString(),
-                (f.ore_stra || 0).toString(),
-                (f.ore_viaggio || 0).toString(),
-                (f.ore || 0).toString(),
-                (f.note || '').replace(/;/g, ',').replace(/\n/g, ' ')
-            ];
-            
-            csvContent += riga.join(';') + '\n';
-        });
-        
-        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        
-        link.href = url;
-        link.download = `FogliLavoro_${new Date().toISOString().slice(0,10)}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        
-        mostraNotifica(`Esportati ${datiDaEsportare.length} fogli`, 'success');
-        
-    } catch (error) {
-        console.error('❌ Errore export CSV:', error);
-        mostraNotifica('Errore nell\'esportazione', 'error');
-    }
-}
-
-// ============================================
-// FUNZIONI IMPORT CSV
-// ============================================
-
-function mostraImportFogli() {
-    document.getElementById('modal-import-fogli').style.display = 'flex';
-}
-
-function chiudiImportFogli() {
-    document.getElementById('modal-import-fogli').style.display = 'none';
-    document.getElementById('file-fogli-csv').value = '';
-    document.getElementById('btn-analizza-fogli').disabled = true;
-    document.getElementById('anteprima-import-fogli').style.display = 'none';
-}
-
-function setupDropZoneFogli() {
-    const dropArea = document.getElementById('drop-zone-fogli');
-    const fileInput = document.getElementById('file-fogli-csv');
+    toggleTipoOreFoglio();
     
-    if (!dropArea || !fileInput) return;
+    document.getElementById('foglio-ore-ord').value = intervento.ore_ord || 0;
+    document.getElementById('foglio-ore-viaggio').value = intervento.ore_viaggio || 0;
+    document.getElementById('foglio-ora-inizio').value = intervento.inizio_int || '';
+    document.getElementById('foglio-ora-fine').value = intervento.fine_int || '';
     
-    dropArea.addEventListener('click', () => fileInput.click());
-    
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        dropArea.addEventListener(eventName, preventDefaults, false);
-    });
-    
-    function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
+    if (intervento.inizio_int && intervento.fine_int) {
+        calcolaOreFoglio();
     }
     
-    dropArea.addEventListener('drop', handleDropFogli, false);
+    document.getElementById('foglio-note').value = intervento.note || '';
+    
+    document.getElementById('modal-foglio').style.display = 'flex';
 }
 
-function handleDropFogli(e) {
-    e.preventDefault();
-    const dt = e.dataTransfer;
-    const files = dt.files;
-    
-    if (files.length > 0) {
-        document.getElementById('file-fogli-csv').files = files;
-        handleFileSelectFogli({ target: { files: files } });
-    }
-}
 
-function handleFileSelectFogli(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+function eliminaIntervento(id, dataStr) {
+    console.log('🗑️ eliminaIntervento', id, dataStr);
     
-    if (!file.name.toLowerCase().endsWith('.csv')) {
-        mostraNotifica('Seleziona un file CSV', 'error');
-        return;
+    const modalGiornaliero = document.getElementById('modal-dettaglio-giorno');
+    if (modalGiornaliero) {
+        modalGiornaliero.style.display = 'none';
     }
     
-    document.getElementById('btn-analizza-fogli').disabled = false;
+    const intervento = fogliList.find(f => f.ID == id);
     
-    // Mostra feedback
-    mostraNotifica(`File caricato: ${file.name}`, 'success');
-}
-
-function scaricaTemplateFogli() {
-    const template = `Data;Tecnico;Codice;Tipo;Impianto;Indirizzo;OreOrd;OreStra;OreViaggio;Note
-15/02/2026;Mario Rossi;21;ORDINARIA;ASC001;Via Roma 1;8;0;0.5;Manutenzione ordinaria
-15/02/2026;Luigi Verdi;075;ALTRO;;;8;0;0;Ferie
-14/02/2026;Anna Neri;22;STRAORDINARIO;ASC002;Via Milano 5;0;3.5;0.5;Chiamata urgente`;
-
-    const blob = new Blob(['\uFEFF' + template], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    
-    link.href = url;
-    link.download = 'Template_FogliLavoro.csv';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-}
-
-async function analizzaCSVFogli() {
-    const fileInput = document.getElementById('file-fogli-csv');
-    const file = fileInput.files[0];
-    
-    if (!file) {
-        mostraNotifica('Seleziona un file CSV', 'error');
-        return;
-    }
-    
-    mostraNotifica('Analisi CSV in corso...', 'info');
-    
-    // Per ora solo anteprima semplice
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const text = e.target.result;
-        const lines = text.split('\n').filter(line => line.trim() !== '');
+    let descrizione = '';
+    if (intervento) {
+        const tipo = intervento.ch_rep || 'GENERICO';
+        const codice = intervento.codice || 'N/D';
+        const impianto = intervento.impianto || 'N/D';
+        const oreTotali = (parseFloat(intervento.ore_ord || 0) + parseFloat(intervento.ore_stra || 0)).toFixed(2);
         
-        const anteprima = document.getElementById('anteprima-import-fogli');
-        anteprima.innerHTML = `
-            <div style="background: #f8fafc; border-radius: 8px; padding: 1rem;">
-                <h4 style="margin: 0 0 0.5rem 0;">Anteprima CSV</h4>
-                <p><strong>Righe trovate:</strong> ${lines.length - 1}</p>
-                <p><strong>Prime 3 righe:</strong></p>
-                <pre style="background: white; padding: 0.5rem; border-radius: 4px; font-size: 0.8rem;">${lines.slice(0, 4).join('\n')}</pre>
-                <button class="btn btn-primary" style="margin-top: 1rem;" onclick="importaCSVFogli()">
-                    Procedi con Import
-                </button>
+        descrizione = `
+            <div style="text-align: left; background: #f8fafc; padding: 0.75rem; border-radius: 8px; margin: 0.5rem 0;">
+                <div><strong>Codice:</strong> ${codice} (${tipo})</div>
+                <div><strong>Impianto:</strong> ${impianto}</div>
+                <div><strong>Ore:</strong> ${oreTotali}h</div>
+                ${intervento.note ? `<div><strong>Note:</strong> ${intervento.note.substring(0, 50)}${intervento.note.length > 50 ? '...' : ''}</div>` : ''}
             </div>
         `;
-        anteprima.style.display = 'block';
-    };
-    reader.readAsText(file, 'UTF-8');
-}
-
-async function importaCSVFogli() {
-    mostraNotifica('Funzionalità import completa in sviluppo', 'warning');
-    chiudiImportFogli();
-}
-
-// ============================================
-// UTILITY
-// ============================================
-
-function formatOre(valore) {
-    if (!valore && valore !== 0) return '0h';
-    const ore = Math.floor(valore);
-    const minuti = Math.round((valore - ore) * 60);
-    if (minuti === 0) return `${ore}h`;
-    return `${ore}h ${minuti}m`;
-}
-
-function mostraNotifica(messaggio, tipo = 'info') {
-    // Crea una notifica temporanea locale invece di chiamare altre funzioni
-    const notifica = document.createElement('div');
-    notifica.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 1rem 1.5rem;
-        border-radius: 8px;
-        font-weight: 600;
-        z-index: 9999;
-        animation: slideIn 0.3s ease;
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-        background: ${tipo === 'error' ? '#ef4444' : tipo === 'success' ? '#22c55e' : '#3B82F6'};
-        color: white;
-    `;
-    notifica.textContent = messaggio;
-    document.body.appendChild(notifica);
+    } else {
+        descrizione = '<div style="color: #ef4444;">Intervento non trovato</div>';
+    }
     
-    setTimeout(() => {
-        notifica.style.animation = 'slideOut 0.3s ease';
-        setTimeout(() => notifica.remove(), 300);
-    }, 3000);
+    const msgEl = document.querySelector('#modal-conferma-cancellazione-ann .modal-body');
+    if (msgEl) {
+        msgEl.innerHTML = `
+            <span class="material-symbols-rounded" style="font-size: 48px; color: #ef4444; margin-bottom: 1rem;">warning</span>
+            <h3 style="margin: 0 0 0.5rem 0;">Conferma cancellazione</h3>
+            ${descrizione}
+            <p style="color: #64748b; margin: 1rem 0;">Sei sicuro di voler cancellare questo intervento?</p>
+            <div style="display: flex; gap: 0.5rem;">
+                <button class="btn btn-secondary" style="flex: 1;" onclick="chiudiModalCancellazioneIntervento()">Annulla</button>
+                <button class="btn btn-danger" style="flex: 1;" onclick="confermaCancellazioneIntervento()">Cancella</button>
+            </div>
+        `;
+    }
+    
+    interventoDaEliminare = id;
+    dataInterventoDaEliminare = dataStr;
+    
+    const modal = document.getElementById('modal-conferma-cancellazione-ann');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
 }
 
-// Carica dati quando il tab viene attivato
-const observer = new MutationObserver(function(mutations) {
-    mutations.forEach(function(mutation) {
-        if (mutation.attributeName === 'class') {
-            const tabFogli = document.getElementById('tab-fogli');
-            if (tabFogli && tabFogli.classList.contains('active')) {
-                console.log('📋 Tab Fogli attivato, carico dati...');
-                if (typeof window.caricaFogli === 'function') {
-                    window.caricaFogli();
-                }
-            }
-        }
+
+function popolaSelectTecnici() {
+    console.log('👤 popolaSelectTecnici');
+    const selectTecnico = document.getElementById('foglio-tecnico');
+    if (!selectTecnico) return;
+    
+    const tecnici = [...new Set(fogliList.map(d => d.tecnico))].filter(Boolean).sort();
+    
+    let html = '<option value="">Seleziona tecnico</option>';
+    tecnici.forEach(t => {
+        html += `<option value="${t}">${t}</option>`;
     });
-});
-
-const tabFogli = document.getElementById('tab-fogli');
-if (tabFogli) {
-    observer.observe(tabFogli, { attributes: true });
+    
+    selectTecnico.innerHTML = html;
+    console.log(`✅ Popolati ${tecnici.length} tecnici`);
 }
-// Carica dati all'avvio
-//setTimeout(() => {
- //   if (document.getElementById('tab-fogli')?.classList.contains('active')) {
- //       caricaFogli();
- //   }
-//}, 500);
 
-console.log('✅ Admin Fogli Lavoro JS caricato');
-
-console.log('🔍 Verifica funzioni prima dell\'export:');
-console.log('- caricaFogli esiste?', typeof caricaFogli === 'function');
-console.log('- mostraModalNuovoFoglio esiste?', typeof mostraModalNuovoFoglio === 'function');
-
-if (typeof caricaFogli === 'function') {
-    window.caricaFogli = caricaFogli;
-    console.log('✅ caricaFogli esportata');
-} else {
-    console.error('❌ caricaFogli NON disponibile');
+function toggleTipoOreFoglio() {
+    console.log('🔄 toggleTipoOreFoglio');
+    const tipo = document.querySelector('input[name="foglio-tipo-ore"]:checked')?.value || 'ORDINARIA';
+    const isOrdinaria = tipo === 'ORDINARIA' || tipo === 'ALTRO';
+    
+    const boxOreDirette = document.getElementById('foglio-box-ore-dirette');
+    const boxOrari = document.getElementById('foglio-box-orari');
+    
+    if (boxOreDirette) boxOreDirette.style.display = isOrdinaria ? 'block' : 'none';
+    if (boxOrari) boxOrari.style.display = isOrdinaria ? 'none' : 'block';
+    
+    console.log('→ tipo:', tipo, 'isOrdinaria:', isOrdinaria);
 }
+
+function calcolaOreFoglio() {
+    console.log('🧮 calcolaOreFoglio');
+    const inizio = document.getElementById('foglio-ora-inizio')?.value;
+    const fine = document.getElementById('foglio-ora-fine')?.value;
+    const dataVal = document.getElementById('foglio-data')?.value;
+    const tipo = document.querySelector('input[name="foglio-tipo-ore"]:checked')?.value || 'ORDINARIA';
+    
+    if (!inizio || !fine || !dataVal) return;
+    
+    // Per ora usiamo una funzione semplice, poi aggiungeremo processHours
+    let [h1, m1] = inizio.split(':').map(Number);
+    let [h2, m2] = fine.split(':').map(Number);
+    let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
+    if (diff < 0) diff += 1440;
+    const oreTotali = diff / 60;
+    
+    const calcOrd = document.getElementById('foglio-calcolo-ord');
+    const calcStra = document.getElementById('foglio-calcolo-stra');
+    
+    if (calcOrd) calcOrd.textContent = tipo === 'ORDINARIA' ? oreTotali.toFixed(2) : '0.00';
+    if (calcStra) calcStra.textContent = tipo !== 'ORDINARIA' ? oreTotali.toFixed(2) : '0.00';
+}
+
+function aggiornaTipoDaCodice() {
+    console.log('📌 aggiornaTipoDaCodice');
+    const codice = document.getElementById('foglio-codice')?.value;
+    const boxViaggio = document.getElementById('foglio-ore-viaggio')?.parentElement?.parentElement;
+    const impiantoField = document.getElementById('foglio-impianto');
+    const indirizzoField = document.getElementById('foglio-indirizzo');
+    
+    // Troviamo tutti i radio button
+    const radioButtons = document.querySelectorAll('input[name="foglio-tipo-ore"]');
+    const radioContainer = radioButtons[0]?.parentElement?.parentElement;
+    
+    // Reset: mostra e abilita tutto
+    if (boxViaggio) boxViaggio.style.display = 'block';
+    if (radioContainer) {
+        radioContainer.style.display = 'block';
+        radioButtons.forEach(rb => {
+            rb.disabled = false;
+            rb.parentElement.style.display = 'inline-block'; // o 'flex' a seconda del layout
+        });
+    }
+    
+    // Riabilita campi impianto/indirizzo
+    if (impiantoField) {
+        impiantoField.disabled = false;
+        impiantoField.placeholder = 'Codice impianto o commessa';
+    }
+    if (indirizzoField) {
+        indirizzoField.disabled = false;
+        indirizzoField.placeholder = 'Via, città...';
+    }
+    
+    // Rimuovi toggle 8h se esiste
+    const toggle8h = document.getElementById('toggle-8h');
+    if (toggle8h) {
+        toggle8h.parentElement?.parentElement?.remove();
+    }
+    
+    // GESTIONE IN BASE AL CODICE
+    if (codice && codice >= '072' && codice <= '092') {
+        // ASSENZE
+        console.log('📌 Codice assenza:', codice);
+        
+        // Nascondi tutti i radio tranne ALTRO
+        radioButtons.forEach(rb => {
+            if (rb.value !== 'ALTRO') {
+                rb.parentElement.style.display = 'none';
+            } else {
+                rb.checked = true;
+            }
+        });
+        
+        // Nascondi ore viaggio
+        if (boxViaggio) boxViaggio.style.display = 'none';
+        
+        // Impianto vuoto e disabilitato
+        if (impiantoField) {
+            impiantoField.value = '';
+            impiantoField.disabled = true;
+        }
+        
+        // Indirizzo con descrizione assenza
+        if (indirizzoField) {
+            indirizzoField.value = foglioDescCodici[codice] || 'Assenza';
+            indirizzoField.disabled = true;
+        }
+        
+        // Aggiungi toggle 8h
+        const container = document.getElementById('foglio-box-ore-dirette');
+        if (container && !document.getElementById('toggle-8h')) {
+            const toggleDiv = document.createElement('div');
+            toggleDiv.style.marginTop = '10px';
+            toggleDiv.style.padding = '10px';
+            toggleDiv.style.background = '#f8fafc';
+            toggleDiv.style.borderRadius = '8px';
+            toggleDiv.style.border = '1px solid #e2e8f0';
+            toggleDiv.id = 'toggle-8h-container';
+            toggleDiv.innerHTML = `
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" id="toggle-8h" onchange="toggleGiornataIntera(this.checked)">
+                    <span style="font-weight: 600;">Giornata intera (8 ore)</span>
+                </label>
+            `;
+            container.appendChild(toggleDiv);
+        }
+        
+    } else if (['001', '007'].includes(codice)) {
+        // MONTAGGI
+        console.log('📌 Codice montaggio:', codice);
+        
+        // Nascondi REPERIBILITA
+        radioButtons.forEach(rb => {
+            if (rb.value === 'REPERIBILITA') {
+                rb.parentElement.style.display = 'none';
+            } else {
+                rb.parentElement.style.display = 'inline-block';
+            }
+        });
+        
+        // Se non c'è nessun radio selezionato, seleziona ORDINARIA
+        const selected = Array.from(radioButtons).find(rb => rb.checked);
+        if (!selected) {
+            const ordRadio = document.querySelector('input[name="foglio-tipo-ore"][value="ORDINARIA"]');
+            if (ordRadio) ordRadio.checked = true;
+        }
+        
+    } else if (['21', '22', '24', '13', '10'].includes(codice)) {
+        // LAVORI
+        console.log('📌 Codice lavoro:', codice);
+        
+        // Mostra tutti i radio
+        radioButtons.forEach(rb => {
+            rb.parentElement.style.display = 'inline-block';
+        });
+    }
+    
+    // Chiama toggleTipoOreFoglio per aggiornare la UI in base al tipo selezionato
+    toggleTipoOreFoglio();
+}
+
+async function cercaIndirizzoImpianto() {
+    console.log('🔍 cercaIndirizzoImpianto - INIZIO');
+    const impiantoInput = document.getElementById('foglio-impianto')?.value.trim();
+    const codiceSelect = document.getElementById('foglio-codice')?.value;
+    const indirizzoField = document.getElementById('foglio-indirizzo');
+    
+    console.log('1️⃣ Valori letti:', { 
+        impianto: impiantoInput, 
+        codice: codiceSelect,
+        indirizzoFieldEsiste: !!indirizzoField 
+    });
+    
+    if (!impiantoInput || !codiceSelect || !indirizzoField) {
+        console.log('2️⃣ ❌ Dati mancanti - esco');
+        return;
+    }
+    
+    indirizzoField.placeholder = 'Ricerca in corso...';
+    console.log('3️⃣ Placeholder cambiato');
+    
+    try {
+        const supabase = getSupabaseClient();
+        console.log('4️⃣ Supabase client:', supabase ? 'OK' : 'NULL');
+        if (!supabase) throw new Error('DB non configurato');
+        
+        let indirizzoTrovato = '';
+        console.log('5️⃣ Codice selezionato:', codiceSelect);
+        
+        // Codici lavoro
+        if (['21', '22', '24', '13', '10'].includes(codiceSelect)) {
+            console.log('6️⃣ Cerco in Parco_app per impianto:', impiantoInput);
+            
+            const { data, error } = await supabase
+                .from('Parco_app')
+                .select('Indirizzo, localit, prov')
+                .eq('impianto', impiantoInput)
+                .maybeSingle();
+            
+            console.log('7️⃣ Risultato query Parco_app:', { data, error });
+            
+            if (error) throw error;
+            
+            if (data) {
+                console.log('8️⃣ Dati trovati:', data);
+                const parti = [];
+                if (data.Indirizzo) parti.push(data.Indirizzo);
+                if (data.localit) parti.push(data.localit);
+                if (data.prov) parti.push(data.prov);
+                indirizzoTrovato = parti.join(' - ');
+                console.log('9️⃣ Indirizzo composto:', indirizzoTrovato);
+            } else {
+                console.log('8️⃣ Nessun dato trovato in Parco_app');
+            }
+            
+        // Codici montaggio
+        } else if (['001', '007'].includes(codiceSelect)) {
+            console.log('6️⃣ Cerco in montaggi per impianto:', impiantoInput);
+            
+            const { data, error } = await supabase
+                .from('montaggi')
+                .select('Indirizzo')
+                .eq('impianto', impiantoInput)
+                .maybeSingle();
+            
+            console.log('7️⃣ Risultato query montaggi:', { data, error });
+            
+            if (error) throw error;
+            
+            if (data && data.Indirizzo) {
+                console.log('8️⃣ Indirizzo trovato:', data.Indirizzo);
+                indirizzoTrovato = data.Indirizzo;
+            } else {
+                console.log('8️⃣ Nessun dato trovato in montaggi');
+            }
+        } else {
+            console.log('6️⃣ Codice non riconosciuto per ricerca impianti');
+        }
+        
+        if (indirizzoTrovato) {
+            console.log('🔟 Aggiorno campo indirizzo con:', indirizzoTrovato);
+            indirizzoField.value = indirizzoTrovato;
+            mostraNotifica('Indirizzo trovato e compilato', 'success');
+        } else {
+            console.log('🔟 Indirizzo non trovato');
+            mostraNotifica('Impianto non trovato', 'warning');
+        }
+        
+    } catch (error) {
+        console.error('❌ ERRORE ricerca impianto:', error);
+        mostraNotifica('Errore nella ricerca dell\'impianto', 'error');
+    } finally {
+        console.log('1️⃣1️⃣ Ripristino placeholder');
+        indirizzoField.placeholder = 'Via, città...';
+    }
+    
+    console.log('🔍 cercaIndirizzoImpianto - FINE');
+}
+
+function processHours(inizio, fine, tipo, dayOfWeek) {
+    console.log('⏱️ processHours', { inizio, fine, tipo, dayOfWeek });
+    
+    // Weekend: tutto straordinario
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+        const total = calculateTotalDiff(inizio, fine);
+        return { ord: 0, stra: total };
+    }
+    
+    // Reperibilità: tutto straordinario
+    if (tipo === 'REPERIBILITA') {
+        const total = calculateTotalDiff(inizio, fine);
+        return { ord: 0, stra: total };
+    }
+    
+    // Calcolo fasce orarie
+    let [hIn, mIn] = inizio.split(':').map(Number);
+    let [hFi, mFi] = fine.split(':').map(Number);
+    let startMin = hIn * 60 + mIn;
+    let endMin = hFi * 60 + mFi;
+    
+    if (endMin < startMin) endMin += 1440; // attraversa mezzanotte
+    
+    let ord = 0, stra = 0;
+    for (let m = startMin; m < endMin; m++) {
+        const hh = (m / 60) % 24;
+        
+        // Fasce ordinarie: 8-12 e 13-17
+        const isOrd = (hh >= 8 && hh < 12) || (hh >= 13 && hh < 17);
+        
+        if (isOrd) ord++;
+        else stra++;
+    }
+    
+    return { ord: ord / 60, stra: stra / 60 };
+}
+
+function calculateTotalDiff(i, f) {
+    if (!i || !f) return 0;
+    let [h1, m1] = i.split(':').map(Number);
+    let [h2, m2] = f.split(':').map(Number);
+    let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
+    return (diff < 0 ? diff + 1440 : diff) / 60;
+}
+
+function filtraTabella() {
+    console.log('🔍 filtraTabella');
+    const search = document.getElementById('search-fogli')?.value.toLowerCase() || '';
+    
+    if (!search) {
+        renderVistaMensile();
+        return;
+    }
+    
+    const rows = document.querySelectorAll('#tableBody tr');
+    rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(search) ? '' : 'none';
+    });
+}
+
+
+
+
+
+
+
+function mostraModalNuovoFoglio() {
+    console.log('➕ mostraModalNuovoFoglio');
+    
+    // Popola select tecnici
+    popolaSelectTecnici();
+    
+    // Pulisci il form
+    document.getElementById('modal-foglio-titolo').textContent = 'Nuovo Intervento';
+    document.getElementById('foglio-id').value = '';
+    document.getElementById('foglio-data').value = new Date().toISOString().split('T')[0];
+    document.getElementById('foglio-ore-ord').value = '0';
+    document.getElementById('foglio-ore-viaggio').value = '0';
+    document.getElementById('foglio-note').value = '';
+    document.getElementById('foglio-ora-inizio').value = '';
+    document.getElementById('foglio-ora-fine').value = '';
+    document.getElementById('foglio-impianto').value = '';
+    document.getElementById('foglio-indirizzo').value = '';
+    
+    // Seleziona default tecnico (se presente nei filtri)
+    const tecnicoSelezionato = document.getElementById('selectTecnico')?.value;
+    if (tecnicoSelezionato) {
+        document.getElementById('foglio-tecnico').value = tecnicoSelezionato;
+    }
+    
+    // Reset radio
+    const radioOrd = document.querySelector('input[name="foglio-tipo-ore"][value="ORDINARIA"]');
+    if (radioOrd) {
+        radioOrd.checked = true;
+        toggleTipoOreFoglio();
+    }
+    
+    // Rimuovi toggle 8h se presente
+    const toggle8h = document.getElementById('toggle-8h');
+    if (toggle8h) {
+        toggle8h.parentElement?.parentElement?.remove();
+    }
+    
+    document.getElementById('modal-foglio').style.display = 'flex';
+}
+
+function chiudiModalFoglio() {
+    document.getElementById('modal-foglio').style.display = 'none';
+}
+
+
+
+
+
 
 // ============================================
-// ESPOSIZIONE FUNZIONI GLOBALI (FINALI)
+// ESPOSIZIONE GLOBALE
 // ============================================
 
 window.caricaFogli = caricaFogli;
+window.renderVistaMensile = renderVistaMensile;
+window.openDettaglioGiorno = openDettaglioGiorno;
+window.chiudiDettaglioGiorno = chiudiDettaglioGiorno;
+window.filtraTabella = filtraTabella;
 window.mostraModalNuovoFoglio = mostraModalNuovoFoglio;
-window.switchVistaFogli = switchVistaFogli;
-window.switchTipoRiepilogo = switchTipoRiepilogo;
-window.filtraFogli = filtraFogli;
-window.filtraPerTecnicoEMese = filtraPerTecnicoEMese;
-window.filtraPerTecnicoEGiorno = filtraPerTecnicoEGiorno;
-window.selezionaTuttiFogli = selezionaTuttiFogli;
-window.toggleSelezionaFoglio = toggleSelezionaFoglio;
-window.mostraModalModificaFoglio = mostraModalModificaFoglio;
 window.chiudiModalFoglio = chiudiModalFoglio;
 window.toggleTipoOreFoglio = toggleTipoOreFoglio;
 window.calcolaOreFoglio = calcolaOreFoglio;
 window.aggiornaTipoDaCodice = aggiornaTipoDaCodice;
+window.popolaSelectTecnici = popolaSelectTecnici;
+window.toggleTipoOreFoglio = toggleTipoOreFoglio;
+window.calcolaOreFoglio = calcolaOreFoglio;
+window.aggiornaTipoDaCodice = aggiornaTipoDaCodice;
+window.aggiornaTipoDaCodice = aggiornaTipoDaCodice;
+window.cercaIndirizzoImpianto = cercaIndirizzoImpianto;
+
+
+
+// CRUD
 window.salvaFoglio = salvaFoglio;
-window.mostraConfermaCancellazioneFoglio = mostraConfermaCancellazioneFoglio;
-window.confermaCancellazioneFoglio = confermaCancellazioneFoglio;
-window.chiudiModalCancellazioneAnn = chiudiModalCancellazioneAnn;
-window.eliminaSelezionatiFogli = eliminaSelezionatiFogli;
-window.esportaCSVFogli = esportaCSVFogli;
-window.mostraImportFogli = mostraImportFogli;
-window.chiudiImportFogli = chiudiImportFogli;
-window.scaricaTemplateFogli = scaricaTemplateFogli;
-window.analizzaCSVFogli = analizzaCSVFogli;
-window.importaCSVFogli = importaCSVFogli;
+window.modificaIntervento = modificaIntervento;
+window.eliminaIntervento = eliminaIntervento;
+window.confermaCancellazioneIntervento = confermaCancellazioneIntervento;
+window.chiudiModalCancellazioneIntervento = chiudiModalCancellazioneIntervento;
 
-console.log('✅ ADMIN FOGLI - FUNZIONI GLOBALI REGISTRATE');
-console.log('📋 Funzioni disponibili:', Object.keys(window).filter(k => k.includes('Fogli') || k.includes('foglio')));
+// Utility
+window.popolaSelectTecnici = popolaSelectTecnici;
+window.processHours = processHours;
+window.calculateTotalDiff = calculateTotalDiff;
+window.cercaIndirizzoImpianto = cercaIndirizzoImpianto;
+window.toggleGiornataIntera = toggleGiornataIntera;
+window.mostraNotifica = mostraNotifica;
 
-// Verifica finale
-console.log('🔍 Verifica finale window.caricaFogli:', typeof window.caricaFogli);
+console.log('✅ Funzioni globali registrate');
+console.log('📋 Funzioni disponibili:', Object.keys(window).filter(k => 
+    k.includes('Fogli') || k.includes('foglio') || 
+    k.includes('Intervento') || k.includes('modal')
+));
