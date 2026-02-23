@@ -665,9 +665,9 @@ function rimuoviFileParco() {
 }
 
 function scaricaTemplateParco() {
-    const template = `impianto;tipo;zona;giro;tecnico;periodicit;venditore;manut;mese_sem;amministratore;esattore;cliente;Indirizzo;localit;prov;ult_sem;utl_vp;ult_man;note
-ASC001;Oleodinamico;Zona1;1;Mario Rossi;180;901;FI;7;Amministratore1;001;Condominio Roma;Via Roma 1;Roma;RM;15/01/2026;20/12/2025;10/01/2026;Note esempio
-ASC002;Idraulico;Zona2;2;Luigi Verdi;365;902;ME;1;Amministratore2;002;Condominio Milano;Via Milano 5;Milano;MI;;;;`;
+    const template = `impianto;tipo;zona;giro;tecnico;periodicit;matricola;venditore;manut;Indirizzo;localit;prov;cliente;amministratore;esattore;mese_sem;ult_sem;utl_vp;ult_man;note
+ASC001;Oleodinamico;1;Giro1;Mario Rossi;180;MAT001;901;FI;Via Roma 1;Roma;RM;Condominio Roma;Amministratore1;001;7;15/01/2026;20/12/2025;10/01/2026;Note esempio`;
+
 
     const blob = new Blob(['\uFEFF' + template], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);

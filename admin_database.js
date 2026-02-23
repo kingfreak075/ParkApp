@@ -588,54 +588,64 @@ let currentEditKeyField = 'id';
 
 // 2. CONFIGURAZIONI PER OGNI TABELLA
 const TABLE_CONFIGS = {
-    'tecnici': {
-        displayName: 'Tecnici',
-        icon: 'engineering',
-        primaryKey: 'id',
-        fields: [
-            { 
-                name: 'nome_completo', 
-                label: 'Nome Completo *', 
-                type: 'text', 
-                required: true,
-                placeholder: 'Mario Rossi'
-            },
-            { 
-                name: 'pin', 
-                label: 'PIN (4 cifre) *', 
-                type: 'text', 
-                required: true,
-                pattern: '\\d{4}',
-                placeholder: '1234',
-                maxlength: 4
-            },
-            { 
-                name: 'ruolo', 
-                label: 'Ruolo', 
-                type: 'text',
-                placeholder: 'tecnico, capo-tecnico, etc.'
-            },
-            { 
-                name: 'cod_supervisore', 
-                label: 'Codice Supervisore', 
-                type: 'number',
-                placeholder: '1001'
-            },
-            { 
-                name: 'Telefono', 
-                label: 'Telefono', 
-                type: 'tel',
-                placeholder: '3331234567'
-            },
-            { 
-                name: 'Mail', 
-                label: 'Email', 
-                type: 'email',
-                placeholder: 'mario.rossi@azienda.it'
-            }
-        ],
-        orderBy: 'nome_completo'
-    },
+'tecnici': {
+    displayName: 'Tecnici',
+    icon: 'engineering',
+    primaryKey: 'id',
+    fields: [
+        { 
+            name: 'nome_completo', 
+            label: 'Nome Completo *', 
+            type: 'text', 
+            required: true,
+            placeholder: 'Mario Rossi'
+        },
+        { 
+            name: 'pin', 
+            label: 'PIN (4 cifre) *', 
+            type: 'text', 
+            required: true,
+            pattern: '\\d{4}',
+            placeholder: '1234',
+            maxlength: 4
+        },
+        { 
+            name: 'ruolo', 
+            label: 'Ruolo', 
+            type: 'text',
+            placeholder: 'tecnico, capo-tecnico, etc.'
+        },
+        { 
+            name: 'cod_supervisore', 
+            label: 'Codice Supervisore', 
+            type: 'number',
+            placeholder: '1001'
+        },
+        { 
+            name: 'Telefono', 
+            label: 'Telefono', 
+            type: 'tel',
+            placeholder: '3331234567'
+        },
+       { 
+            name: 'Mail', 
+            label: 'Email *', 
+            type: 'email', 
+            required: true,  // <-- AGGIUNTO required
+            placeholder: 'mario.rossi@azienda.it'
+        },
+        { 
+            name: 'attivo', 
+            label: 'Stato Account', 
+            type: 'boolean-select',  // Tipo personalizzato per booleano
+            options: [
+                { value: true, label: '✅ Attivo', icon: 'check_circle', color: '#10b981' },
+                { value: false, label: '❌ Non attivo', icon: 'cancel', color: '#ef4444' }
+            ]
+        }
+    ],
+    orderBy: 'nome_completo'
+},
     
     'manutentori': {
         displayName: 'Manutentori',
@@ -768,6 +778,7 @@ const TABLE_CONFIGS = {
 };
 
 // 3. APRI MODAL PER AGGIUNTA RECORD
+// 3. APRI MODAL PER AGGIUNTA RECORD (VERSIONE CORRETTA CON DEFAULT NON ATTIVO)
 function openAddModal(tableName) {
     console.log(`➕ Apertura modal aggiunta per: ${tableName}`);
     
@@ -784,28 +795,57 @@ function openAddModal(tableName) {
     // Costruisci i campi del form
     let formFieldsHTML = '';
     config.fields.forEach(field => {
-        formFieldsHTML += `
-            <div class="form-group">
-                <label for="field-${field.name}">
-                    ${field.label}
-                    ${field.required ? '<span class="required-star">*</span>' : ''}
-                </label>
-                <input 
-                    type="${field.type || 'text'}"
-                    id="field-${field.name}"
-                    name="${field.name}"
-                    ${field.required ? 'required' : ''}
-                    ${field.pattern ? `pattern="${field.pattern}"` : ''}
-                    ${field.maxlength ? `maxlength="${field.maxlength}"` : ''}
-                    ${field.min ? `min="${field.min}"` : ''}
-                    ${field.max ? `max="${field.max}"` : ''}
-                    ${field.step ? `step="${field.step}"` : ''}
-                    placeholder="${field.placeholder || field.label}"
-                    class="form-input"
-                >
-                ${field.pattern ? `<small class="field-hint">Formato: ${field.pattern}</small>` : ''}
-            </div>
-        `;
+        // Gestione speciale per campo booleano in aggiunta
+        if (field.type === 'boolean-select') {
+            formFieldsHTML += `
+                <div class="form-group">
+                    <label>${field.label}</label>
+                    <div style="display: flex; gap: 20px; margin-top: 8px; padding: 8px 0;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; flex: 1; padding: 10px; border: 2px solid #e2e8f0; border-radius: 12px; transition: all 0.2s;">
+                            <input type="radio" name="${field.name}" value="true">
+                            <span class="material-symbols-rounded" style="color: #10b981;">check_circle</span>
+                            <div>
+                                <div style="font-weight: 600;">✅ Attivo</div>
+                                <div style="font-size: 12px; color: #64748b;">Account abilitato all'accesso</div>
+                            </div>
+                        </label>
+                        
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; flex: 1; padding: 10px; border: 2px solid #ef4444; border-radius: 12px; background: #fef2f2;">
+                            <input type="radio" name="${field.name}" value="false" checked>
+                            <span class="material-symbols-rounded" style="color: #ef4444;">cancel</span>
+                            <div>
+                                <div style="font-weight: 600;">❌ Non attivo</div>
+                                <div style="font-size: 12px; color: #64748b;">Account in attesa di approvazione</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            `;
+        } else {
+            // Campi normali (text, number, email, ecc.)
+            formFieldsHTML += `
+                <div class="form-group">
+                    <label for="field-${field.name}">
+                        ${field.label}
+                        ${field.required ? '<span class="required-star">*</span>' : ''}
+                    </label>
+                    <input 
+                        type="${field.type || 'text'}"
+                        id="field-${field.name}"
+                        name="${field.name}"
+                        ${field.required ? 'required' : ''}
+                        ${field.pattern ? `pattern="${field.pattern}"` : ''}
+                        ${field.maxlength ? `maxlength="${field.maxlength}"` : ''}
+                        ${field.min ? `min="${field.min}"` : ''}
+                        ${field.max ? `max="${field.max}"` : ''}
+                        ${field.step ? `step="${field.step}"` : ''}
+                        placeholder="${field.placeholder || field.label}"
+                        class="form-input"
+                    >
+                    ${field.pattern ? `<small class="field-hint">Formato: ${field.pattern}</small>` : ''}
+                </div>
+            `;
+        }
     });
     
     // Modal HTML completo
@@ -885,16 +925,20 @@ async function handleCrudSubmit(event) {
     const recordData = {};
     
     // Raccogli dati dal form
-    formData.forEach((value, key) => {
-        if (value.trim() !== '') {
-            // Converte numeri se necessario
-            if (!isNaN(value) && value.trim() !== '') {
-                recordData[key] = parseInt(value, 10);
-            } else {
-                recordData[key] = value;
-            }
+    // Dopo aver raccolto i dati, converti i valori booleani
+formData.forEach((value, key) => {
+    // Se il campo è 'attivo', converti in booleano
+    if (key === 'attivo') {
+        recordData[key] = value === 'true';
+    } else if (value.trim() !== '') {
+        // Converte numeri se necessario
+        if (!isNaN(value) && value.trim() !== '' && key !== 'pin') {
+            recordData[key] = parseInt(value, 10);
+        } else {
+            recordData[key] = value;
         }
-    });
+    }
+});
     
     console.log('📝 Dati del form:', recordData);
     console.log('📊 Tabella:', currentEditTable, 'ID:', currentEditId);
@@ -1063,16 +1107,55 @@ async function openEditModal(tableName, recordId) {
 }
 
 // 7. APRI MODAL PRECOMPILATO PER MODIFICA
+// 7. APRI MODAL PRECOMPILATO PER MODIFICA (VERSIONE CORRETTA)
 function openEditModalWithData(tableName, recordData) {
     const config = TABLE_CONFIGS[tableName];
     if (!config) return;
     
+    // ✅ IMPORTANTE: Salva il tableName nelle variabili globali
+    currentEditTable = tableName;
+    currentEditId = recordData[config.primaryKey || 'id'];
+    currentEditKeyField = config.primaryKey || 'id';
+    
+    console.log(`✏️ Apertura modifica per ${tableName}, ID: ${currentEditId}`);
+    
     // Costruisci form precompilato
     let formFieldsHTML = '';
-    config.fields.forEach(field => {
-        const value = recordData[field.name] || '';
-        const displayValue = value !== null && value !== undefined ? value : '';
+   // All'interno di openEditModalWithData(), sostituisci il loop dei campi
+config.fields.forEach(field => {
+    const value = recordData[field.name];
+    const displayValue = value !== null && value !== undefined ? value : '';
+    
+    // Gestione speciale per campo booleano
+    if (field.type === 'boolean-select') {
+        const isActive = value === true || value === 'true' || value === 1 || value === '1';
         
+        formFieldsHTML += `
+            <div class="form-group">
+                <label>${field.label}</label>
+                <div style="display: flex; gap: 20px; margin-top: 8px; padding: 8px 0;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; flex: 1; padding: 10px; border: 2px solid ${isActive ? '#10b981' : '#e2e8f0'}; border-radius: 12px; background: ${isActive ? '#f0fdf4' : 'white'}; transition: all 0.2s;">
+                        <input type="radio" name="${field.name}" value="true" ${isActive ? 'checked' : ''} style="width: 18px; height: 18px;">
+                        <span class="material-symbols-rounded" style="color: #10b981;">check_circle</span>
+                        <div>
+                            <div style="font-weight: 600;">✅ Attivo</div>
+                            <div style="font-size: 12px; color: #64748b;">Account abilitato all'accesso</div>
+                        </div>
+                    </label>
+                    
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; flex: 1; padding: 10px; border: 2px solid ${!isActive && value !== undefined ? '#ef4444' : '#e2e8f0'}; border-radius: 12px; background: ${!isActive && value !== undefined ? '#fef2f2' : 'white'}; transition: all 0.2s;">
+                        <input type="radio" name="${field.name}" value="false" ${!isActive && value !== undefined ? 'checked' : ''} ${value === undefined ? 'checked' : ''}>
+                        <span class="material-symbols-rounded" style="color: #ef4444;">cancel</span>
+                        <div>
+                            <div style="font-weight: 600;">❌ Non attivo</div>
+                            <div style="font-size: 12px; color: #64748b;">Account in attesa di approvazione</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        `;
+    } else {
+        // Campi normali (text, number, email, ecc.)
         formFieldsHTML += `
             <div class="form-group">
                 <label for="field-${field.name}">
@@ -1092,7 +1175,8 @@ function openEditModalWithData(tableName, recordData) {
                 >
             </div>
         `;
-    });
+    }
+});
     
     // Modal HTML per modifica
     const modalHTML = `
@@ -1299,8 +1383,10 @@ async function loadTecniciData() {
         const client = getSupabaseClient();
         const { data } = await client
             .from('tecnici')
-            .select('id, nome_completo, pin, ruolo, cod_supervisore, Telefono, Mail')
+            .select('id, nome_completo, pin, ruolo, cod_supervisore, Telefono, Mail, attivo')  // <-- AGGIUNTO attivo
             .order('nome_completo', { ascending: true });
+        
+        console.log('📊 Tecnici caricati con stato attivo:', data?.map(t => ({ nome: t.nome_completo, attivo: t.attivo })));
         
         window.tecniciData = data || [];
         renderTecniciTable();
@@ -3236,6 +3322,8 @@ function analyzePotentialKeys() {
 }
 
 function renderTecniciTable() {
+    console.log('🔄 Render tecnici con stato attivo:', tecniciData);
+    
     const container = document.getElementById('personnel-content');
     if (!container) return;
     
@@ -3267,7 +3355,6 @@ function renderTecniciTable() {
                 </p>
             </div>
             <div class="action-buttons">
-                <!-- QUI IL PULSANTE CORRETTO -->
                 <button class="btn btn-primary" onclick="openAddModal('tecnici')">
                     <span class="material-symbols-rounded">add</span>
                     Nuovo Tecnico
@@ -3288,11 +3375,17 @@ function renderTecniciTable() {
                         <th>PIN</th>
                         <th>Ruolo</th>
                         <th>Supervisore</th>
+                        <th>Email</th>
+                        <th>Stato</th>
                         <th style="width: 120px;">Azioni</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${tecniciData.map((tecnico, index) => `
+                    ${tecniciData.map((tecnico) => {
+                        // Determina lo stato attivo (gestisce sia booleano che stringa)
+                        const isActive = tecnico.attivo === true || tecnico.attivo === 'true' || tecnico.attivo === 1 || tecnico.attivo === '1';
+                        
+                        return `
                         <tr>
                             <td><strong>${tecnico.nome_completo || '-'}</strong></td>
                             <td>
@@ -3306,19 +3399,24 @@ function renderTecniciTable() {
                                 </span>
                             </td>
                             <td>${tecnico.cod_supervisore || '-'}</td>
+                            <td>${tecnico.Mail ? `<a href="mailto:${tecnico.Mail}">${tecnico.Mail}</a>` : '-'}</td>
+                            <td>
+                                ${isActive ? 
+                                    '<span class="badge badge-success" style="background: #d1fae5; color: #065f46; padding: 4px 8px; border-radius: 20px; font-weight: 600;">✅ Attivo</span>' : 
+                                    '<span class="badge badge-danger" style="background: #fee2e2; color: #991b1b; padding: 4px 8px; border-radius: 20px; font-weight: 600;">❌ Non attivo</span>'}
+                            </td>
                             <td class="action-cells">
-                                <!-- QUI I PULSANTI CORRETTI -->
                                 <button class="btn-icon edit" title="Modifica" 
                                     onclick="openEditModal('tecnici', ${tecnico.id})">
                                     <span class="material-symbols-rounded">edit</span>
                                 </button>
                                 <button class="btn-icon delete" title="Elimina" 
-                                    onclick="deleteRecord('tecnici', ${tecnico.id})">
+                                    onclick="deleteRecord('tecnici', ${tecnico.id}, '${tecnico.nome_completo || 'tecnico'}')">
                                     <span class="material-symbols-rounded">delete</span>
                                 </button>
                             </td>
                         </tr>
-                    `).join('')}
+                    `}).join('')}
                 </tbody>
             </table>
         </div>
@@ -3742,22 +3840,39 @@ function formatCellValue(value, column) {
 
 
 function exportTecniciCSV() {
-    if (personnelData.length === 0) {
-        showNotification('Nessun dato da esportare', 'warning');
+    if (!tecniciData || tecniciData.length === 0) {
+        showNotification('Nessun tecnico da esportare', 'warning');
         return;
     }
     
-    // Converti in CSV semplice
-    const headers = ['nome_completo', 'pin', 'ruolo', 'cod_supervisore'];
+    console.log(`📥 Esportazione ${tecniciData.length} tecnici in CSV`);
+    
+    // Intestazioni CSV
+    const headers = ['nome_completo', 'pin', 'ruolo', 'cod_supervisore', 'Telefono', 'Mail', 'attivo'];
+    
+    // Crea righe CSV
     const csvRows = [
-        headers.join(','),
-        ...personnelData.map(tecnico => 
-            headers.map(header => `"${tecnico[header] || ''}"`).join(',')
+        headers.join(';'), // Intestazione
+        ...tecniciData.map(tecnico => 
+            headers.map(header => {
+                let value = tecnico[header] || '';
+                // Gestisci booleano
+                if (header === 'attivo') {
+                    value = tecnico.attivo === true || tecnico.attivo === 'true' || tecnico.attivo === 1 ? 'true' : 'false';
+                }
+                // Escaping per CSV
+                if (typeof value === 'string' && (value.includes(';') || value.includes('"') || value.includes('\n'))) {
+                    value = '"' + value.replace(/"/g, '""') + '"';
+                }
+                return value;
+            }).join(';')
         )
     ];
     
     const csvContent = csvRows.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    
+    // Crea e scarica file
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' }); // Aggiunge BOM per UTF-8
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -3767,7 +3882,7 @@ function exportTecniciCSV() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    showNotification('Tecnici esportati in CSV', 'success');
+    showNotification(`✅ ${tecniciData.length} tecnici esportati in CSV`, 'success');
 }
 // RENDER TABLE STRUCTURE
 function renderTableStructure() {
@@ -5360,6 +5475,8 @@ async function uploadCSVToTable(tableName) {
 // Esporta CSV
 async function downloadTableCSV(tableName) {
     try {
+        showLoading('Esportazione', `Preparazione dati ${tableName}...`);
+        
         const client = getSupabaseClient();
         const { data, error } = await client
             .from(tableName)
@@ -5367,12 +5484,43 @@ async function downloadTableCSV(tableName) {
         
         if (error) throw error;
         
-        const csvContent = convertToCSV(data);
-        downloadFile(csvContent, `${tableName}_${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
-        showNotification(`Tabella ${tableName} esportata con successo`, 'success');
+        if (!data || data.length === 0) {
+            showNotification('Nessun dato da esportare', 'warning');
+            return;
+        }
+        
+        const headers = Object.keys(data[0]);
+        const csvRows = [
+            headers.join(';'),
+            ...data.map(row => 
+                headers.map(header => {
+                    let value = row[header] || '';
+                    if (typeof value === 'string' && (value.includes(';') || value.includes('"') || value.includes('\n'))) {
+                        value = '"' + value.replace(/"/g, '""') + '"';
+                    }
+                    return value;
+                }).join(';')
+            )
+        ];
+        
+        const csvContent = csvRows.join('\n');
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${tableName}_${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        showNotification(`✅ ${data.length} record esportati da ${tableName}`, 'success');
         
     } catch (error) {
-        showNotification(`Errore esportazione: ${error.message}`, 'error');
+        console.error('Errore esportazione:', error);
+        showNotification(`❌ Errore: ${error.message}`, 'error');
+    } finally {
+        hideLoading();
     }
 }
 
