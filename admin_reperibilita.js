@@ -432,6 +432,12 @@ function handleFileSelect(e) {
     
     document.getElementById('btn-carica-csv').disabled = false;
 }
+// admin_reperibilita.js - FUNZIONE CORRETTA PER IL TUO CSV
+
+
+
+
+
 
 function rimuoviFile() {
     document.getElementById('file-csv').value = '';
@@ -441,30 +447,10 @@ function rimuoviFile() {
     document.getElementById('anteprima-csv').innerHTML = '';
 }
 
-async function scaricaTemplateCSV() {
-    const template = `DataInizio;Zona;Tecnico
-2025-01-03;BO EST;Mario Rossi
-2025-01-03;BO CENTRO;Luigi Verdi
-2025-01-03;BO OVEST;Giuseppe Bianchi
-2025-01-03;FERRARA;Anna Russo
-2025-01-03;RAVENNA;Laura Ferrari
-2025-01-10;BO EST;Luigi Verdi
-2025-01-10;BO CENTRO;Mario Rossi
-2025-01-10;BO OVEST;Anna Russo
-2025-01-10;FERRARA;Giuseppe Bianchi
-2025-01-10;RAVENNA;Laura Ferrari`;
 
-    const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    
-    link.href = url;
-    link.download = 'Template_Reperibilita.csv';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-}
+// ============================================
+// FUNZIONI CARICAMENTO CSV (TAB 2) - CORRETTE
+// ============================================
 
 async function validaECaricaCSV() {
     try {
@@ -479,7 +465,9 @@ async function validaECaricaCSV() {
         mostraLoading('Validazione CSV in corso...');
         
         const text = await file.text();
-        const lines = text.split('\n').filter(line => line.trim() !== '');
+        // Rimuovi eventuale BOM all'inizio del file
+        const cleanText = text.replace(/^\uFEFF/, '');
+        const lines = cleanText.split('\n').filter(line => line.trim() !== '');
         
         if (lines.length < 2) {
             mostraMessaggio('File CSV vuoto o formato non valido', 'error');
@@ -487,93 +475,121 @@ async function validaECaricaCSV() {
             return;
         }
         
-        const header = lines[0].split(';');
+        // Verifica header
+        const header = lines[0].split(';').map(h => h.trim().replace(/^\uFEFF/, '').toLowerCase());
         if (header.length !== 3 || 
-            header[0].toLowerCase() !== 'datainizio' || 
-            header[1].toLowerCase() !== 'zona' || 
-            header[2].toLowerCase() !== 'tecnico') {
-            mostraMessaggio('Formato CSV non valido. Usa il template.', 'error');
+            header[0] !== 'datainizio' || 
+            header[1] !== 'zona' || 
+            header[2] !== 'tecnico') {
+            mostraMessaggio('Formato CSV non valido. Usa: DataInizio;Zona;Tecnico', 'error');
             nascondiLoading();
             return;
         }
+        
+        const supabase = getSupabaseClient();
+        if (!supabase) throw new Error('DB non configurato');
+        
+        // Carica tutte le zone con i loro ID
+        const { data: zoneEsistenti, error: errorZone } = await supabase
+            .from('zone_reperibilita')
+            .select('id, nome')
+            .eq('attivo', true);
+        
+        if (errorZone) throw errorZone;
+        
+        // Crea mappa nome -> id
+        const zoneMap = {};
+        zoneEsistenti.forEach(z => zoneMap[z.nome] = z.id);
         
         const errori = [];
         const righeValide = [];
         const turniDaImportare = [];
         
-        const supabase = getSupabaseClient();
-        if (!supabase) throw new Error('DB non configurato');
-        
-        const { data: zoneEsistenti, error: errorZone } = await supabase
-            .from('zone_reperibilita')
-            .select('nome')
-            .eq('attivo', true);
-        
-        if (errorZone) throw errorZone;
-        
-        const nomiZoneValide = zoneEsistenti.map(z => z.nome);
-        
         for (let i = 1; i < lines.length; i++) {
-            const riga = lines[i];
-            const parti = riga.split(';');
+            const riga = lines[i].trim();
+            if (!riga) continue;
+            
+            const parti = riga.split(';').map(p => p.trim());
             
             if (parti.length !== 3) {
                 errori.push({ riga: i + 1, errore: 'Numero di colonne non valido', dati: riga });
                 continue;
             }
             
-            const [dataStr, zona, tecnico] = parti.map(p => p.trim());
+            const [dataStr, zonaNome, tecnicoId] = parti;
             
-            const dataRegex = /^\d{4}-\d{2}-\d{2}$/;
-            if (!dataRegex.test(dataStr)) {
-                errori.push({ riga: i + 1, errore: 'Formato data non valido (usare YYYY-MM-DD)', dati: riga });
+            // VALIDAZIONE DATA IN FORMATO ITALIANO (gg/mm/aaaa)
+            const dataRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+            const match = dataStr.match(dataRegex);
+            
+            if (!match) {
+                errori.push({ riga: i + 1, errore: 'Formato data non valido. Usare GG/MM/AAAA', dati: riga });
                 continue;
             }
             
-            const dataInizio = new Date(dataStr + 'T08:00:00');
+            const giorno = parseInt(match[1], 10);
+            const mese = parseInt(match[2], 10) - 1; // Mese in JS parte da 0
+            const anno = parseInt(match[3], 10);
+            
+            // Crea data_inizio alle 17:00 del venerdì
+            const dataInizio = new Date(anno, mese, giorno, 17, 0, 0);
+            
             if (isNaN(dataInizio.getTime())) {
                 errori.push({ riga: i + 1, errore: 'Data non valida', dati: riga });
                 continue;
             }
             
+            // Verifica che sia venerdì (5 = venerdì)
             if (dataInizio.getDay() !== 5) {
-                errori.push({ riga: i + 1, errore: 'La data deve essere un venerdì', dati: riga });
+                errori.push({ 
+                    riga: i + 1, 
+                    errore: `La data deve essere un venerdì (il ${dataStr} è ${dataInizio.toLocaleDateString('it-IT', { weekday: 'long' })})`, 
+                    dati: riga 
+                });
                 continue;
             }
             
-            if (!nomiZoneValide.includes(zona)) {
-                errori.push({ riga: i + 1, errore: `Zona "${zona}" non esistente o disattiva`, dati: riga });
+            // Verifica che la zona esista
+            if (!zoneMap[zonaNome]) {
+                errori.push({ riga: i + 1, errore: `Zona "${zonaNome}" non esistente o disattiva`, dati: riga });
                 continue;
             }
             
-            if (!tecnico || tecnico.length < 2) {
+            // Verifica tecnico_id non vuoto
+            if (!tecnicoId || tecnicoId.length < 2) {
                 errori.push({ riga: i + 1, errore: 'Nome tecnico non valido', dati: riga });
                 continue;
             }
             
+            // Calcola data_fine = data_inizio + 7 giorni, poi imposta ora 8:00
             const dataFine = new Date(dataInizio);
             dataFine.setDate(dataFine.getDate() + 7);
+            dataFine.setHours(8, 0, 0, 0); // Imposta le 8:00 del venerdì successivo
             
             righeValide.push({
                 riga: i + 1,
                 dataInizio: dataInizio.toISOString(),
                 dataFine: dataFine.toISOString(),
-                zona: zona,
-                tecnico: tecnico,
+                zonaNome: zonaNome,
+                tecnicoId: tecnicoId,
                 rigaOriginale: riga
             });
             
-            const zonaObj = zoneEsistenti.find(z => z.nome === zona);
+            // Prepara record per l'inserimento - SENZA anno_riferimento (generato automaticamente)
             turniDaImportare.push({
-                zona_id: zonaObj.id,
-                tecnico_id: tecnico,
+                zona_id: zoneMap[zonaNome],
+                tecnico_id: tecnicoId,
                 data_inizio: dataInizio.toISOString(),
                 data_fine: dataFine.toISOString(),
-                stato: 'originale'
+                stato: 'originale',
+                peso_turno: 2
+                // NOTA: anno_riferimento è una colonna generata, non va inserita
+                // created_at e updated_at hanno valori di default nel DB
             });
         }
         
-        mostraAnteprimaCSV(righeValide, errori, turniDaImportare.length);
+        // Mostra anteprima
+        mostraAnteprimaCSV(righeValide, errori, turniDaImportare);
         nascondiLoading();
         
     } catch (error) {
@@ -583,10 +599,10 @@ async function validaECaricaCSV() {
     }
 }
 
-function mostraAnteprimaCSV(righeValide, errori, numTurni) {
+function mostraAnteprimaCSV(righeValide, errori, turniDaImportare) {
     const container = document.getElementById('anteprima-csv');
-    const backupCheck = document.getElementById('backup-csv').checked;
-    const sovrascriviCheck = document.getElementById('sovrascrivi-csv').checked;
+    const backupCheck = document.getElementById('backup-csv')?.checked || false;
+    const sovrascriviCheck = document.getElementById('sovrascrivi-csv')?.checked || false;
     
     let html = `
         <div style="background: #f8fafc; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; border: 1px solid var(--border);">
@@ -636,6 +652,32 @@ function mostraAnteprimaCSV(righeValide, errori, numTurni) {
         `;
     }
     
+    // Mostra un'anteprima dei primi 5 turni validi
+    if (righeValide.length > 0) {
+        html += `
+            <div style="margin-bottom: 1.5rem;">
+                <h4 style="margin: 0 0 0.5rem 0; color: var(--text-main); font-weight: 800;">Anteprima turni validi:</h4>
+                <div style="max-height: 200px; overflow-y: auto; background: white; border-radius: 8px; border: 1px solid var(--border);">
+        `;
+        
+        righeValide.slice(0, 5).forEach((riga, idx) => {
+            const dataInizio = new Date(riga.dataInizio).toLocaleDateString('it-IT');
+            const dataFine = new Date(riga.dataFine).toLocaleDateString('it-IT');
+            html += `
+                <div style="padding: 0.75rem; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem;">
+                    <div><strong>${riga.zonaNome}</strong> - ${dataInizio} (17:00) → ${dataFine} (8:00)</div>
+                    <div style="color: var(--text-muted);">Tecnico: ${riga.tecnicoId}</div>
+                </div>
+            `;
+        });
+        
+        if (righeValide.length > 5) {
+            html += `<div style="padding: 0.75rem; color: var(--text-muted); text-align: center;">... e altri ${righeValide.length - 5} turni</div>`;
+        }
+        
+        html += `</div></div>`;
+    }
+    
     html += `
             <div style="background: #eff6ff; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; border-left: 4px solid var(--primary);">
                 <h4 style="margin: 0 0 0.5rem 0; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
@@ -643,9 +685,10 @@ function mostraAnteprimaCSV(righeValide, errori, numTurni) {
                     Riepilogo operazione
                 </h4>
                 <ul style="margin: 0; padding-left: 1.5rem; color: #1e293b;">
-                    <li>Turni da importare: <strong>${numTurni}</strong></li>
+                    <li>Turni da importare: <strong>${turniDaImportare.length}</strong></li>
                     <li>Backup automatico: <strong>${backupCheck ? 'SÌ' : 'NO'}</strong></li>
                     <li>Sovrascrivi esistenti: <strong>${sovrascriviCheck ? 'SÌ' : 'NO'}</strong></li>
+                    <li>Orario inizio: <strong>17:00</strong> - Orario fine: <strong>8:00 (giorno successivo)</strong></li>
                 </ul>
             </div>
             
@@ -667,178 +710,29 @@ function mostraAnteprimaCSV(righeValide, errori, numTurni) {
     container.style.display = 'block';
 }
 
-async function importaCSV() {
-    try {
-        const fileInput = document.getElementById('file-csv');
-        const file = fileInput.files[0];
-        
-        if (!file) {
-            mostraMessaggio('Nessun file selezionato', 'error');
-            return;
-        }
-        
-        const text = await file.text();
-        const lines = text.split('\n').filter(line => line.trim() !== '');
-        
-        if (lines.length < 2) {
-            mostraMessaggio('File CSV vuoto', 'error');
-            return;
-        }
-        
-        const backupCheck = document.getElementById('backup-csv').checked;
-        const sovrascriviCheck = document.getElementById('sovrascrivi-csv').checked;
-        
-        mostraLoading('Importazione CSV in corso...');
-        
-        const supabase = getSupabaseClient();
-        if (!supabase) throw new Error('DB non configurato');
-        
-        const adminName = localStorage.getItem('tecnico_loggato') || 'admin';
-        
-        console.log('📋 Validazione CSV in corso...');
-        
-        const { righeValide, errori, turniDaImportare, zoneEsistenti } = await validazioneCSVCompleta(lines);
-        
-        if (righeValide.length === 0) {
-            mostraMessaggio('Nessuna riga valida da importare', 'error');
-            nascondiLoading();
-            return;
-        }
-        
-        console.log('📝 Creazione log operazione...');
-        
-        const { data: log, error: logError } = await supabase
-            .from('log_caricamenti_csv')
-            .insert([{
-                nome_file: file.name,
-                righe_totali: lines.length - 1,
-                righe_importate: 0,
-                righe_errate: errori.length,
-                errori_json: errori,
-                caricato_da: adminName,
-                sovrascrivi_esistenti: sovrascriviCheck,
-                backup_eseguito: false
-            }])
-            .select()
-            .single();
-        
-        if (logError) throw logError;
-        
-        if (backupCheck) {
-            console.log('💾 Creazione backup...');
-            await creaBackupTurni(supabase, log.id, zoneEsistenti);
-            
-            await supabase
-                .from('log_caricamenti_csv')
-                .update({ backup_eseguito: true })
-                .eq('id', log.id);
-        }
-        
-        console.log('🚀 Importazione turni...');
-        
-        let turniImportati = 0;
-        const erroriImport = [];
-        
-        for (const turno of turniDaImportare) {
-            try {
-                if (sovrascriviCheck) {
-                    const { data: esistente, error: checkError } = await supabase
-                        .from('turni_reperibilita')
-                        .select('id')
-                        .eq('zona_id', turno.zona_id)
-                        .eq('data_inizio', turno.data_inizio)
-                        .eq('data_fine', turno.data_fine)
-                        .maybeSingle();
-                    
-                    if (checkError) throw checkError;
-                    
-                    if (esistente) {
-                        const { error: updateError } = await supabase
-                            .from('turni_reperibilita')
-                            .update({
-                                tecnico_id: turno.tecnico_id,
-                                stato: 'originale',
-                                updated_at: new Date().toISOString()
-                            })
-                            .eq('id', esistente.id);
-                        
-                        if (updateError) throw updateError;
-                    } else {
-                        const { error: insertError } = await supabase
-                            .from('turni_reperibilita')
-                            .insert([turno]);
-                        
-                        if (insertError) throw insertError;
-                    }
-                } else {
-                    const { error: insertError } = await supabase
-                        .from('turni_reperibilita')
-                        .insert([turno]);
-                    
-                    if (insertError) {
-                        if (insertError.code === '23505') {
-                            erroriImport.push({
-                                turno: turno,
-                                errore: 'Turno già esistente (non sovrascritto)'
-                            });
-                            continue;
-                        }
-                        throw insertError;
-                    }
-                }
-                
-                turniImportati++;
-                
-            } catch (turnoError) {
-                console.error('❌ Errore import turno:', turnoError);
-                erroriImport.push({
-                    turno: turno,
-                    errore: turnoError.message
-                });
-            }
-        }
-        
-        console.log('📊 Aggiornamento log finale...');
-        
-        const erroriFinali = [...errori, ...erroriImport.map(e => ({
-            riga: 'N/A',
-            errore: e.errore,
-            dati: JSON.stringify(e.turno)
-        }))];
-        
-        await supabase
-            .from('log_caricamenti_csv')
-            .update({
-                righe_importate: turniImportati,
-                righe_errate: erroriFinali.length,
-                errori_json: erroriFinali
-            })
-            .eq('id', log.id);
-        
-        nascondiLoading();
-        
-        rimuoviFile();
-        document.getElementById('anteprima-csv').style.display = 'none';
-        
-        const messaggio = `
-            Importazione completata!<br>
-            • Turni importati: <strong>${turniImportati}</strong><br>
-            • Errori totali: <strong>${erroriFinali.length}</strong><br>
-            • Backup: <strong>${backupCheck ? 'Eseguito' : 'Non eseguito'}</strong>
-        `;
-        
-        mostraMessaggio(messaggio, turniImportati > 0 ? 'success' : 'warning');
-        
-        await caricaStoricoCSV();
-        
-        console.log(`✅ Importazione completata: ${turniImportati} turni importati`);
-        
-    } catch (error) {
-        console.error('❌ Errore importazione CSV:', error);
-        nascondiLoading();
-        mostraMessaggio(`Errore nell'importazione: ${error.message}`, 'error');
-    }
+
+
+function scaricaTemplateCSV() {
+    const template = `DataInizio;Zona;Tecnico
+26/12/2025;BO EST;Mario Rossi
+02/01/2026;BO CENTRO;Luigi Verdi
+09/01/2026;BO OVEST;Anna Bianchi`;
+
+    const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    
+    link.href = url;
+    link.download = 'Template_Turni_Reperibilita.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
+
+
+
+
 
 async function validazioneCSVCompleta(lines) {
     const errori = [];
@@ -909,14 +803,21 @@ async function validazioneCSVCompleta(lines) {
             rigaOriginale: riga
         });
         
-        turniDaImportare.push({
-            zona_id: zonaObj.id,
-            tecnico_id: tecnico,
-            data_inizio: dataInizio.toISOString(),
-            data_fine: dataFine.toISOString(),
-            stato: 'originale',
-            peso_turno: 0
-        });
+    // All'interno di importaCSV(), quando crei turniDaImportare:
+
+turniDaImportare.push({
+    zona_id: zoneMap[zonaNome],
+    tecnico_id: tecnicoId,
+    data_inizio: dataInizio.toISOString(),
+    data_fine: dataFine.toISOString(),
+    stato: 'originale',
+    peso_turno: 2,
+    // 👇 RIMUOVI anno_riferimento - è generato automaticamente
+    // created_at e updated_at possono essere gestiti automaticamente da Supabase
+    // se la tabella ha valori di default, altrimenti li lasciamo
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+});
     }
     
     return { righeValide, errori, turniDaImportare, zoneEsistenti };
@@ -1020,8 +921,294 @@ function aggiornaUI_StoricoCSV() {
     container.innerHTML = html;
 }
 
-function visualizzaDettaglioCaricamento(id) {
-    mostraMessaggio('Visualizzazione dettaglio in sviluppo', 'warning');
+async function importaCSV() {
+    try {
+        const fileInput = document.getElementById('file-csv');
+        const file = fileInput.files[0];
+        
+        if (!file) {
+            mostraMessaggio('Nessun file selezionato', 'error');
+            return;
+        }
+        
+        mostraLoading('Importazione turni in corso...');
+        
+        const text = await file.text();
+        const cleanText = text.replace(/^\uFEFF/, '');
+        const lines = cleanText.split('\n').filter(line => line.trim() !== '');
+        
+        if (lines.length < 2) {
+            mostraMessaggio('File CSV vuoto', 'error');
+            nascondiLoading();
+            return;
+        }
+        
+        const supabase = getSupabaseClient();
+        if (!supabase) throw new Error('DB non configurato');
+        
+        // Carica zone
+        const { data: zoneEsistenti, error: errorZone } = await supabase
+            .from('zone_reperibilita')
+            .select('id, nome')
+            .eq('attivo', true);
+        
+        if (errorZone) throw errorZone;
+        
+        const zoneMap = {};
+        zoneEsistenti.forEach(z => zoneMap[z.nome] = z.id);
+        
+        const turniDaImportare = [];
+        const errori = [];
+        const righeTotali = lines.length - 1; // Escludi header
+        
+        for (let i = 1; i < lines.length; i++) {
+            const riga = lines[i].trim();
+            if (!riga) continue;
+            
+            const parti = riga.split(';').map(p => p.trim());
+            if (parti.length !== 3) {
+                errori.push({ riga: i + 1, errore: 'Numero di colonne non valido', dati: riga });
+                continue;
+            }
+            
+            const [dataStr, zonaNome, tecnicoId] = parti;
+            
+            // Converti data da formato italiano
+            const match = dataStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+            if (!match) {
+                errori.push({ riga: i + 1, errore: 'Formato data non valido', dati: riga });
+                continue;
+            }
+            
+            const giorno = parseInt(match[1], 10);
+            const mese = parseInt(match[2], 10) - 1;
+            const anno = parseInt(match[3], 10);
+            
+            const dataInizio = new Date(anno, mese, giorno, 17, 0, 0);
+            
+            // Verifica che sia venerdì
+            if (dataInizio.getDay() !== 5) {
+                errori.push({ riga: i + 1, errore: 'La data deve essere un venerdì', dati: riga });
+                continue;
+            }
+            
+            // Verifica zona
+            if (!zoneMap[zonaNome]) {
+                errori.push({ riga: i + 1, errore: `Zona "${zonaNome}" non esistente`, dati: riga });
+                continue;
+            }
+            
+            // Verifica tecnico
+            if (!tecnicoId || tecnicoId.length < 2) {
+                errori.push({ riga: i + 1, errore: 'Nome tecnico non valido', dati: riga });
+                continue;
+            }
+            
+            const dataFine = new Date(dataInizio);
+            dataFine.setDate(dataFine.getDate() + 7);
+            dataFine.setHours(8, 0, 0, 0);
+            
+            turniDaImportare.push({
+                zona_id: zoneMap[zonaNome],
+                tecnico_id: tecnicoId,
+                data_inizio: dataInizio.toISOString(),
+                data_fine: dataFine.toISOString(),
+                stato: 'originale',
+                peso_turno: 2
+            });
+        }
+        
+        console.log(`🚀 Importazione di ${turniDaImportare.length} turni validi su ${righeTotali} righe totali...`);
+        
+        // Inserisci in batch
+        const batchSize = 50;
+        let inseriti = 0;
+        const erroriBatch = [];
+        
+        for (let i = 0; i < turniDaImportare.length; i += batchSize) {
+            const batch = turniDaImportare.slice(i, i + batchSize);
+            
+            const { data, error } = await supabase
+                .from('turni_reperibilita')
+                .insert(batch)
+                .select();
+            
+            if (error) {
+                console.error('❌ Errore batch:', error);
+                erroriBatch.push(`Errore nel batch ${Math.floor(i/batchSize) + 1}: ${error.message}`);
+            } else {
+                inseriti += batch.length;
+                console.log(`✅ Batch ${Math.floor(i/batchSize) + 1} inserito: ${batch.length} turni`);
+            }
+        }
+        
+        // --- SALVA LOG NEL DATABASE ---
+        const adminName = localStorage.getItem('tecnico_loggato') || 'admin';
+        
+        const { error: logError } = await supabase
+            .from('log_caricamenti_csv')
+            .insert([{
+                nome_file: file.name,
+                data_caricamento: new Date().toISOString(),
+                caricato_da: adminName,
+                righe_totali: righeTotali,
+                righe_importate: inseriti,
+                righe_errate: errori.length + erroriBatch.length,
+                errori_json: [...errori, ...erroriBatch.map(e => ({ errore: e }))]
+            }]);
+        
+        if (logError) {
+            console.error('❌ Errore salvataggio log:', logError);
+        } else {
+            console.log('✅ Log caricamento salvato');
+        }
+        // ------------------------------
+        
+        nascondiLoading();
+        
+        if (inseriti > 0) {
+            mostraMessaggio(`✅ Importati ${inseriti} turni con successo!`, 'success');
+            rimuoviFile();
+            document.getElementById('anteprima-csv').style.display = 'none';
+            
+            // Ricarica lo storico e i turni
+            await caricaStoricoCSV();
+            await caricaTurni();
+        } else {
+            mostraMessaggio(`❌ Nessun turno importato. Errori: ${errori.length + erroriBatch.length}`, 'error');
+        }
+        
+    } catch (error) {
+        console.error('❌ Errore importazione CSV:', error);
+        nascondiLoading();
+        mostraMessaggio(`Errore: ${error.message}`, 'error');
+    }
+}
+
+async function visualizzaDettaglioCaricamento(logId) {
+    try {
+        const supabase = getSupabaseClient();
+        if (!supabase) throw new Error('DB non configurato');
+        
+        const { data: log, error } = await supabase
+            .from('log_caricamenti_csv')
+            .select('*')
+            .eq('id', logId)
+            .single();
+        
+        if (error) throw error;
+        
+        // Formatta data
+        const data = new Date(log.data_caricamento).toLocaleString('it-IT', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        
+        // Crea contenuto dettaglio
+        let html = `
+            <div style="padding: 1rem;">
+                <div style="margin-bottom: 1.5rem;">
+                    <h4 style="margin: 0 0 0.5rem 0; color: var(--primary);">${log.nome_file}</h4>
+                    <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">${data} • da ${log.caricato_da}</p>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+                    <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: 800; color: var(--primary);">${log.righe_totali}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">Totale righe</div>
+                    </div>
+                    <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: 800; color: #22c55e;">${log.righe_importate}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">Importate</div>
+                    </div>
+                    <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: 800; color: #ef4444;">${log.righe_errate}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">Errori</div>
+                    </div>
+                </div>
+        `;
+        
+        // Mostra errori se presenti
+        if (log.errori_json && log.errori_json.length > 0) {
+            html += `
+                <div style="margin-top: 1rem;">
+                    <h5 style="margin: 0 0 0.5rem 0; color: #ef4444; display: flex; align-items: center; gap: 0.5rem;">
+                        <span class="material-symbols-rounded">error</span>
+                        Dettaglio errori
+                    </h5>
+                    <div style="max-height: 300px; overflow-y: auto; background: #fef2f2; border-radius: 8px; padding: 1rem;">
+            `;
+            
+            log.errori_json.forEach((err, idx) => {
+                if (err.riga) {
+                    html += `
+                        <div style="padding: 0.5rem; border-bottom: 1px solid #fecaca; font-size: 0.85rem;">
+                            <strong>Riga ${err.riga}:</strong> ${err.errore}
+                            ${err.dati ? `<div style="font-family: monospace; color: #64748b; margin-top: 0.25rem;">${err.dati}</div>` : ''}
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div style="padding: 0.5rem; border-bottom: 1px solid #fecaca; font-size: 0.85rem; color: #991b1b;">
+                            ${err.errore || JSON.stringify(err)}
+                        </div>
+                    `;
+                }
+            });
+            
+            html += `</div></div>`;
+        } else {
+            html += `<p style="color: #22c55e; display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem;">
+                <span class="material-symbols-rounded">check_circle</span>
+                Nessun errore durante l'importazione
+            </p>`;
+        }
+        
+        html += `</div>`;
+        
+        // Mostra in un modale
+        mostraModaleDettaglio(log.nome_file, html);
+        
+    } catch (error) {
+        console.error('❌ Errore caricamento dettaglio:', error);
+        mostraMessaggio('Errore nel caricamento dei dettagli', 'error');
+    }
+}
+
+function mostraModaleDettaglio(titolo, contenuto) {
+    // Crea modale se non esiste
+    let modale = document.getElementById('modale-dettaglio-log');
+    
+    if (!modale) {
+        modale = document.createElement('div');
+        modale.id = 'modale-dettaglio-log';
+        modale.className = 'modal';
+        modale.innerHTML = `
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">
+                    <h3 id="modale-dettaglio-titolo">Dettaglio Import</h3>
+                    <button class="btn-icon-small" onclick="document.getElementById('modale-dettaglio-log').style.display='none'">
+                        <span class="material-symbols-rounded">close</span>
+                    </button>
+                </div>
+                <div class="modal-body" id="modale-dettaglio-contenuto"></div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" onclick="document.getElementById('modale-dettaglio-log').style.display='none'">
+                        Chiudi
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modale);
+    }
+    
+    document.getElementById('modale-dettaglio-titolo').textContent = `Dettaglio: ${titolo}`;
+    document.getElementById('modale-dettaglio-contenuto').innerHTML = contenuto;
+    modale.style.display = 'flex';
 }
 
 // ============================================

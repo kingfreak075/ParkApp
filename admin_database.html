@@ -58,7 +58,7 @@
         Reperibilità
     </button>
 <!-- Nella sezione GESTIONE MANUALE, dopo Reperibilità -->
-<button class="nav-btn" data-tab="parco">
+<button class="nav-btn" data-tab="parco" onclick="attivaTabParco()">
     <span class="material-symbols-rounded">elevator</span>
     Parco Impianti
 </button>
@@ -764,16 +764,17 @@
                 
                 <div class="tables-container">
                     <table class="data-table" id="fleet-table">
-                        <thead>
-                            <tr>
-                                <th>Targa</th>
-                                <th>Modello</th>
-                                <th>Driver Assegnato</th>
-                                <th>Data Assegnazione</th>
-                                <th>Stato</th>
-                                <th>Azioni</th>
-                            </tr>
-                        </thead>
+                      <thead>
+    <tr>
+        <th>Targa</th>
+        <th>Modello</th>
+        <th>Driver Assegnato</th>
+        <th>Data Assegnazione</th>
+        <th>Km Veicolo</th>  
+        <th>Stato</th>
+        <th>Azioni</th>
+    </tr>
+</thead>
                         <tbody id="fleet-table-body">
                             <tr>
                                 <td colspan="6" class="text-center">
@@ -1286,7 +1287,7 @@
                     <option value="">Tutti i tecnici</option>
                 </select>
             </div>
-            
+            <div id="paginazione-parco-top" style="margin-bottom: 1rem;"></div>
             <!-- TABELLA IMPIANTI -->
             <div class="tables-container">
                 <table class="data-table" id="tabella-parco">

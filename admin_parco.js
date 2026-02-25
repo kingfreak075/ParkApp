@@ -3,10 +3,31 @@
 // GESTIONE COMPLETA PARCO ASCENSORI
 // ============================================
 
-// Variabili globali
-// A:
-let parcoImpiantiList = [];
-let parcoImpiantiFiltrati = [];
+// ============================================
+// VARIABILI GLOBALI PAGINAZIONE
+// ============================================
+let parcoPaginazione = {
+    currentPage: 1,
+    itemsPerPage: 50,
+    totalRecords: 0,
+    totalPages: 0
+};
+
+let parcoFiltriAttivi = {
+    search: '',
+    giro: '',
+    tecnico: ''
+};
+
+let parcoStatisticheTotali = {
+    totale: 0,
+    conteggioGiri: {},
+    giriOrdinati: []
+};
+
+// Mantieni le variabili esistenti
+let parcoImpiantiList = [];        // Solo i dati della pagina corrente
+let parcoImpiantiFiltrati = [];    // Sinonimo di parcoImpiantiList per compatibilità
 let parcoGiriList = [];
 let parcoTecniciList = [];
 let parcoImportAnalisi = null;
@@ -47,38 +68,326 @@ document.addEventListener('DOMContentLoaded', function() {
 // CARICAMENTO DATI
 // ============================================
 
-async function caricaImpianti() {
+// ============================================
+// NUOVE FUNZIONI DI PAGINAZIONE
+// ============================================
+
+async function caricaStatisticheTotali() {
     try {
-        console.log('📥 Caricamento impianti...');
-        
         const supabase = getSupabaseClient();
         if (!supabase) throw new Error('DB non configurato');
         
-        const { data, error } = await supabase
+        console.log('📊 Caricamento statistiche totali...');
+        
+        // 1. Conta totale record
+        const { count, error: countError } = await supabase
+            .from('Parco_app')
+            .select('*', { count: 'exact', head: true });
+        
+        if (countError) throw countError;
+        
+        parcoStatisticheTotali.totale = count || 0;
+        parcoPaginazione.totalRecords = count || 0;
+        parcoPaginazione.totalPages = Math.ceil(parcoPaginazione.totalRecords / parcoPaginazione.itemsPerPage);
+        
+        // 2. Prendi TUTTI i giro e tecnici (con paginazione)
+        const limit = 1000;
+        const totalPages = Math.ceil(count / limit);
+        
+        let allGiriData = [];
+        let tecniciSet = new Set();
+        
+        for (let page = 0; page < totalPages; page++) {
+            const from = page * limit;
+            const to = from + limit - 1;
+            
+            console.log(`📊 Caricamento batch statistiche ${page + 1}/${totalPages}`);
+            
+            const { data, error } = await supabase
+                .from('Parco_app')
+                .select('giro, tecnico')
+                .range(from, to);
+            
+            if (error) throw error;
+            
+            if (data && data.length > 0) {
+                allGiriData = [...allGiriData, ...data];
+                
+                // Raccogli tecnici già in questa fase
+                data.forEach(imp => {
+                    if (imp.tecnico && imp.tecnico.trim() !== '') {
+                        tecniciSet.add(imp.tecnico);
+                    }
+                });
+            }
+        }
+        
+        console.log(`✅ Analizzati ${allGiriData.length} record per le statistiche`);
+        
+        // Calcola conteggio per giro su TUTTI i dati
+        const conteggioGiri = {};
+        allGiriData.forEach(imp => {
+            const giro = imp.giro !== null && imp.giro !== undefined ? imp.giro.toString() : 'Non assegnato';
+            conteggioGiri[giro] = (conteggioGiri[giro] || 0) + 1;
+        });
+        
+        parcoStatisticheTotali.conteggioGiri = conteggioGiri;
+        
+        // Ordina giri
+        parcoStatisticheTotali.giriOrdinati = Object.keys(conteggioGiri).sort((a, b) => {
+            if (a === 'Non assegnato') return 1;
+            if (b === 'Non assegnato') return -1;
+            
+            // Confronto numerico
+            const numA = parseInt(a);
+            const numB = parseInt(b);
+            if (isNaN(numA) && isNaN(numB)) return a.localeCompare(b);
+            if (isNaN(numA)) return 1;
+            if (isNaN(numB)) return -1;
+            return numA - numB;
+        });
+        
+        parcoTecniciList = Array.from(tecniciSet).sort();
+        
+        // Estrai lista giri per filtri (escludi "Non assegnato" se preferisci)
+        parcoGiriList = Object.keys(conteggioGiri)
+            .filter(g => g !== 'Non assegnato' && !isNaN(parseInt(g)))
+            .sort((a, b) => parseInt(a) - parseInt(b));
+        
+        console.log(`✅ Statistiche calcolate: ${parcoStatisticheTotali.totale} impianti totali`);
+        console.log('📊 Conteggio per giro (TUTTI):', conteggioGiri);
+        
+        // Aggiorna UI
+        aggiornaStatisticheTotali();
+        aggiornaFiltri();
+        
+    } catch (error) {
+        console.error('❌ Errore caricamento statistiche:', error);
+        throw error;
+    }
+}
+
+function aggiornaStatisticheTotali() {
+    const totaleEl = document.getElementById('totale-impianti');
+    if (totaleEl) totaleEl.textContent = parcoStatisticheTotali.totale;
+    
+    const barraGiri = document.getElementById('barra-giri');
+    if (!barraGiri) return;
+    
+    let htmlBarra = '';
+    parcoStatisticheTotali.giriOrdinati.forEach(giro => {
+        const count = parcoStatisticheTotali.conteggioGiri[giro];
+        htmlBarra += `
+            <div style="min-width: 100px; background: #f8fafc; border-radius: 12px; padding: 1rem; text-align: center; border: 1px solid var(--border);">
+                <div style="font-size: 1.25rem; font-weight: 800;">${giro === 'Non assegnato' ? 'N/A' : `Giro ${giro}`}</div>
+                <div style="font-size: 1.5rem; font-weight: 800; color: var(--primary);">${count}</div>
+            </div>
+        `;
+    });
+    
+    barraGiri.innerHTML = htmlBarra;
+}
+
+async function caricaPagina(page) {
+    try {
+        const supabase = getSupabaseClient();
+        if (!supabase) throw new Error('DB non configurato');
+        
+        parcoPaginazione.currentPage = page;
+        
+        const from = (page - 1) * parcoPaginazione.itemsPerPage;
+        const to = from + parcoPaginazione.itemsPerPage - 1;
+        
+        console.log(`📥 Caricamento pagina ${page} (righe ${from}-${to})`);
+        
+        let query = supabase
             .from('Parco_app')
             .select('*')
+            .range(from, to)
             .order('impianto', { ascending: true });
+        
+        if (parcoFiltriAttivi.giro) {
+            query = query.eq('giro', parseInt(parcoFiltriAttivi.giro));
+        }
+        
+        if (parcoFiltriAttivi.tecnico) {
+            query = query.eq('tecnico', parcoFiltriAttivi.tecnico);
+        }
+        
+        const { data, error } = await query;
         
         if (error) throw error;
         
         parcoImpiantiList = data || [];
-        parcoImpiantiFiltrati = [...parcoImpiantiList];
         
-        console.log(`✅ Caricati ${parcoImpiantiList.length} impianti`);
+        // Applica filtro search (client-side)
+        if (parcoFiltriAttivi.search) {
+            const searchLower = parcoFiltriAttivi.search.toLowerCase();
+            parcoImpiantiFiltrati = parcoImpiantiList.filter(imp => 
+                (imp.impianto && imp.impianto.toLowerCase().includes(searchLower)) ||
+                (imp.cliente && imp.cliente.toLowerCase().includes(searchLower)) ||
+                (imp.Indirizzo && imp.Indirizzo.toLowerCase().includes(searchLower))
+            );
+        } else {
+            parcoImpiantiFiltrati = [...parcoImpiantiList];
+        }
         
-        // Estrai giri e tecnici unici
-        aggiornaListeUniche();
-        
-        // Aggiorna UI
-        aggiornaStatistiche();
-        aggiornaFiltri();
         renderizzaTabella();
+        aggiornaControlliPaginazione();
+        
+    } catch (error) {
+        console.error('❌ Errore caricamento pagina:', error);
+        mostraNotifica('Errore nel caricamento della pagina', 'error');
+    }
+}
+
+function aggiornaControlliPaginazione() {
+    // Usa il nuovo contenitore in alto
+    let container = document.getElementById('paginazione-parco-top');
+    
+    // Se non esiste, cerca quello vecchio o crealo in posizione di fallback
+    if (!container) {
+        container = document.getElementById('paginazione-parco');
+        if (!container) {
+            // Fallback: crea dopo la tabella come prima
+            container = document.createElement('div');
+            container.id = 'paginazione-parco';
+            const tabella = document.getElementById('tabella-parco');
+            if (tabella && tabella.parentNode) {
+                tabella.parentNode.insertBefore(container, tabella.nextSibling);
+            } else {
+                return;
+            }
+        }
+    }
+    
+    // Calcola valori per la visualizzazione
+    const da = parcoPaginazione.totalRecords > 0 ? 
+        (parcoPaginazione.currentPage - 1) * parcoPaginazione.itemsPerPage + 1 : 0;
+    const a = Math.min(parcoPaginazione.currentPage * parcoPaginazione.itemsPerPage, 
+                      parcoPaginazione.totalRecords);
+    
+    container.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: #f8fafc; border-radius: 8px; border: 1px solid var(--border);">
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <span style="color: var(--text-muted); font-size: 0.9rem;">Record per pagina:</span>
+                    <select id="items-per-page" onchange="cambiaItemsPerPagina()" style="padding: 0.35rem 0.5rem; border-radius: 6px; border: 1px solid var(--border); background: white;">
+                        <option value="20" ${parcoPaginazione.itemsPerPage === 20 ? 'selected' : ''}>20</option>
+                        <option value="50" ${parcoPaginazione.itemsPerPage === 50 ? 'selected' : ''}>50</option>
+                        <option value="100" ${parcoPaginazione.itemsPerPage === 100 ? 'selected' : ''}>100</option>
+                    </select>
+                </div>
+                
+                <div style="color: var(--text-muted); font-size: 0.9rem;">
+                    <strong style="color: var(--text-main);">${parcoPaginazione.totalRecords > 0 ? `${da}-${a}` : '0-0'}</strong> di 
+                    <strong style="color: var(--text-main);">${parcoPaginazione.totalRecords}</strong> impianti
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <div style="display: flex; gap: 0.25rem;">
+                    <button class="btn-icon-small" onclick="vaiPagina(1)" ${parcoPaginazione.currentPage === 1 ? 'disabled' : ''} style="${parcoPaginazione.currentPage === 1 ? 'opacity: 0.5; cursor: not-allowed;' : ''}" title="Prima pagina">
+                        <span class="material-symbols-rounded">first_page</span>
+                    </button>
+                    <button class="btn-icon-small" onclick="vaiPagina(parcoPaginazione.currentPage - 1)" ${parcoPaginazione.currentPage === 1 ? 'disabled' : ''} style="${parcoPaginazione.currentPage === 1 ? 'opacity: 0.5; cursor: not-allowed;' : ''}" title="Pagina precedente">
+                        <span class="material-symbols-rounded">chevron_left</span>
+                    </button>
+                    
+                    <span style="padding: 0 0.75rem; font-weight: 600; color: var(--text-main);">
+                        Pagina ${parcoPaginazione.currentPage} di ${parcoPaginazione.totalPages || 1}
+                    </span>
+                    
+                    <button class="btn-icon-small" onclick="vaiPagina(parcoPaginazione.currentPage + 1)" ${parcoPaginazione.currentPage === parcoPaginazione.totalPages ? 'disabled' : ''} style="${parcoPaginazione.currentPage === parcoPaginazione.totalPages ? 'opacity: 0.5; cursor: not-allowed;' : ''}" title="Pagina successiva">
+                        <span class="material-symbols-rounded">chevron_right</span>
+                    </button>
+                    <button class="btn-icon-small" onclick="vaiPagina(parcoPaginazione.totalPages)" ${parcoPaginazione.currentPage === parcoPaginazione.totalPages ? 'disabled' : ''} style="${parcoPaginazione.currentPage === parcoPaginazione.totalPages ? 'opacity: 0.5; cursor: not-allowed;' : ''}" title="Ultima pagina">
+                        <span class="material-symbols-rounded">last_page</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+async function debugStatisticheParco() {
+    try {
+        const supabase = getSupabaseClient();
+        if (!supabase) return;
+        
+        // Query 1: Conta totale
+        const { count, error: countErr } = await supabase
+            .from('Parco_app')
+            .select('*', { count: 'exact', head: true });
+        console.log('✅ Totale DB:', count);
+        
+        // Query 2: Conta giro per giro
+        const { data, error } = await supabase
+            .from('Parco_app')
+            .select('giro');
+        
+        if (error) throw error;
+        
+        // Raggruppa
+        const gruppi = {};
+        data.forEach(row => {
+            const giro = row.giro !== null && row.giro !== undefined ? String(row.giro) : 'NULL';
+            gruppi[giro] = (gruppi[giro] || 0) + 1;
+        });
+        
+        console.log('📊 Conteggio per giro:', gruppi);
+        
+        // Somma
+        const somma = Object.values(gruppi).reduce((a, b) => a + b, 0);
+        console.log('📊 Somma conteggi:', somma);
+        
+        return { totale: count, gruppi, somma };
+        
+    } catch (error) {
+        console.error('Errore debug:', error);
+    }
+}
+
+
+
+
+async function cambiaItemsPerPagina() {
+    const select = document.getElementById('items-per-page');
+    if (!select) return;
+    
+    parcoPaginazione.itemsPerPage = parseInt(select.value);
+    parcoPaginazione.totalPages = Math.ceil(parcoPaginazione.totalRecords / parcoPaginazione.itemsPerPage);
+    await caricaPagina(1);
+}
+
+async function vaiPagina(page) {
+    if (page < 1 || page > parcoPaginazione.totalPages) return;
+    await caricaPagina(page);
+}
+
+function attivaTabParco() {
+    console.log('📌 Tab Parco attivato, carico dati...');
+    caricaImpianti();
+}
+
+
+async function caricaImpianti() {
+    try {
+        console.log('📥 Caricamento impianti con paginazione...');
+        
+        // Prima carica le statistiche totali
+        await caricaStatisticheTotali();
+        
+        // Poi carica la prima pagina
+        await caricaPagina(1);
         
     } catch (error) {
         console.error('❌ Errore caricamento impianti:', error);
         mostraNotifica('Errore nel caricamento degli impianti', 'error');
     }
 }
+
+
 
 function aggiornaListeUniche() {
     // Estrai giri unici (escludi null e '')
@@ -133,19 +442,23 @@ function aggiornaStatistiche() {
 function aggiornaFiltri() {
     // Filtro giro
     const selectGiro = document.getElementById('filtro-giro-parco');
-    let htmlGiro = '<option value="">Tutti i giri</option>';
-    parcoGiriList.forEach(giro => {
-        htmlGiro += `<option value="${giro}">Giro ${giro}</option>`;
-    });
-    selectGiro.innerHTML = htmlGiro;
+    if (selectGiro) {
+        let htmlGiro = '<option value="">Tutti i giri</option>';
+        parcoGiriList.forEach(giro => {
+            htmlGiro += `<option value="${giro}" ${parcoFiltriAttivi.giro === giro ? 'selected' : ''}>Giro ${giro}</option>`;
+        });
+        selectGiro.innerHTML = htmlGiro;
+    }
     
     // Filtro tecnico
     const selectTecnico = document.getElementById('filtro-tecnico-parco');
-    let htmlTecnico = '<option value="">Tutti i tecnici</option>';
-    parcoTecniciList.forEach(tecnico => {
-        htmlTecnico += `<option value="${tecnico}">${tecnico}</option>`;
-    });
-    selectTecnico.innerHTML = htmlTecnico;
+    if (selectTecnico) {
+        let htmlTecnico = '<option value="">Tutti i tecnici</option>';
+        parcoTecniciList.forEach(tecnico => {
+            htmlTecnico += `<option value="${tecnico}" ${parcoFiltriAttivi.tecnico === tecnico ? 'selected' : ''}>${tecnico}</option>`;
+        });
+        selectTecnico.innerHTML = htmlTecnico;
+    }
     
     // Datalist tecnici per form
     const datalistTecnici = document.getElementById('tecnici-parco');
@@ -169,27 +482,12 @@ function filtraImpianti() {
     const filtroGiro = document.getElementById('filtro-giro-parco').value;
     const filtroTecnico = document.getElementById('filtro-tecnico-parco').value;
     
-    parcoImpiantiFiltrati = parcoImpiantiList.filter(imp => {
-        // Filtro ricerca
-        const matchesSearch = search === '' || 
-            (imp.impianto && imp.impianto.toLowerCase().includes(search)) ||
-            (imp.cliente && imp.cliente.toLowerCase().includes(search)) ||
-            (imp.Indirizzo && imp.Indirizzo.toLowerCase().includes(search));
-        
-        // Filtro giro
-        const matchesGiro = filtroGiro === '' || 
-            (imp.giro && imp.giro.toString() === filtroGiro);
-        
-        // Filtro tecnico
-        const matchesTecnico = filtroTecnico === '' || 
-            (imp.tecnico && imp.tecnico === filtroTecnico);
-        
-        return matchesSearch && matchesGiro && matchesTecnico;
-    });
+    parcoFiltriAttivi.search = search;
+    parcoFiltriAttivi.giro = filtroGiro;
+    parcoFiltriAttivi.tecnico = filtroTecnico;
     
-    renderizzaTabella();
+    caricaPagina(1);
 }
-
 // ============================================
 // RENDERING TABELLA
 // ============================================
@@ -259,7 +557,8 @@ function renderizzaTabella() {
 }
 
 function formattaData(data) {
-    if (!data) return '';
+    // Se data è null, undefined, o stringa vuota
+    if (!data || data.trim() === '') return '';
     
     // Se è già in formato ISO (YYYY-MM-DD)
     if (data.includes('-')) {
@@ -268,6 +567,13 @@ function formattaData(data) {
     }
     
     // Se è in formato gg/mm/aaaa
+    if (data.includes('/')) {
+        return data;
+    }
+    
+    // Se arriva una stringa piena di # (valore nullo di Supabase)
+    if (data.includes('#')) return '';
+    
     return data;
 }
 
@@ -702,7 +1008,7 @@ async function analizzaCSVParco() {
             return;
         }
         
-        // Parsing CSV (separatore ;)
+        // Parsing CSV
         const header = lines[0].split(';').map(h => h.trim());
         const datiCSV = [];
         
@@ -719,9 +1025,51 @@ async function analizzaCSVParco() {
         
         console.log(`📊 CSV letto: ${datiCSV.length} righe`);
         
+        // CARICA TUTTI GLI IMPIANTI DAL DB (non solo la pagina corrente)
+        mostraLoading('Caricamento dati DB per confronto...');
+        const supabase = getSupabaseClient();
+        if (!supabase) throw new Error('DB non configurato');
+        
+        // Carica TUTTI i record senza limiti di pagina
+        let tuttiImpianti = [];
+        let page = 0;
+        const pageSize = 1000;
+        let hasMore = true;
+        
+        while (hasMore) {
+            const from = page * pageSize;
+            const to = from + pageSize - 1;
+            
+            const { data, error } = await supabase
+                .from('Parco_app')
+                .select('*')
+                .range(from, to);
+            
+            if (error) throw error;
+            
+            if (data && data.length > 0) {
+                tuttiImpianti = [...tuttiImpianti, ...data];
+                page++;
+                if (data.length < pageSize) hasMore = false;
+            } else {
+                hasMore = false;
+            }
+        }
+        
+        console.log(`📊 Caricati ${tuttiImpianti.length} impianti dal DB per confronto`);
+        
+        // Salva temporaneamente i dati originali
+        const originalList = parcoImpiantiList;
+        
+        // Sostituisci temporaneamente con tutti gli impianti per il confronto
+        parcoImpiantiList = tuttiImpianti;
+        
         // Esegui analisi comparativa
         const analisi = confrontaCSVconDB(datiCSV);
         parcoImportAnalisi = analisi;
+        
+        // Ripristina la lista originale
+        parcoImpiantiList = originalList;
         
         // Mostra risultati
         mostraRisultatiAnalisi(analisi);
@@ -734,6 +1082,34 @@ async function analizzaCSVParco() {
         nascondiLoading();
     }
 }
+
+
+// Aggiungi questa funzione prima di confrontaCSVconDB
+function normalizzaStringa(str) {
+    if (str === null || str === undefined) return str;
+    
+    // Converti in stringa se non lo è
+    let s = String(str);
+    
+    // 1. Gestione virgolette doppie "escapate"
+    s = s.replace(/""/g, '"');
+    
+    // 2. Rimuovi virgolette all'inizio e alla fine se presenti
+    if (s.startsWith('"') && s.endsWith('"')) {
+        s = s.substring(1, s.length - 1);
+    }
+    
+    // 3. RIMUOVI SPAZI INIZIALI E FINALI (TRIM)
+    s = s.trim();
+    
+    // 4. Gestione spazi multipli (opzionale)
+    s = s.replace(/\s+/g, ' ');
+    
+    return s;
+}
+
+
+
 
 function confrontaCSVconDB(datiCSV) {
     const result = {
@@ -772,19 +1148,20 @@ const campi = ['tipo', 'zona', 'giro', 'tecnico', 'periodicit', 'venditore',
               'manut', 'mese_sem', 'amministratore', 'esattore', 'cliente', 
               'Indirizzo', 'localit', 'prov', 'note'];
 
+// Nella funzione confrontaCSVconDB, sostituisci la parte del confronto campi con:
+
 campi.forEach(campo => {
     let valCSV = row[campo] || null;
     let valDB = dbRow[campo] || null;
     
+    // NORMALIZZA ENTRAMBI I VALORI prima del confronto
+    valCSV = normalizzaStringa(valCSV);
+    valDB = normalizzaStringa(valDB);
+    
     // CONVERSIONE: se entrambi sono numerici, converti in numero per il confronto
     if (!isNaN(valCSV) && !isNaN(valDB)) {
-        // Se sono entrambi numerici (o convertibili a numero)
         valCSV = Number(valCSV);
         valDB = Number(valDB);
-    } else {
-        // Altrimenti converti in stringa e trimma
-        valCSV = valCSV !== null ? String(valCSV).trim() : null;
-        valDB = valDB !== null ? String(valDB).trim() : null;
     }
     
     if (valCSV !== valDB) {
@@ -1137,14 +1514,45 @@ async function eseguiImportParco() {
             }
         }
         
-        // 4. ELIMINA SELEZIONATI (soft delete - per ora eliminazione fisica)
-        const checkEliminati = document.querySelectorAll('.check-eliminato:checked');
-        const impiantiDaEliminare = [];
-        for (const cb of checkEliminati) {
-            const idx = cb.id.split('-')[1];
-            const impianto = parcoImportAnalisi.eliminati[idx];
-            if (impianto) impiantiDaEliminare.push(impianto.impianto);
-        }
+// 4. ELIMINA SELEZIONATI (soft delete - per ora eliminazione fisica)
+const checkEliminati = document.querySelectorAll('.check-eliminato:checked');
+console.log('🔍 Checkbox eliminati selezionati:', checkEliminati.length);
+
+const impiantiDaEliminare = [];
+for (const cb of checkEliminati) {
+    const idx = cb.id.split('-')[1];
+    console.log('🔍 Indice checkbox:', idx);
+    
+    const impianto = parcoImportAnalisi.eliminati[idx];
+    console.log('🔍 Impianto trovato:', impianto);
+    
+    if (impianto) {
+        impiantiDaEliminare.push(impianto.impianto);
+        console.log('🔍 Aggiunto alla lista eliminazione:', impianto.impianto);
+    }
+}
+
+console.log('🔍 Lista finale impianti da eliminare:', impiantiDaEliminare);
+
+if (impiantiDaEliminare.length > 0) {
+    console.log('🔍 Eseguo DELETE per:', impiantiDaEliminare);
+    
+    const { data, error } = await supabase
+        .from('Parco_app')
+        .delete()
+        .in('impianto', impiantiDaEliminare);
+    
+    console.log('🔍 Risultato DELETE - data:', data);
+    console.log('🔍 Risultato DELETE - error:', error);
+    
+    if (error) {
+        console.error('❌ Errore DELETE:', error);
+        mostraNotifica(`Errore eliminazione: ${error.message}`, 'error');
+    } else {
+        risultati.eliminati = impiantiDaEliminare.length;
+        console.log('✅ DELETE completata con successo');
+    }
+}
         
         if (impiantiDaEliminare.length > 0) {
             const { error } = await supabase
@@ -1404,7 +1812,9 @@ window.scaricaTemplateParco = scaricaTemplateParco;
 window.analizzaCSVParco = analizzaCSVParco;
 window.toggleCategoria = toggleCategoria;
 window.eseguiImportParco = eseguiImportParco;
-
+window.vaiPagina = vaiPagina;
+window.cambiaItemsPerPagina = cambiaItemsPerPagina;
+window.attivaTabParco = attivaTabParco;
 
 
 console.log('✅ Admin Parco Impianti JS caricato');

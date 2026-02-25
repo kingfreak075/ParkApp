@@ -30,8 +30,51 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Collega manualmente il pulsante dopo il caricamento
-    setTimeout(connectAddVehicleButton, 500);
+    //setTimeout(connectAddVehicleButton, 500);
 });
+
+// AGGIUNGI QUESTA FUNZIONE PER CARICARE I TECNICI
+async function loadTecniciForVeicoli() {
+    try {
+        const supabase = getSupabaseClient();
+        if (!supabase) return [];
+        
+        // Prova a caricare dalla tabella tecnici
+        const { data, error } = await supabase
+            .from('tecnici')
+            .select('nome_completo')
+            .order('nome_completo');
+        
+        if (!error && data && data.length > 0) {
+            window.tecniciList = data.map(t => t.nome_completo);
+            console.log(`✅ Caricati ${window.tecniciList.length} tecnici per veicoli`);
+            return window.tecniciList;
+        }
+        
+        // Se non trova la tabella tecnici, prendili dai veicoli esistenti
+        const { data: veicoli, error: vErr } = await supabase
+            .from('veicoli')
+            .select('tecnico_assegnato')
+            .not('tecnico_assegnato', 'is', null);
+        
+        if (!vErr && veicoli) {
+            const tecniciUnici = [...new Set(veicoli.map(v => v.tecnico_assegnato))];
+            window.tecniciList = tecniciUnici.filter(t => t && t.trim() !== '');
+            console.log(`✅ Caricati ${window.tecniciList.length} tecnici dai veicoli`);
+            return window.tecniciList;
+        }
+        
+        window.tecniciList = [];
+        return [];
+        
+    } catch (error) {
+        console.error('❌ Errore caricamento tecnici:', error);
+        window.tecniciList = [];
+        return [];
+    }
+}
+
+
 
 // Funzione per collegare il pulsante
 function connectAddVehicleButton() {
@@ -71,56 +114,6 @@ function switchVehicleView(view) {
 }
 
 // CARICAMENTO DATI
-async function loadVehicles() {
-    console.log('🚗 Caricamento veicoli...');
-    
-    if (!hasDbConfig()) {
-        showNotification('⚠️ Configura prima il database', 'warning');
-        showFleetError('Database non configurato');
-        return;
-    }
-    
-    showLoading('Caricamento veicoli', 'Recupero dati dal database...');
-    
-    try {
-        const supabase = getSupabaseClient();
-        
-        // Carica veicoli
-        const { data, error } = await supabase
-            .from('veicoli')
-            .select('*')
-            .order('targa', { ascending: true });
-        
-        if (error) throw error;
-        
-        vehiclesData = data || [];
-        
-        // Carica conteggio cambi per ogni veicolo
-        const { data: counts, error: countError } = await supabase
-            .from('storico_assegnazioni')
-            .select('veicolo_id, count');
-        
-        if (!countError && counts) {
-            const changeCountMap = {};
-            counts.forEach(c => { changeCountMap[c.veicolo_id] = c.count; });
-            window.vehicleChangeCounts = changeCountMap;
-        } else {
-            window.vehicleChangeCounts = {};
-        }
-        
-        console.log(`✅ Caricati ${vehiclesData.length} veicoli`);
-        
-        renderFleetTable(vehiclesData);
-        showNotification(`✅ Caricati ${vehiclesData.length} veicoli`, 'success');
-        
-    } catch (error) {
-        console.error('❌ Errore caricamento veicoli:', error);
-        showNotification(`❌ Errore: ${error.message}`, 'error');
-        showFleetError(`Errore: ${error.message}`);
-    } finally {
-        hideLoading();
-    }
-}
 
 async function loadApprovals() {
     try {
@@ -151,144 +144,174 @@ async function loadApprovals() {
     }
 }
 
+// Modifica la funzione loadVehicles() - versione con due query separate
+async function loadVehicles() {
+    console.log('🚗 Caricamento veicoli...');
+    
+    if (!hasDbConfig()) {
+        showNotification('⚠️ Configura prima il database', 'warning');
+        showFleetError('Database non configurato');
+        return;
+    }
+    
+    showLoading('Caricamento veicoli', 'Recupero dati dal database...');
+    
+    try {
+        const supabase = getSupabaseClient();
+        
+        // 1. Carica tutti i veicoli
+        const { data: vehicles, error } = await supabase
+            .from('veicoli')
+            .select('*')
+            .order('targa', { ascending: true });
+        
+        if (error) throw error;
+        
+        // 2. Carica tutte le statistiche
+        const { data: stats, error: statsError } = await supabase
+            .from('statistiche_veicoli')
+            .select('*');
+        
+        if (statsError) {
+            console.log('ℹ️ Tabella statistiche_veicoli non disponibile:', statsError.message);
+            // Se non ci sono statistiche, continua senza
+        }
+        
+        // 3. Unisci i dati manualmente
+        const vehiclesWithStats = (vehicles || []).map(vehicle => {
+            const stat = (stats || []).find(s => s.targa === vehicle.targa);
+            return {
+                ...vehicle,
+                statistiche_veicoli: stat ? [stat] : [] // Mantieni la stessa struttura dell'array
+            };
+        });
+        
+        vehiclesData = vehiclesWithStats;
+        
+        // PROVA A CARICARE I CONTEGGI, SE LA TABELLA NON ESISTE IGNORA
+        try {
+            const { data: counts, error: countError } = await supabase
+                .from('storico_assegnazioni')
+                .select('veicolo_id');
+            
+            if (!countError && counts) {
+                const changeCountMap = {};
+                counts.forEach(c => { 
+                    changeCountMap[c.veicolo_id] = (changeCountMap[c.veicolo_id] || 0) + 1; 
+                });
+                window.vehicleChangeCounts = changeCountMap;
+            } else {
+                window.vehicleChangeCounts = {};
+            }
+        } catch (countErr) {
+            console.log('ℹ️ Tabella storico_assegnazioni non disponibile, conteggi ignorati');
+            window.vehicleChangeCounts = {};
+        }
+        
+        console.log(`✅ Caricati ${vehiclesData.length} veicoli`);
+        console.log('📊 Dati veicoli con statistiche:', vehiclesData);
+        
+        renderFleetTable(vehiclesData);
+        showNotification(`✅ Caricati ${vehiclesData.length} veicoli`, 'success');
+        
+    } catch (error) {
+        console.error('❌ Errore caricamento veicoli:', error);
+        showNotification(`❌ Errore: ${error.message}`, 'error');
+        showFleetError(`Errore: ${error.message}`);
+    } finally {
+        hideLoading();
+    }
+}
+
+// Modifica la parte dei km totali in loadVehicleStats()
 async function loadVehicleStats() {
     try {
         const supabase = getSupabaseClient();
         if (!supabase) return;
         
-        const { count: total, error: totalError } = await supabase
-            .from('veicoli')
-            .select('*', { count: 'exact', head: true });
-        
-        if (totalError) throw totalError;
-        
-        const { count: active, error: activeError } = await supabase
-            .from('veicoli')
-            .select('*', { count: 'exact', head: true })
-            .eq('attivo', true);
-        
-        if (activeError) throw activeError;
-        
-        const { count: pending, error: pendingError } = await supabase
-            .from('kilometri_mensili')
-            .select('*', { count: 'exact', head: true })
-            .eq('confermato', false);
-        
-        if (pendingError) throw pendingError;
-        
-        document.getElementById('stats-total-vehicles').textContent = total || 0;
-        document.getElementById('stats-active-vehicles').textContent = active || 0;
-        document.getElementById('stats-pending-approvals').textContent = pending || 0;
-        
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        
-        const { data: kmData, error: kmError } = await supabase
-            .from('kilometri_mensili')
-            .select('km_fine_mese, km_precedenti')
-            .eq('confermato', true)
-            .gte('data_inserimento', thirtyDaysAgo.toISOString().split('T')[0]);
-        
-        if (!kmError && kmData) {
-            const totalKm = kmData.reduce((sum, item) => {
-                return sum + (item.km_fine_mese - (item.km_precedenti || 0));
-            }, 0);
-            document.getElementById('stats-total-km').textContent = totalKm.toLocaleString();
+        // 1. Conteggio veicoli totali
+        let total = 0;
+        try {
+            const { count, error } = await supabase
+                .from('veicoli')
+                .select('*', { count: 'exact', head: true });
+            if (!error) total = count || 0;
+        } catch (e) {
+            console.log('ℹ️ Impossibile contare veicoli totali');
         }
+        document.getElementById('stats-total-vehicles').textContent = total;
+        
+        // 2. Conteggio veicoli attivi
+        let active = 0;
+        try {
+            const { count, error } = await supabase
+                .from('veicoli')
+                .select('*', { count: 'exact', head: true })
+                .eq('attivo', true);
+            if (!error) active = count || 0;
+        } catch (e) {
+            console.log('ℹ️ Impossibile contare veicoli attivi');
+        }
+        document.getElementById('stats-active-vehicles').textContent = active;
+        
+        // 3. Conteggio approvazioni pending
+        let pending = 0;
+        try {
+            const { count, error } = await supabase
+                .from('kilometri_mensili')
+                .select('*', { count: 'exact', head: true })
+                .eq('confermato', false);
+            
+            if (!error) pending = count || 0;
+        } catch (e) {
+            console.log('ℹ️ Tabella kilometri_mensili non disponibile');
+        }
+        document.getElementById('stats-pending-approvals').textContent = pending;
+        
+        // 4. Km totali ultimo mese - VERSIONE CORRETTA
+        let totalKm = 0;
+        try {
+            const trentaGiorniFa = new Date();
+            trentaGiorniFa.setDate(trentaGiorniFa.getDate() - 30);
+            
+            // Prendi tutti i record confermati degli ultimi 30 giorni
+            const { data, error } = await supabase
+                .from('kilometri_mensili')
+                .select('km_fine_mese, data_inserimento, veicolo_id')
+                .eq('confermato', true)
+                .gte('data_inserimento', trentaGiorniFa.toISOString().split('T')[0]);
+            
+            if (!error && data && data.length > 0) {
+                // Raggruppa per veicolo e prendi l'ultimo km per ciascuno
+                const kmPerVeicolo = {};
+                data.forEach(record => {
+                    if (!kmPerVeicolo[record.veicolo_id] || 
+                        new Date(record.data_inserimento) > new Date(kmPerVeicolo[record.veicolo_id].data)) {
+                        kmPerVeicolo[record.veicolo_id] = {
+                            km: record.km_fine_mese,
+                            data: record.data_inserimento
+                        };
+                    }
+                });
+                
+                // Somma i km più recenti di ogni veicolo
+                totalKm = Object.values(kmPerVeicolo).reduce((sum, v) => sum + (v.km || 0), 0);
+            }
+        } catch (e) {
+            console.log('ℹ️ Impossibile calcolare km totali');
+        }
+        document.getElementById('stats-total-km').textContent = totalKm.toLocaleString() || '0';
         
     } catch (error) {
         console.error('Errore caricamento statistiche:', error);
+        document.getElementById('stats-total-vehicles').textContent = '0';
+        document.getElementById('stats-active-vehicles').textContent = '0';
+        document.getElementById('stats-pending-approvals').textContent = '0';
+        document.getElementById('stats-total-km').textContent = '0';
     }
 }
-
 // RENDERING TABELLA VEICOLI
-function renderFleetTable(vehicles) {
-    console.log('📊 Rendering tabella veicoli...');
-    
-    const tbody = document.getElementById('fleet-table-body');
-    if (!tbody) {
-        console.error('❌ Elemento #fleet-table-body non trovato');
-        return;
-    }
-    
-    if (!vehicles || vehicles.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="8" class="text-center">
-                    <div style="text-align: center; padding: 60px 20px; color: #94a3b8;">
-                        <span class="material-symbols-rounded" style="font-size: 64px; color: #cbd5e1;">directions_car_off</span>
-                        <div style="margin-top: 16px; font-size: 18px; font-weight: 600;">Nessun veicolo registrato</div>
-                        <div style="margin-top: 8px; color: #64748b;">Usa il pulsante "Aggiungi Veicolo" per inserire il primo veicolo</div>
-                        <button class="btn btn-primary" onclick="showAddVehicleModal()" style="margin-top: 24px;">
-                            <span class="material-symbols-rounded">add</span>
-                            Aggiungi il primo veicolo
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `;
-        return;
-    }
-    
-    let html = '';
-    
-    vehicles.forEach(vehicle => {
-        const dataAssegnazione = vehicle.data_assegnazione 
-            ? new Date(vehicle.data_assegnazione).toLocaleDateString('it-IT')
-            : '-';
-        
-        const kmIniziali = vehicle.km_totali_iniziali 
-            ? vehicle.km_totali_iniziali.toLocaleString() + ' km'
-            : '-';
-        
-        const changeCount = window.vehicleChangeCounts?.[vehicle.id] || 0;
-        
-        html += `
-            <tr>
-                <td>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span class="material-symbols-rounded" style="color: ${vehicle.attivo ? '#10b981' : '#94a3b8'}">
-                            ${vehicle.attivo ? 'check_circle' : 'radio_button_unchecked'}
-                        </span>
-                        <strong style="font-family: monospace; font-size: 16px;">${vehicle.targa || '-'}</strong>
-                    </div>
-                </td>
-                <td>${vehicle.modello || '-'}</td>
-                <td>${vehicle.tecnico_assegnato || '-'}</td>
-                <td>${dataAssegnazione}</td>
-                <td>${kmIniziali}</td>
-                <td>
-                    <span class="badge ${vehicle.attivo ? 'badge-success' : 'badge-danger'}">
-                        ${vehicle.attivo ? 'Attivo' : 'Non attivo'}
-                    </span>
-                </td>
-                <td>
-                    <span class="badge badge-info" title="Numero cambi tecnico">
-                        ${changeCount} <span class="material-symbols-rounded" style="font-size: 14px; vertical-align: middle;">swap_horiz</span>
-                    </span>
-                </td>
-                <td>
-                    <div class="action-buttons">
-                        <button class="btn-icon-small" onclick="editVehicle('${vehicle.id}')" title="Modifica">
-                            <span class="material-symbols-rounded">edit</span>
-                        </button>
-                        <button class="btn-icon-small" onclick="toggleVehicleStatus('${vehicle.id}', ${!vehicle.attivo})" 
-                                title="${vehicle.attivo ? 'Disattiva' : 'Attiva'}" 
-                                style="color: ${vehicle.attivo ? '#ef4444' : '#10b981'};">
-                            <span class="material-symbols-rounded">${vehicle.attivo ? 'toggle_off' : 'toggle_on'}</span>
-                        </button>
-                        <button class="btn-icon-small" onclick="viewVehicleHistory('${vehicle.id}')" title="Storico">
-                            <span class="material-symbols-rounded">history</span>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `;
-    });
-    
-    tbody.innerHTML = html;
-    console.log(`✅ Tabella renderizzata con ${vehicles.length} veicoli`);
-}
+
 
 function renderApprovalsTable(approvals) {
     const tbody = document.getElementById('approvals-table-body');
@@ -439,65 +462,7 @@ async function toggleVehicleStatus(id, newStatus) {
 }
 
 // MODALE AGGIUNTA VEICOLO - VERSIONE SEMPLIFICATA
-function showAddVehicleModal() {
-    console.log('🚗 Apertura modale veicolo');
-    
-    // Rimuovi eventuali modali precedenti
-    const oldModal = document.getElementById('modal-add-vehicle');
-    if (oldModal) oldModal.remove();
-    
-    const modalHtml = `
-        <div id="modal-add-vehicle" class="modal" style="display: flex !important; z-index: 10000 !important;">
-            <div class="modal-content" style="max-width: 500px; background: white; border-radius: 8px;">
-                <div class="modal-header" style="padding: 16px; border-bottom: 1px solid #e2e8f0;">
-                    <h3 style="margin: 0;">
-                        <span class="material-symbols-rounded">add_circle</span>
-                        Nuovo Veicolo
-                    </h3>
-                    <button class="btn-icon-small" onclick="closeAddVehicleModal()">
-                        <span class="material-symbols-rounded">close</span>
-                    </button>
-                </div>
-                <div class="modal-body" style="padding: 16px;">
-                    <div class="form-group" style="margin-bottom: 16px;">
-                        <label for="modal-targa">Targa *</label>
-                        <input type="text" id="modal-targa" class="form-control" placeholder="AB123CD" maxlength="7" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; text-transform: uppercase;">
-                    </div>
-                    <div class="form-group" style="margin-bottom: 16px;">
-                        <label for="modal-modello">Modello</label>
-                        <input type="text" id="modal-modello" class="form-control" placeholder="Fiat Doblo, Ford Transit..." style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                    </div>
-                    <div class="form-group" style="margin-bottom: 16px;">
-                        <label for="modal-tecnico">Tecnico Assegnato *</label>
-                        <input type="text" id="modal-tecnico" class="form-control" placeholder="Nome e cognome" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                    </div>
-                    <div class="form-group" style="margin-bottom: 16px;">
-                        <label for="modal-km">Km Iniziali</label>
-                        <input type="number" id="modal-km" class="form-control" value="0" min="0" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                    </div>
-                    <div class="form-group" style="margin-bottom: 16px;">
-                        <label for="modal-note">Note</label>
-                        <textarea id="modal-note" class="form-control" rows="3" placeholder="Eventuali note..." style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer" style="padding: 16px; border-top: 1px solid #e2e8f0; text-align: right;">
-                    <button class="btn btn-secondary" onclick="closeAddVehicleModal()" style="padding: 8px 16px; margin-right: 8px;">Annulla</button>
-                    <button class="btn btn-primary" onclick="saveNewVehicle()" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px;">
-                        <span class="material-symbols-rounded">save</span>
-                        Salva Veicolo
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-    console.log('✅ Modale aggiunto al DOM');
-    
-    setTimeout(() => {
-        document.getElementById('modal-targa')?.focus();
-    }, 100);
-}
+
 
 function closeAddVehicleModal() {
     console.log('🚪 Chiusura modale');
@@ -765,12 +730,268 @@ async function editVehicle(id) {
 let activeSaveOperation = null;
 let lastSavePerVehicle = {}; // mappa veicoloId -> timestamp ultimo salvataggio
 
-function showEditVehicleModal(vehicle) {
+
+// Modifica renderFleetTable() per mostrare i km attuali dalle statistiche
+// Modifica renderFleetTable() - versione con info visibili
+function renderFleetTable(vehicles) {
+    console.log('📊 Rendering tabella veicoli...');
+    
+    const tbody = document.getElementById('fleet-table-body');
+    if (!tbody) {
+        console.error('❌ Elemento #fleet-table-body non trovato');
+        return;
+    }
+    
+    if (!vehicles || vehicles.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center">
+                    <div style="text-align: center; padding: 60px 20px; color: #94a3b8;">
+                        <span class="material-symbols-rounded" style="font-size: 64px; color: #cbd5e1;">directions_car_off</span>
+                        <div style="margin-top: 16px; font-size: 18px; font-weight: 600;">Nessun veicolo registrato</div>
+                        <div style="margin-top: 8px; color: #64748b;">Usa il pulsante "Aggiungi Veicolo" per inserire il primo veicolo</div>
+                        <button class="btn btn-primary" onclick="showAddVehicleModal()" style="margin-top: 24px;">
+                            <span class="material-symbols-rounded">add</span>
+                            Aggiungi il primo veicolo
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    let html = '';
+    
+    vehicles.forEach(vehicle => {
+        const dataAssegnazione = vehicle.data_assegnazione 
+            ? new Date(vehicle.data_assegnazione).toLocaleDateString('it-IT')
+            : '-';
+        
+        // Prendi i km attuali dalle statistiche, se disponibili
+        const stats = vehicle.statistiche_veicoli && vehicle.statistiche_veicoli[0];
+        const kmAttuali = stats?.km_attuali 
+            ? stats.km_attuali.toLocaleString() + ' km'
+            : '-';
+        
+        // Calcola km percorsi totali
+        const kmIniziali = vehicle.km_totali_iniziali || 0;
+        const kmPercorsi = stats?.km_attuali 
+            ? (stats.km_attuali - kmIniziali).toLocaleString() + ' km'
+            : null;
+        
+        const changeCount = window.vehicleChangeCounts?.[vehicle.id] || 0;
+        
+        // Crea badge per le statistiche se disponibili
+        const statsBadge = stats ? `
+            <div style="font-size: 11px; color: #64748b; margin-top: 4px;">
+                <span title="Media mensile">📊 ${stats.media_km_mensile || 0} km/mese</span>
+                ${kmPercorsi ? ` | <span title="Km percorsi totali">📈 ${kmPercorsi}</span>` : ''}
+                <span title="Mesi registrati"> | 📅 ${stats.mesi_registrati || 0} mesi</span>
+            </div>
+        ` : '';
+        
+        html += `
+            <tr>
+                <td>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span class="material-symbols-rounded" style="color: ${vehicle.attivo ? '#10b981' : '#94a3b8'}">
+                            ${vehicle.attivo ? 'check_circle' : 'radio_button_unchecked'}
+                        </span>
+                        <strong style="font-family: monospace; font-size: 16px;">${vehicle.targa || '-'}</strong>
+                    </div>
+                </td>
+                <td>${vehicle.modello || '-'}</td>
+                <td>${vehicle.tecnico_assegnato || '-'}</td>
+                <td>${dataAssegnazione}</td>
+                <td>
+                    ${kmAttuali}
+                    ${statsBadge}
+                </td>
+                <td>
+                    <span class="badge ${vehicle.attivo ? 'badge-success' : 'badge-danger'}">
+                        ${vehicle.attivo ? 'Attivo' : 'Non attivo'}
+                    </span>
+                </td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn-icon-small" onclick="editVehicle('${vehicle.id}')" title="Modifica">
+                            <span class="material-symbols-rounded">edit</span>
+                        </button>
+                        <button class="btn-icon-small" onclick="toggleVehicleStatus('${vehicle.id}', ${!vehicle.attivo})" 
+                                title="${vehicle.attivo ? 'Disattiva' : 'Attiva'}" 
+                                style="color: ${vehicle.attivo ? '#ef4444' : '#10b981'};">
+                            <span class="material-symbols-rounded">${vehicle.attivo ? 'toggle_off' : 'toggle_on'}</span>
+                        </button>
+                        <button class="btn-icon-small" onclick="viewVehicleHistory('${vehicle.id}')" title="Storico">
+                            <span class="material-symbols-rounded">history</span>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+    console.log(`✅ Tabella renderizzata con ${vehicles.length} veicoli`);
+}
+
+// AGGIUNGI QUESTA FUNZIONE PER CARICARE I TECNICI
+async function loadTecniciForVeicoli() {
+    try {
+        const supabase = getSupabaseClient();
+        if (!supabase) return [];
+        
+        // Prova a caricare dalla tabella tecnici
+        const { data, error } = await supabase
+            .from('tecnici')
+            .select('nome_completo')
+            .order('nome_completo');
+        
+        if (!error && data && data.length > 0) {
+            window.tecniciList = data.map(t => t.nome_completo);
+            console.log(`✅ Caricati ${window.tecniciList.length} tecnici per veicoli`);
+            return window.tecniciList;
+        }
+        
+        // Se non trova la tabella tecnici, prendili dai veicoli esistenti
+        const { data: veicoli, error: vErr } = await supabase
+            .from('veicoli')
+            .select('tecnico_assegnato')
+            .not('tecnico_assegnato', 'is', null);
+        
+        if (!vErr && veicoli) {
+            const tecniciUnici = [...new Set(veicoli.map(v => v.tecnico_assegnato))];
+            window.tecniciList = tecniciUnici.filter(t => t && t.trim() !== '');
+            console.log(`✅ Caricati ${window.tecniciList.length} tecnici dai veicoli`);
+            return window.tecniciList;
+        }
+        
+        window.tecniciList = [];
+        return [];
+        
+    } catch (error) {
+        console.error('❌ Errore caricamento tecnici:', error);
+        window.tecniciList = [];
+        return [];
+    }
+}
+
+// MODIFICA LA FUNZIONE showAddVehicleModal per caricare i tecnici al momento
+function showAddVehicleModal() {
+    console.log('🚗 Apertura modale veicolo');
+    
+    // Rimuovi eventuali modali precedenti
+    const oldModal = document.getElementById('modal-add-vehicle');
+    if (oldModal) oldModal.remove();
+    
+    // Carica i tecnici al momento (invece di usare window.tecniciList che potrebbe essere vuoto)
+    loadTecniciForVeicoli().then(tecnici => {
+        const tecniciOptions = tecnici.length > 0 
+            ? tecnici.map(t => `<option value="${t}">`).join('')
+            : '';
+        
+        const modalHtml = `
+            <div id="modal-add-vehicle" class="modal" style="display: flex !important; z-index: 10000 !important;">
+                <div class="modal-content" style="max-width: 500px; background: white; border-radius: 8px;">
+                    <div class="modal-header" style="padding: 16px; border-bottom: 1px solid #e2e8f0;">
+                        <h3 style="margin: 0;">
+                            <span class="material-symbols-rounded">add_circle</span>
+                            Nuovo Veicolo
+                        </h3>
+                        <button class="btn-icon-small" onclick="closeAddVehicleModal()">
+                            <span class="material-symbols-rounded">close</span>
+                        </button>
+                    </div>
+                    <div class="modal-body" style="padding: 16px;">
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label for="modal-targa">Targa *</label>
+                            <input type="text" id="modal-targa" class="form-control" placeholder="AB123CD" maxlength="7" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; text-transform: uppercase;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label for="modal-modello">Modello</label>
+                            <input type="text" id="modal-modello" class="form-control" placeholder="Fiat Doblo, Ford Transit..." style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label for="modal-tecnico">Tecnico Assegnato *</label>
+                            <input type="text" id="modal-tecnico" class="form-control" placeholder="Nome e cognome" 
+                                   list="tecnici-list-add" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                            <datalist id="tecnici-list-add">
+                                ${tecniciOptions}
+                            </datalist>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label for="modal-km">Km Iniziali</label>
+                            <input type="number" id="modal-km" class="form-control" value="0" min="0" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label for="modal-note">Note</label>
+                            <textarea id="modal-note" class="form-control" rows="3" placeholder="Eventuali note..." style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer" style="padding: 16px; border-top: 1px solid #e2e8f0; text-align: right;">
+                        <button class="btn btn-secondary" onclick="closeAddVehicleModal()" style="padding: 8px 16px; margin-right: 8px;">Annulla</button>
+                        <button class="btn btn-primary" onclick="saveNewVehicle()" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px;">
+                            <span class="material-symbols-rounded">save</span>
+                            Salva Veicolo
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        console.log('✅ Modale aggiunto al DOM');
+        
+        setTimeout(() => {
+            document.getElementById('modal-targa')?.focus();
+        }, 100);
+    });
+}
+
+
+// showEditVehicleModal - VERSIONE CORRETTA (senza errori di sintassi)
+// showEditVehicleModal - VERSIONE CON CARICAMENTO DIRETTO STATISTICHE
+async function showEditVehicleModal(vehicle) {
     console.log('🚗 Apertura modale modifica:', vehicle);
+    console.log('🔍 Dati completi veicolo:', vehicle);
+    console.log('🔍 Statistiche veicolo:', vehicle.statistiche_veicoli);
+    
+    // Se le statistiche non sono attaccate, caricale direttamente dal DB
+    if (!vehicle.statistiche_veicoli) {
+        try {
+            console.log('📊 Caricamento diretto statistiche per targa:', vehicle.targa);
+            const supabase = getSupabaseClient();
+            const { data: statsData, error } = await supabase
+                .from('statistiche_veicoli')
+                .select('*')
+                .eq('targa', vehicle.targa)
+                .maybeSingle();
+            
+            if (error) {
+                console.warn('⚠️ Errore caricamento statistiche:', error);
+            } else if (statsData) {
+                vehicle.statistiche_veicoli = statsData;
+                console.log('✅ Statistiche caricate direttamente:', statsData);
+            } else {
+                console.log('ℹ️ Nessuna statistica trovata per questo veicolo');
+                vehicle.statistiche_veicoli = null;
+            }
+        } catch (e) {
+            console.warn('⚠️ Eccezione caricamento statistiche:', e);
+            vehicle.statistiche_veicoli = null;
+        }
+    }
     
     // Rimuovi eventuali modali precedenti
     const oldModal = document.getElementById('modal-edit-vehicle');
     if (oldModal) oldModal.remove();
+    
+    // Carica i tecnici
+    const tecnici = await loadTecniciForVeicoli();
+    const tecniciOptions = tecnici.length > 0 
+        ? tecnici.map(t => `<option value="${t}">`).join('')
+        : '';
     
     // Opzioni motivo
     const motivoOptions = [
@@ -782,116 +1003,142 @@ function showEditVehicleModal(vehicle) {
         `<option value="${opt}">${opt}</option>`
     ).join('');
     
+    // Prendi le statistiche se disponibili
+    const stats = vehicle.statistiche_veicoli;
+    console.log('📊 stats da usare:', stats);
+    
+    let kmAttuali = '';
+    if (stats && stats.km_attuali) {
+        kmAttuali = stats.km_attuali;
+    }
+    console.log('📊 kmAttuali trovati:', kmAttuali);
+    
+    // Calcola km iniziali e percorsi
+    const kmInizialiVeicolo = vehicle.km || 0;
+    const kmPercorsi = (kmAttuali && kmAttuali > 0) 
+        ? (kmAttuali - kmInizialiVeicolo).toLocaleString()
+        : '0';
+    
     const modalHtml = `
         <div id="modal-edit-vehicle" class="modal" style="display: flex !important; z-index: 10000 !important;">
-            <div class="modal-content" style="max-width: 500px; background: white; border-radius: 8px;">
+            <div class="modal-content" style="max-width: 600px; background: white; border-radius: 8px;">
                 <div class="modal-header" style="padding: 16px; border-bottom: 1px solid #e2e8f0;">
                     <h3 style="margin: 0;">
                         <span class="material-symbols-rounded">edit</span>
-                        Modifica Veicolo
+                        Modifica Veicolo - ${vehicle.targa}
                     </h3>
                     <button class="btn-icon-small" onclick="closeEditVehicleModal()">
                         <span class="material-symbols-rounded">close</span>
                     </button>
                 </div>
-                <div class="modal-body" style="padding: 16px;">
-                    <!-- Targa (sola lettura) -->
-                    <div class="form-group" style="margin-bottom: 16px;">
-                        <label for="edit-targa">Targa</label>
-                        <input type="text" id="edit-targa" class="form-control" 
-                               value="${vehicle.targa}" readonly disabled
-                               style="width: 100%; padding: 8px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px;">
-                        <small style="color: #64748b;">La targa non può essere modificata</small>
-                    </div>
-                    
-                    <!-- Modello -->
-                    <div class="form-group" style="margin-bottom: 16px;">
-                        <label for="edit-modello">Modello</label>
-                        <input type="text" id="edit-modello" class="form-control" 
-                               value="${vehicle.modello}" placeholder="Fiat Doblo, Ford Transit..."
-                               style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                    </div>
-                    
-                    <!-- Tecnico -->
-                    <div class="form-group" style="margin-bottom: 16px;">
-                        <label for="edit-tecnico">Tecnico Assegnato *</label>
-                        <input type="text" id="edit-tecnico" class="form-control" 
-                               value="${vehicle.tecnico}" placeholder="Nome e cognome"
-                               style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                        <small id="tec-change-warning" style="color: #3b82f6; display: none; margin-top: 4px;">
-                            ⚠️ Hai modificato il tecnico. Inserisci i dettagli del cambio qui sotto.
-                        </small>
-                    </div>
-                    
-                    <!-- Campi aggiuntivi per cambio tecnico (nascosti inizialmente) -->
-                    <div id="cambio-tecnico-fields" style="display: none; margin-top: 16px; padding: 16px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #3b82f6;">
-                        <h4 style="margin-top: 0; margin-bottom: 16px; font-size: 16px;">Dettagli cambio tecnico</h4>
+                
+                <div class="modal-body" style="padding: 16px; max-height: 70vh; overflow-y: auto;">
+                    <!-- SEZIONE DATI VEICOLO -->
+                    <div style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #e2e8f0;">
+                        <h4 style="margin: 0 0 16px 0; color: #2563eb;">Dati Veicolo</h4>
                         
-                        <!-- Km -->
                         <div class="form-group" style="margin-bottom: 16px;">
-                            <label for="edit-km-cambio" style="display: block; margin-bottom: 8px; font-weight: 600; color: #475569;">
-                                Km al momento del cambio <span style="color: #ef4444;">*</span>
-                            </label>
-                            <div style="position: relative;">
-                                <span class="material-symbols-rounded" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8;">speed</span>
-                                <input type="number" id="edit-km-cambio" class="form-control" 
-                                       placeholder="Inserisci i km attuali" min="0" step="1" required
-                                       style="width: 100%; padding: 12px 12px 12px 44px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 16px;">
-                            </div>
-                            <small id="edit-km-error" style="color: #ef4444; display: none; margin-top: 4px;">
-                                Campo obbligatorio - inserisci i km
+                            <label for="edit-targa">Targa</label>
+                            <input type="text" id="edit-targa" class="form-control" 
+                                   value="${vehicle.targa}" readonly disabled
+                                   style="width: 100%; padding: 8px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px;">
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label for="edit-modello">Modello</label>
+                            <input type="text" id="edit-modello" class="form-control" 
+                                   value="${vehicle.modello}" placeholder="Fiat Doblo, Ford Transit..."
+                                   style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label for="edit-tecnico">Tecnico Assegnato *</label>
+                            <input type="text" id="edit-tecnico" class="form-control" 
+                                   value="${vehicle.tecnico}" placeholder="Nome e cognome"
+                                   list="tecnici-list-edit"
+                                   style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                            <datalist id="tecnici-list-edit">
+                                ${tecniciOptions}
+                            </datalist>
+                            <small id="tec-change-warning" style="color: #3b82f6; display: none; margin-top: 4px;">
+                                ⚠️ Hai modificato il tecnico
                             </small>
                         </div>
                         
-                        <!-- Motivo -->
                         <div class="form-group" style="margin-bottom: 16px;">
-                            <label for="edit-motivo-select" style="display: block; margin-bottom: 8px; font-weight: 600; color: #475569;">
-                                Motivo del cambio (opzionale)
-                            </label>
-                            <select id="edit-motivo-select" class="form-control" 
-                                    style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; margin-bottom: 12px; font-size: 15px;">
-                                <option value="">Seleziona un motivo...</option>
-                                ${optionsHtml}
-                            </select>
+                            <label for="edit-data">Data Assegnazione</label>
+                            <input type="date" id="edit-data" class="form-control" 
+                                   value="${vehicle.data}"
+                                   style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label for="edit-note">Note</label>
+                            <textarea id="edit-note" class="form-control" rows="2" 
+                                      placeholder="Eventuali note..."
+                                      style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">${vehicle.note}</textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- SEZIONE STATISTICHE KM (solo km attuali) -->
+                    <div style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #e2e8f0;">
+                        <h4 style="margin: 0 0 16px 0; color: #10b981;">Chilometraggio</h4>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div class="form-group">
+                                <label>Km iniziali (alla consegna)</label>
+                                <input type="text" class="form-control" 
+                                       value="${kmInizialiVeicolo} km" readonly disabled
+                                       style="width: 100%; padding: 8px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px;">
+                            </div>
                             
-                            <div id="edit-altro-container" style="display: none;">
-                                <input type="text" id="edit-motivo-altro" class="form-control" 
-                                       placeholder="Specifica il motivo" 
-                                       style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 15px;">
+                            <div class="form-group">
+                                <label for="edit-km-attuali">Km attuali *</label>
+                                <input type="number" id="edit-km-attuali" class="form-control" 
+                                       value="${kmAttuali}" min="0" step="1"
+                                       data-km-iniziali="${kmInizialiVeicolo}"
+                                       style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
                             </div>
                         </div>
                         
-                        <div style="background: #eff6ff; border-radius: 8px; padding: 12px; font-size: 13px; color: #1e40af; display: flex; align-items: center; gap: 8px;">
-                            <span class="material-symbols-rounded" style="font-size: 18px;">info</span>
-                            <span>Questo cambio verrà registrato nello storico del veicolo</span>
+                        <div style="margin-top: 16px; padding: 12px; background: #f0f9ff; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 600; color: #2563eb;">Km percorsi totali:</span>
+                            <span id="km-percorsi-display" style="font-size: 18px; font-weight: 700; color: #2563eb;">${kmPercorsi} km</span>
+                        </div>
+                        
+                        <small style="display: block; margin-top: 8px; color: #64748b;">
+                            I km percorsi vengono calcolati automaticamente come differenza tra km attuali e km iniziali.
+                        </small>
+                    </div>
+                    
+                    <!-- SEZIONE CAMBIO TECNICO -->
+                    <div id="cambio-tecnico-fields" style="display: none; margin-bottom: 16px; padding: 16px; background: #f8fafc; border-radius: 8px;">
+                        <h4 style="margin-top: 0; margin-bottom: 16px;">Dettagli cambio tecnico</h4>
+                        
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label for="edit-km-cambio">Km al momento del cambio *</label>
+                            <input type="number" id="edit-km-cambio" class="form-control" 
+                                   placeholder="Inserisci i km attuali" min="0" step="1"
+                                   style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label for="edit-motivo-select">Motivo del cambio</label>
+                            <select id="edit-motivo-select" class="form-control" 
+                                    style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                <option value="">Seleziona un motivo...</option>
+                                ${optionsHtml}
+                            </select>
+                        </div>
+                        
+                        <div id="edit-altro-container" style="display: none;">
+                            <input type="text" id="edit-motivo-altro" class="form-control" 
+                                   placeholder="Specifica il motivo" 
+                                   style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; margin-top: 8px;">
                         </div>
                     </div>
-                    
-                    <!-- Data Assegnazione -->
-                    <div class="form-group" style="margin-bottom: 16px;">
-                        <label for="edit-data">Data Assegnazione</label>
-                        <input type="date" id="edit-data" class="form-control" 
-                               value="${vehicle.data}"
-                               style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                    </div>
-                    
-                    <!-- Km Iniziali (sola lettura) -->
-                    <div class="form-group" style="margin-bottom: 16px;">
-                        <label for="edit-km">Km Iniziali</label>
-                        <input type="text" id="edit-km" class="form-control" 
-                               value="${vehicle.km} km" readonly disabled
-                               style="width: 100%; padding: 8px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px;">
-                        <small style="color: #64748b;">I km iniziali non possono essere modificati</small>
-                    </div>
-                    
-                    <!-- Note -->
-                    <div class="form-group" style="margin-bottom: 16px;">
-                        <label for="edit-note">Note</label>
-                        <textarea id="edit-note" class="form-control" rows="3" 
-                                  placeholder="Eventuali note..."
-                                  style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">${vehicle.note}</textarea>
-                    </div>
                 </div>
+                
                 <div class="modal-footer" style="padding: 16px; border-top: 1px solid #e2e8f0; text-align: right;">
                     <button class="btn btn-secondary" onclick="closeEditVehicleModal()" style="padding: 8px 16px; margin-right: 8px;">
                         Annulla
@@ -907,13 +1154,27 @@ function showEditVehicleModal(vehicle) {
     
     document.body.insertAdjacentHTML('beforeend', modalHtml);
     
-    // Assegna l'event handler al pulsante di salvataggio (assicura un solo listener)
+    // Assegna l'event handler al pulsante di salvataggio
     document.getElementById('save-vehicle-btn').onclick = function(e) {
         e.preventDefault();
         saveVehicleChanges(this);
     };
     
-    // Mostra/nascondi campi cambio tecnico in base alla modifica del campo tecnico
+    // Aggiungi listener per calcolo km percorsi in tempo reale
+    const kmAttualiInput = document.getElementById('edit-km-attuali');
+    const kmPercorsiDisplay = document.getElementById('km-percorsi-display');
+    
+    if (kmAttualiInput && kmPercorsiDisplay) {
+        kmAttualiInput.addEventListener('input', function() {
+            const kmAttualiNum = parseInt(this.value) || 0;
+            const kmInizialiNum = parseInt(this.getAttribute('data-km-iniziali')) || 0;
+            const kmPercorsiNum = kmAttualiNum - kmInizialiNum;
+            kmPercorsiDisplay.textContent = (kmPercorsiNum > 0 ? kmPercorsiNum : 0).toLocaleString() + ' km';
+            kmPercorsiDisplay.style.color = kmPercorsiNum < 0 ? '#ef4444' : '#2563eb';
+        });
+    }
+    
+    // Mostra/nascondi campi cambio tecnico
     const tecInput = document.getElementById('edit-tecnico');
     const cambioFields = document.getElementById('cambio-tecnico-fields');
     const warning = document.getElementById('tec-change-warning');
@@ -941,6 +1202,7 @@ function showEditVehicleModal(vehicle) {
     const select = document.getElementById('edit-motivo-select');
     const altroContainer = document.getElementById('edit-altro-container');
     const altroInput = document.getElementById('edit-motivo-altro');
+    
     if (select && altroContainer) {
         select.addEventListener('change', function() {
             if (this.value === 'Altro') {
@@ -954,6 +1216,37 @@ function showEditVehicleModal(vehicle) {
     }
 }
 
+
+
+
+
+
+
+
+// AGGIUNGI LA CHIAMATA A LOAD TECNICI ALL'AVVIO
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚗 Admin Veicoli Manager inizializzato');
+    
+    // Carica i tecnici all'avvio
+    loadTecniciForVeicoli();
+    
+    // Aggiungi listener per quando il tab veicoli viene attivato
+    document.querySelectorAll('[data-tab="vehicles"]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            console.log('📂 Tab veicoli attivato');
+            setTimeout(() => {
+                loadVehicles();
+                loadApprovals();
+                loadVehicleStats();
+            }, 100);
+        });
+    });
+});
+
+
+// Modifica saveVehicleChanges() per salvare anche le statistiche
+// Modifica saveVehicleChanges() - correggi la parte statistiche
+// saveVehicleChanges - VERSIONE CON SALVATAGGIO IN KILOMETRI_MENSILI
 async function saveVehicleChanges(button) {
     const vehicleId = window.currentEditingVehicle?.id;
     if (!vehicleId) {
@@ -964,35 +1257,31 @@ async function saveVehicleChanges(button) {
     const now = Date.now();
     const operationId = vehicleId + '-' + now + '-' + Math.random().toString(36).substr(2, 5);
     
-    // Controllo se c'è già un'operazione attiva (per qualsiasi veicolo)
     if (activeSaveOperation) {
-        console.log('⏳ Salvataggio già in corso, operazione ignorata', operationId, 'attiva:', activeSaveOperation);
+        console.log('⏳ Salvataggio già in corso');
         showNotification('Salvataggio già in corso, attendere', 'warning');
         return;
     }
     
-    // Controllo cooldown per questo specifico veicolo (3 secondi)
     const lastSave = lastSavePerVehicle[vehicleId] || 0;
     if (now - lastSave < 3000) {
-        console.log('⏳ Ultimo salvataggio per questo veicolo troppo recente, attendere');
+        console.log('⏳ Ultimo salvataggio troppo recente');
         showNotification('Hai appena salvato, attendere qualche secondo', 'warning');
         return;
     }
     
-    // Imposta lock
     activeSaveOperation = operationId;
     lastSavePerVehicle[vehicleId] = now;
     
-    // Disabilita pulsante
     if (button) {
         button.disabled = true;
         button.style.opacity = '0.6';
     }
     
-    console.log('💾 saveVehicleChanges() iniziata', new Date().toISOString(), 'op:', operationId);
+    console.log('💾 saveVehicleChanges() iniziata', new Date().toISOString());
     
     try {
-        // Raccogli dati
+        // Raccogli dati veicolo
         const modello = document.getElementById('edit-modello')?.value.trim();
         const nuovoTecnico = document.getElementById('edit-tecnico')?.value.trim();
         const nuovaData = document.getElementById('edit-data')?.value;
@@ -1009,6 +1298,15 @@ async function saveVehicleChanges(button) {
             return;
         }
         
+        // Raccogli km attuali
+        const kmAttuali = document.getElementById('edit-km-attuali')?.value;
+        const kmAttualiNum = kmAttuali ? parseInt(kmAttuali) : null;
+        
+        showLoading('Salvataggio', 'Aggiornamento veicolo...');
+        
+        const supabase = getSupabaseClient();
+        
+        // 1. AGGIORNA VEICOLO
         const updates = {
             modello: modello || null,
             tecnico_assegnato: nuovoTecnico,
@@ -1016,11 +1314,6 @@ async function saveVehicleChanges(button) {
             note: nuoveNote || null
         };
         
-        showLoading('Salvataggio', 'Aggiornamento veicolo...');
-        
-        const supabase = getSupabaseClient();
-        
-        // Aggiorna veicolo
         const { error: updateError } = await supabase
             .from('veicoli')
             .update(updates)
@@ -1028,15 +1321,95 @@ async function saveVehicleChanges(button) {
         
         if (updateError) throw updateError;
         
+        // 2. GESTIONE KILOMETRI MENSILI (se modificati)
+        // Recupera le statistiche correnti per confronto
+        const { data: statsCorrenti } = await supabase
+            .from('statistiche_veicoli')
+            .select('km_attuali')
+            .eq('targa', oldVehicle.targa)
+            .maybeSingle();
+        
+        const kmCorrenti = statsCorrenti?.km_attuali || 0;
+        
+        if (kmAttualiNum !== null && kmAttualiNum !== kmCorrenti) {
+            console.log('📊 Rilevata modifica km: da', kmCorrenti, 'a', kmAttualiNum);
+            
+            // Determina mese e anno correnti
+            const oggi = new Date();
+            const meseCorrente = oggi.getMonth() + 1; // getMonth() parte da 0
+            const annoCorrente = oggi.getFullYear();
+            
+            // Verifica se esiste già un record per questo veicolo, mese e anno
+            const { data: existingKm, error: checkError } = await supabase
+                .from('kilometri_mensili')
+                .select('id, km_fine_mese')
+                .eq('veicolo_id', oldVehicle.id)
+                .eq('anno', annoCorrente)
+                .eq('mese', meseCorrente)
+                .maybeSingle();
+            
+            if (checkError && checkError.code !== 'PGRST116') {
+                console.warn('⚠️ Errore verifica kilometri mensili:', checkError);
+            }
+            
+            // Prepara nota per il record
+            const notaKm = nuoveNote 
+                ? `Modifica admin: ${nuoveNote} (km: ${kmCorrenti} → ${kmAttualiNum})`
+                : `Modifica admin km: ${kmCorrenti} → ${kmAttualiNum}`;
+            
+            if (existingKm) {
+                // Aggiorna record esistente
+                const { error: updateKmError } = await supabase
+                    .from('kilometri_mensili')
+                    .update({
+                        km_fine_mese: kmAttualiNum,
+                        data_inserimento: oggi.toISOString().split('T')[0],
+                        confermato: true,
+                        data_conferma: oggi.toISOString().split('T')[0],
+                        created_by: 'Admin',
+                        note: notaKm
+                    })
+                    .eq('id', existingKm.id);
+                
+                if (updateKmError) {
+                    console.error('❌ Errore aggiornamento kilometri mensili:', updateKmError);
+                    showNotification('Veicolo aggiornato ma errore km mensili', 'warning');
+                } else {
+                    console.log('✅ Kilometri mensili aggiornati:', existingKm.id, '->', kmAttualiNum);
+                }
+            } else {
+                // Crea nuovo record
+                const { error: insertKmError } = await supabase
+                    .from('kilometri_mensili')
+                    .insert([{
+                        veicolo_id: oldVehicle.id,
+                        anno: annoCorrente,
+                        mese: meseCorrente,
+                        km_fine_mese: kmAttualiNum,
+                        data_inserimento: oggi.toISOString().split('T')[0],
+                        confermato: true,
+                        data_conferma: oggi.toISOString().split('T')[0],
+                        created_by: 'Admin',
+                        note: notaKm
+                    }]);
+                
+                if (insertKmError) {
+                    console.error('❌ Errore inserimento kilometri mensili:', insertKmError);
+                    showNotification('Veicolo aggiornato ma errore km mensili', 'warning');
+                } else {
+                    console.log('✅ Nuovo record kilometri mensili inserito:', kmAttualiNum);
+                }
+            }
+        }
+        
+        // 3. GESTIONE CAMBIO TECNICO (se necessario)
         const isTechnicianChanged = (nuovoTecnico !== oldVehicle.tecnico);
         
         if (isTechnicianChanged) {
             console.log('🔄 Rilevato cambio tecnico');
             
-            // Raccogli dati cambio
             const kmCambio = parseInt(document.getElementById('edit-km-cambio')?.value);
             const motivoSelect = document.getElementById('edit-motivo-select')?.value;
-            const motivoAltro = document.getElementById('edit-motivo-altro')?.value;
             
             if (!kmCambio || kmCambio <= 0) {
                 hideLoading();
@@ -1045,15 +1418,11 @@ async function saveVehicleChanges(button) {
             }
             
             let motivo = motivoSelect;
-            if (motivo === 'Altro' && motivoAltro) {
-                motivo = motivoAltro;
-            } else if (motivo === 'Altro') {
-                motivo = 'Altro (non specificato)';
-            } else if (motivo === '') {
-                motivo = null;
+            if (motivo === 'Altro') {
+                const motivoAltro = document.getElementById('edit-motivo-altro')?.value;
+                motivo = motivoAltro || 'Altro (non specificato)';
             }
             
-            // Inserisci storico
             const { error: historyError } = await supabase
                 .from('storico_assegnazioni')
                 .insert([{
@@ -1062,7 +1431,7 @@ async function saveVehicleChanges(button) {
                     tecnico_nuovo: nuovoTecnico,
                     data_cambio: new Date().toISOString(),
                     km_al_cambio: kmCambio,
-                    motivo: motivo
+                    motivo: motivo || null
                 }]);
             
             if (historyError) {
@@ -1086,7 +1455,6 @@ async function saveVehicleChanges(button) {
         console.error('❌ Errore modifica veicolo:', error);
         showNotification(`Errore: ${error.message}`, 'error');
     } finally {
-        // Rilascia il lock solo se è l'operazione corrente
         if (activeSaveOperation === operationId) {
             activeSaveOperation = null;
         }
@@ -1096,7 +1464,6 @@ async function saveVehicleChanges(button) {
         }
     }
 }
-
 
 
 
