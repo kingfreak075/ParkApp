@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FloX - Accesso</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db-config.js"></script>
+    <script src="login.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo span {
+            font-size: 48px;
+            color: #667eea;
+            background: #f0f3ff;
+            padding: 15px;
+            border-radius: 50%;
+        }
+        
+        .logo h1 {
+            margin-top: 15px;
+            font-size: 24px;
+            color: #333;
+        }
+        
+        .app-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            background: #f5f5f5;
+            padding: 5px;
+            border-radius: 12px;
+        }
+        
+        .app-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: transparent;
+            color: #666;
+        }
+        
+        .app-btn.active {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .app-btn.admin.active {
+            color: #667eea;
+        }
+        
+        .app-btn.client.active {
+            color: #10b981;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+            font-size: 14px;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        button[type="submit"] {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        button[type="submit"]:hover {
+            transform: translateY(-2px);
+        }
+        
+        button[type="submit"]:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        
+        .error-message {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 8px;
+            background: #fee2e2;
+            color: #dc2626;
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        .info-box {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f9ff;
+            border-radius: 10px;
+            font-size: 13px;
+            color: #0369a1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .info-box .material-symbols-rounded {
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <span class="material-symbols-rounded">lock</span>
+            <h1>FloX Access</h1>
+        </div>
+        
+        <div class="app-selector">
+            <button onclick="setAppType('admin')" class="app-btn admin active" id="btn-admin">
+                <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px;">admin_panel_settings</span>
+                Amministratore
+            </button>
+            <button onclick="setAppType('client')" class="app-btn client" id="btn-client">
+                <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px;">engineering</span>
+                Tecnico
+            </button>
+        </div>
+        
+        <form onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" placeholder="nome@azienda.it" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+            
+            <button type="submit" id="login-btn">
+                <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px;">login</span>
+                Accedi
+            </button>
+        </form>
+        
+        <div id="error-message" class="error-message" style="display: none;"></div>
+        
+        <div class="info-box">
+            <span class="material-symbols-rounded">info</span>
+            <div>
+                <strong>Accesso differenziato:</strong><br>
+                👑 Admin → Pannello amministratore<br>
+                👷 Tecnico → App mobile/tablet
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentAppType = 'admin';
+        
+        function setAppType(type) {
+            currentAppType = type;
+            
+            // Aggiorna UI
+            document.getElementById('btn-admin').classList.toggle('active', type === 'admin');
+            document.getElementById('btn-client').classList.toggle('active', type === 'client');
+            
+            // Cambia colore del pulsante
+            const submitBtn = document.getElementById('login-btn');
+            if (type === 'admin') {
+                submitBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            } else {
+                submitBtn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+            }
+        }
+        
+        async function handleLogin(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('error-message');
+            const loginBtn = document.getElementById('login-btn');
+            
+            // Disabilita pulsante
+            loginBtn.disabled = true;
+            loginBtn.textContent = '⏳ Accesso in corso...';
+            errorDiv.style.display = 'none';
+            
+            const result = await login(email, password, currentAppType);
+            
+            if (!result.success) {
+                errorDiv.textContent = '❌ ' + result.error;
+                errorDiv.style.display = 'block';
+                
+                // Riabilita pulsante
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = '<span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px;">login</span> Accedi';
+            }
+        }
+        
+       
+       
+   
+    </script>
+</body>
+</html>

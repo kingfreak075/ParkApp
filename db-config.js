@@ -1,9 +1,10 @@
-// db-config.js - VERSIONE CORRETTA CON SINGLETON
+// db-config.js - VERSIONE CORRETTA CON SINGLETON E ADMIN CLIENT
 // Gestione centralizzata della configurazione Supabase per FloX
 // ==============================================================
 
 // VARIABILE GLOBALE PER IL CLIENT SINGLETON
 let _supabaseClientInstance = null;
+let _adminClientInstance = null;
 
 /**
  * Controlla se la configurazione del database è presente
@@ -36,6 +37,15 @@ function getSupabaseUrl() {
 function getSupabaseKey() {
     const key = localStorage.getItem('supabase_key');
     return key && !key.includes('INSERISCI_KEY') ? key : '';
+}
+
+/**
+ * Ottiene la service key per operazioni admin
+ * @returns {string} La service key o stringa vuota
+ */
+function getServiceKey() {
+    const config = JSON.parse(localStorage.getItem('db_config') || '{}');
+    return config.serviceKey || '';
 }
 
 /**
@@ -77,11 +87,45 @@ function getSupabaseClient() {
 }
 
 /**
+ * Client con service_role key (per operazioni admin)
+ * @returns {object} Client admin o null se non configurato
+ */
+window.getAdminClient = function() {
+    if (_adminClientInstance) {
+        console.log('✓ Client Admin riutilizzato (singleton)');
+        return _adminClientInstance;
+    }
+    
+    const url = getSupabaseUrl();
+    const serviceKey = getServiceKey();
+    
+    if (!url || !serviceKey) {
+        console.error('❌ Configurazione admin non trovata');
+        return null;
+    }
+    
+    _adminClientInstance = supabase.createClient(
+        url,
+        serviceKey,
+        {
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false
+            }
+        }
+    );
+    
+    console.log('✓ Nuovo client Admin creato (singleton)');
+    return _adminClientInstance;
+};
+
+/**
  * Resetta il client Supabase (utile per riconnessione)
  */
 function resetSupabaseClient() {
     _supabaseClientInstance = null;
-    console.log('✓ Client Supabase resettato');
+    _adminClientInstance = null;
+    console.log('✓ Client resettati');
 }
 
 /**
@@ -91,6 +135,7 @@ function resetSupabaseClient() {
 function getDbConfigInfo() {
     const url = getSupabaseUrl();
     const key = getSupabaseKey();
+    const config = JSON.parse(localStorage.getItem('db_config') || '{}');
     const timestamp = localStorage.getItem('config_timestamp');
     const tabellaSelezionata = localStorage.getItem('sync_tabella');
     
@@ -100,10 +145,12 @@ function getDbConfigInfo() {
         urlShort: url ? url.replace('https://', '').substring(0, 20) + '...' : '',
         keyPresent: !!key,
         keyLength: key ? key.length : 0,
+        serviceKeyPresent: !!config.serviceKey,
         timestamp: timestamp ? new Date(timestamp).toLocaleString('it-IT') : null,
         table: tabellaSelezionata,
         daysSinceConfig: timestamp ? Math.floor((new Date() - new Date(timestamp)) / (1000 * 60 * 60 * 24)) : null,
-        clientInstance: _supabaseClientInstance ? 'Creata' : 'Non creata'
+        clientInstance: _supabaseClientInstance ? 'Creata' : 'Non creata',
+        adminClientInstance: _adminClientInstance ? 'Creata' : 'Non creata'
     };
 }
 
@@ -174,11 +221,48 @@ async function testDbConnection() {
 }
 
 /**
+ * Salva una nuova configurazione
+ * @param {string} url - URL di Supabase
+ * @param {string} anonKey - Chiave anonima
+ * @param {string} serviceKey - Service role key (opzionale)
+ * @returns {boolean} True se salvato con successo
+ */
+function saveDbConfig(url, anonKey, serviceKey = '') {
+    if (!url || !url.startsWith('https://')) {
+        throw new Error('URL non valido. Deve iniziare con https://');
+    }
+    
+    if (!anonKey || anonKey.length < 20) {
+        throw new Error('Chiave API non valida');
+    }
+    
+    localStorage.setItem('supabase_url', url);
+    localStorage.setItem('supabase_key', anonKey);
+    
+    // Salva la configurazione completa con service key
+    localStorage.setItem('db_config', JSON.stringify({
+        url: url,
+        anonKey: anonKey,
+        serviceKey: serviceKey || anonKey // Se non fornita, usa la anon key
+    }));
+    
+    localStorage.setItem('config_caricata', 'true');
+    localStorage.setItem('config_timestamp', new Date().toISOString());
+    
+    // Resetta il client quando cambia la configurazione
+    resetSupabaseClient();
+    
+    console.log('Configurazione database salvata:', url.substring(0, 30) + '...');
+    return true;
+}
+
+/**
  * Resetta la configurazione del database
  */
 function resetDbConfig() {
     localStorage.removeItem('supabase_url');
     localStorage.removeItem('supabase_key');
+    localStorage.removeItem('db_config');
     localStorage.removeItem('config_caricata');
     localStorage.removeItem('config_timestamp');
     localStorage.removeItem('sync_tabella');
@@ -188,33 +272,6 @@ function resetDbConfig() {
     resetSupabaseClient();
     
     console.log('Configurazione database resettata');
-}
-
-/**
- * Salva una nuova configurazione
- * @param {string} url - URL di Supabase
- * @param {string} key - Chiave anonima di Supabase
- * @returns {boolean} True se salvato con successo
- */
-function saveDbConfig(url, key) {
-    if (!url || !url.startsWith('https://')) {
-        throw new Error('URL non valido. Deve iniziare con https://');
-    }
-    
-    if (!key || key.length < 20) {
-        throw new Error('Chiave API non valida');
-    }
-    
-    localStorage.setItem('supabase_url', url);
-    localStorage.setItem('supabase_key', key);
-    localStorage.setItem('config_caricata', 'true');
-    localStorage.setItem('config_timestamp', new Date().toISOString());
-    
-    // Resetta il client quando cambia la configurazione
-    resetSupabaseClient();
-    
-    console.log('Configurazione database salvata:', url.substring(0, 30) + '...');
-    return true;
 }
 
 /**
@@ -228,6 +285,8 @@ function exportDbConfig() {
     
     const url = getSupabaseUrl();
     const key = getSupabaseKey();
+    const config = JSON.parse(localStorage.getItem('db_config') || '{}');
+    const serviceKey = config.serviceKey || '';
     const timestamp = new Date().toISOString();
     
     return `# FloX Database Configuration
@@ -236,6 +295,7 @@ function exportDbConfig() {
 
 SUPABASE_URL=${url}
 SUPABASE_KEY=${key}
+SUPABASE_SERVICE_KEY=${serviceKey}
 
 # End of configuration`;
 }
@@ -247,13 +307,15 @@ SUPABASE_KEY=${key}
  */
 function importDbConfig(content) {
     let url = '';
-    let key = '';
+    let anonKey = '';
+    let serviceKey = '';
     
     // Prova a parsare come JSON
     try {
         const json = JSON.parse(content);
         url = json.supabase_url || json.SUPABASE_URL || json.url;
-        key = json.supabase_key || json.SUPABASE_KEY || json.key;
+        anonKey = json.supabase_key || json.SUPABASE_KEY || json.key || json.anonKey;
+        serviceKey = json.serviceKey || json.SUPABASE_SERVICE_KEY || '';
     } catch (e) {
         // Non è JSON, prova formato key=value
         const lines = content.split('\n');
@@ -261,21 +323,24 @@ function importDbConfig(content) {
             if (line.trim() && !line.trim().startsWith('#')) {
                 if (line.includes('=')) {
                     const [chiave, valore] = line.split('=').map(s => s.trim());
-                    if (chiave.toUpperCase().includes('URL')) {
+                    const chiaveUp = chiave.toUpperCase();
+                    if (chiaveUp.includes('URL')) {
                         url = valore;
-                    } else if (chiave.toUpperCase().includes('KEY')) {
-                        key = valore;
+                    } else if (chiaveUp.includes('KEY') && !chiaveUp.includes('SERVICE')) {
+                        anonKey = valore;
+                    } else if (chiaveUp.includes('SERVICE')) {
+                        serviceKey = valore;
                     }
                 }
             }
         }
     }
     
-    if (!url || !key) {
+    if (!url || !anonKey) {
         throw new Error('Formato file non valido. Assicurati di avere SUPABASE_URL e SUPABASE_KEY');
     }
     
-    return saveDbConfig(url, key);
+    return saveDbConfig(url, anonKey, serviceKey);
 }
 
 // ==============================================================
@@ -333,3 +398,19 @@ function clearTecniciCache() {
     localStorage.removeItem('tecnici_cache_timestamp');
     console.log('✓ Cache tecnici pulita');
 }
+
+// Esponi le funzioni globalmente
+window.hasDbConfig = hasDbConfig;
+window.getSupabaseUrl = getSupabaseUrl;
+window.getSupabaseKey = getSupabaseKey;
+window.getSupabaseClient = getSupabaseClient;
+window.getAdminClient = getAdminClient;
+window.resetSupabaseClient = resetSupabaseClient;
+window.getDbConfigInfo = getDbConfigInfo;
+window.testDbConnection = testDbConnection;
+window.saveDbConfig = saveDbConfig;
+window.resetDbConfig = resetDbConfig;
+window.exportDbConfig = exportDbConfig;
+window.importDbConfig = importDbConfig;
+window.getTecnici = getTecnici;
+window.clearTecniciCache = clearTecniciCache;

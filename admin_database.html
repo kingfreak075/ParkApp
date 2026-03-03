@@ -13,7 +13,6 @@
 
 
 
-
 </head>
 <body>
     <div class="admin-container">
@@ -27,8 +26,9 @@
                 <div class="app-version">v2.0</div>
             </div>
             
-           <!-- Modifica sidebar esistente -->
+          
 <!-- Sezione DATABASE -->
+
 <div class="nav-section">
     <h3>DATABASE</h3>
     <button class="nav-btn" data-tab="config">
@@ -39,8 +39,14 @@
         <span class="material-symbols-rounded">table_chart</span>
         Tabelle
     </button>
+    <!-- NUOVO PULSANTE USER -->
+    <button class="nav-btn" data-tab="users">
+        <span class="material-symbols-rounded">people</span>
+        Utenti
+    </button>
 </div>
     
+
 <!-- NUOVA: Sezione GESTIONE MANUALE -->
 <div class="nav-section">
     <h3>GESTIONE MANUALE</h3>
@@ -52,24 +58,23 @@
         <span class="material-symbols-rounded">directions_car</span>
         Veicoli
     </button>
-<!-- NUOVO: Pulsante Reperibilità -->
     <button class="nav-btn" data-tab="reperibilita">
         <span class="material-symbols-rounded">schedule</span>
         Reperibilità
     </button>
-<!-- Nella sezione GESTIONE MANUALE, dopo Reperibilità -->
-<button class="nav-btn" data-tab="parco" onclick="attivaTabParco()">
-    <span class="material-symbols-rounded">elevator</span>
-    Parco Impianti
-</button>
-
-<!-- Dopo Parco Impianti, aggiungi: -->
-<button class="nav-btn" data-tab="fogli">
-    <span class="material-symbols-rounded">assignment</span>
-    Fogli Lavoro
-</button>
-
-
+    <button class="nav-btn" data-tab="parco" onclick="attivaTabParco()">
+        <span class="material-symbols-rounded">elevator</span>
+        Parco Impianti
+    </button>
+    <button class="nav-btn" data-tab="fogli">
+        <span class="material-symbols-rounded">assignment</span>
+        Fogli Lavoro
+    </button>
+    <!-- ANNOTAZIONI SPOSTATA QUI -->
+    <button class="nav-btn" data-tab="annotazioni">
+        <span class="material-symbols-rounded">note_alt</span>
+        Annotazioni
+    </button>
 </div>
     
  <!-- Sezione SINCRONIZZAZIONE -->
@@ -86,6 +91,7 @@
 </div>
     
     <!-- Sezione UTILITIES -->
+<!-- Sezione UTILITIES -->
 <div class="nav-section">
     <h3>UTILITIES</h3>
     <button class="nav-btn" data-tab="backup">
@@ -96,12 +102,7 @@
         <span class="material-symbols-rounded">list_alt</span>
         Logs
     </button>
-<!-- Dopo Logs, aggiungi: -->
-<button class="nav-btn" data-tab="annotazioni">
-    <span class="material-symbols-rounded">note_alt</span>
-    Annotazioni
-</button>
-
+    <!-- RIMOSSO IL PULSANTE ANNOTAZIONI -->
 </div>
 </nav>
             
@@ -110,10 +111,10 @@
                     <div class="status-indicator offline"></div>
                     <span>Database: Non connesso</span>
                 </div>
-                <button class="logout-btn">
-                    <span class="material-symbols-rounded">logout</span>
-                    Logout
-                </button>
+  <button class="logout-btn" onclick="logout()">
+    <span class="material-symbols-rounded">logout</span>
+    Logout
+</button>
             </div>
         </aside>
 
@@ -129,131 +130,156 @@
                         <span>Database</span>
                     </div>
                 </div>
+
+<div class="header-right">
+    <div class="user-info">
+        <span class="material-symbols-rounded" id="user-icon">account_circle</span>
+        <div>
+            <div class="user-name" id="user-name">Caricamento...</div>
+            <div class="user-role" id="user-role"></div>
+        </div>
+    </div>
+    <button class="notifications-btn">
+        <span class="material-symbols-rounded">notifications</span>
+        <span class="notification-count">3</span>
+    </button>
+</div>
+
+
                 
-                <div class="header-right">
-                    <div class="user-info">
-                        <span class="material-symbols-rounded">account_circle</span>
-                        <div>
-                            <div class="user-name">Administrator</div>
-                            <div class="user-role">Admin</div>
-                        </div>
-                    </div>
-                    <button class="notifications-btn">
-                        <span class="material-symbols-rounded">notifications</span>
-                        <span class="notification-count">3</span>
-                    </button>
-                </div>
-            </header>
+   </header>
 
             <!-- CONTENT AREA -->
             <div class="content-area">
                 <!-- TAB 1: CONFIGURAZIONE DATABASE -->
-                <div id="tab-config" class="tab-content active">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>
-                                <span class="material-symbols-rounded">database</span>
-                                Configurazione Database Supabase
-                            </h3>
-                            <div class="card-actions">
-                                <button class="btn btn-icon" title="Test connessione" onclick="testConnection()">
-                                    <span class="material-symbols-rounded">wifi</span>
-                                </button>
-                                <button class="btn btn-icon" title="Esporta configurazione" onclick="exportConfig()">
-                                    <span class="material-symbols-rounded">download</span>
-                                </button>
-                            </div>
+              <!-- TAB 1: CONFIGURAZIONE DATABASE -->
+<div id="tab-config" class="tab-content active">
+    <div class="card">
+        <div class="card-header">
+            <h3>
+                <span class="material-symbols-rounded">database</span>
+                Configurazione Database Supabase
+            </h3>
+            <div class="card-actions">
+                <button class="btn btn-icon" title="Test connessione" onclick="testConnection()">
+                    <span class="material-symbols-rounded">wifi</span>
+                </button>
+                <button class="btn btn-icon" title="Esporta configurazione" onclick="exportConfig()">
+                    <span class="material-symbols-rounded">download</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <div class="config-grid">
+                <!-- Configurazione attuale -->
+                <div class="config-current">
+                    <h4>Configurazione Attuale</h4>
+                    
+                    <div class="config-info">
+                        <div class="info-item">
+                            <span class="label">Stato:</span>
+                            <span id="config-status" class="value status-offline">Non configurato</span>
                         </div>
-                        
-                        <div class="card-body">
-                            <div class="config-grid">
-                                <!-- Configurazione attuale -->
-                                <div class="config-current">
-                                    <h4>Configurazione Attuale</h4>
-                                    <div class="config-info">
-                                        <div class="info-item">
-                                            <span class="label">Stato:</span>
-                                            <span id="config-status" class="value status-offline">Non configurato</span>
-                                        </div>
-                                        <div class="info-item">
-                                            <span class="label">URL Supabase:</span>
-                                            <span id="config-url" class="value">-</span>
-                                        </div>
-                                        <div class="info-item">
-                                            <span class="label">Ultimo test:</span>
-                                            <span id="config-last-test" class="value">-</span>
-                                        </div>
-                                        <div class="info-item">
-                                            <span class="label">Tempo online:</span>
-                                            <span id="config-uptime" class="value">-</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Metodi di configurazione -->
-                                <div class="config-methods">
-                                    <h4>Nuova Configurazione</h4>
-                                    <div class="tabs-horizontal">
-                                        <button class="tab-btn active" data-method="file">File DB.kf</button>
-                                        <button class="tab-btn" data-method="manual">Inserimento Manuale</button>
-                                    </div>
-                                    
-                                    <!-- Metodo File -->
-                                    <div id="method-file" class="method-content active">
-                                        <div class="file-upload-area" id="drop-zone">
-                                            <input type="file" id="file-kf" accept=".kf,.txt,.json" hidden>
-                                            <span class="material-symbols-rounded">cloud_upload</span>
-                                            <p>Trascina il file DB.kf qui o <a href="#" onclick="document.getElementById('file-kf').click()">clicca per selezionare</a></p>
-                                            <small>Formati supportati: .kf, .txt, .json</small>
-                                        </div>
-                                        <div id="file-info" class="file-info" style="display: none;">
-                                            <div class="file-info-content">
-                                                <span class="material-symbols-rounded">check_circle</span>
-                                                <div>
-                                                    <strong>File caricato:</strong>
-                                                    <span id="file-name"></span>
-                                                </div>
-                                                <button class="btn-icon-small" onclick="removeFile()">
-                                                    <span class="material-symbols-rounded">close</span>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Metodo Manuale -->
-                                    <div id="method-manual" class="method-content">
-                                        <div class="form-group">
-                                            <label for="supabase-url">SUPABASE URL</label>
-                                            <input type="text" id="supabase-url" placeholder="https://tuoprogetto.supabase.co">
-                                            <small>Dashboard → Settings → API</small>
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="supabase-key">ANON KEY</label>
-                                            <div class="input-with-icon">
-                                                <input type="password" id="supabase-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
-                                                <button class="btn-icon-small" onclick="togglePassword()">
-                                                    <span class="material-symbols-rounded" id="toggle-icon">visibility</span>
-                                                </button>
-                                            </div>
-                                            <small>Chiave anonima (pubblica) del progetto</small>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="config-actions">
-                                        <button class="btn btn-primary" onclick="saveConfig()">
-                                            <span class="material-symbols-rounded">save</span>
-                                            Salva Configurazione
-                                        </button>
-                                        <button class="btn btn-secondary" onclick="resetConfig()">
-                                            <span class="material-symbols-rounded">delete</span>
-                                            Resetta
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="info-item">
+                            <span class="label">URL Supabase:</span>
+                            <span id="config-url" class="value">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">Anon Key:</span>
+                            <span id="config-key-status" class="value">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">Service Key:</span>
+                            <span id="config-service-status" class="value">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">Ultimo test:</span>
+                            <span id="config-last-test" class="value">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">Tempo online:</span>
+                            <span id="config-uptime" class="value">-</span>
                         </div>
                     </div>
                 </div>
+                
+                <!-- Metodi di configurazione -->
+                <div class="config-methods">
+                    <h4>Nuova Configurazione</h4>
+                    <div class="tabs-horizontal">
+                        <button class="tab-btn active" data-method="file">File DB.kf</button>
+                        <button class="tab-btn" data-method="manual">Inserimento Manuale</button>
+                    </div>
+                    
+                    <!-- Metodo File -->
+                    <div id="method-file" class="method-content active">
+                        <div class="file-upload-area" id="drop-zone">
+                            <input type="file" id="file-kf" accept=".kf,.txt,.json" hidden>
+                            <span class="material-symbols-rounded">cloud_upload</span>
+                            <p>Trascina il file DB.kf qui o <a href="#" onclick="document.getElementById('file-kf').click()">clicca per selezionare</a></p>
+                            <small>Formati supportati: .kf, .txt, .json</small>
+                        </div>
+                        <div id="file-info" class="file-info" style="display: none;">
+                            <div class="file-info-content">
+                                <span class="material-symbols-rounded">check_circle</span>
+                                <div>
+                                    <strong>File caricato:</strong>
+                                    <span id="file-name"></span>
+                                </div>
+                                <button class="btn-icon-small" onclick="removeFile()">
+                                    <span class="material-symbols-rounded">close</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Metodo Manuale -->
+                    <div id="method-manual" class="method-content">
+                        <div class="form-group">
+                            <label for="supabase-url">SUPABASE URL</label>
+                            <input type="text" id="supabase-url" placeholder="https://tuoprogetto.supabase.co" value="https://berlfufnmolyrmxeyqfd.supabase.co">
+                            <small>Dashboard → Settings → API</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="supabase-key">ANON KEY (pubblica)</label>
+                            <div class="input-with-icon">
+                                <input type="password" id="supabase-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+                                <button class="btn-icon-small" onclick="togglePassword()" type="button">
+                                    <span class="material-symbols-rounded" id="toggle-icon">visibility</span>
+                                </button>
+                            </div>
+                            <small>Chiave anonima per il client normale</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="supabase-service-key">SERVICE ROLE KEY (segreta)</label>
+                            <div class="input-with-icon">
+                                <input type="password" id="supabase-service-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+                                <button class="btn-icon-small" onclick="toggleServiceKey()" type="button">
+                                    <span class="material-symbols-rounded" id="toggle-service-icon">visibility</span>
+                                </button>
+                            </div>
+                            <small>Chiave segreta per operazioni admin (creazione utenti)</small>
+                        </div>
+                    </div>
+                    
+                    <div class="config-actions">
+                        <button class="btn btn-primary" onclick="saveConfig()">
+                            <span class="material-symbols-rounded">save</span>
+                            Salva Configurazione
+                        </button>
+                        <button class="btn btn-secondary" onclick="resetConfig()">
+                            <span class="material-symbols-rounded">delete</span>
+                            Resetta
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
                 <!-- TAB 2: TABELLE -->
                 <div id="tab-tables" class="tab-content">
@@ -1406,7 +1432,310 @@
     </div>
 </div>
 
-<!-- NUOVO TAB: Fogli Lavoro -->
+<!-- TAB 7: GESTIONE UTENTI -->
+<div id="tab-users" class="tab-content">
+    <div class="card">
+        <div class="card-header">
+            <h3>
+                <span class="material-symbols-rounded">people</span>
+                Gestione Utenti  <span id="user-count" style="font-size: 14px; color: #666;"></span>
+            </h3>
+              
+            <div class="card-actions">
+               <button class="btn btn-primary" onclick="if(typeof mostraModalNuovoUtente === 'function') mostraModalNuovoUtente(); else console.error('mostraModalNuovoUtente non definita')">
+    <span class="material-symbols-rounded">add</span>
+    Nuovo Utente
+</button>
+               <button class="btn btn-icon" onclick="if(typeof window.caricaUtenti === 'function') window.caricaUtenti(); else console.error('caricaUtenti non definita')" title="Aggiorna">
+    <span class="material-symbols-rounded">refresh</span>
+</button>
+            </div>
+        </div>
+     
+        <div class="card-body">
+            <!-- Statistiche utenti -->
+            <div class="stats-grid" style="margin-bottom: 2rem;">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-symbols-rounded">admin_panel_settings</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stats-admin">0</div>
+                        <div class="stat-label">Amministratori</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-symbols-rounded">visibility</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stats-supervisori">0</div>
+                        <div class="stat-label">Supervisori</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-symbols-rounded">engineering</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stats-tecnici">0</div>
+                        <div class="stat-label">Tecnici</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-symbols-rounded">schedule</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stats-ultimo-accesso">-</div>
+                        <div class="stat-label">Ultimo accesso</div>
+                    </div>
+<div class="stat-card">
+    <div class="stat-icon"><span class="material-symbols-rounded">schedule</span></div>
+    <div class="stat-content">
+        <div class="stat-value" id="stats-mai-loggati">0</div>
+        <div class="stat-label">Mai loggati</div>
+    </div>
+</div>
+<div class="stat-card">
+    <div class="stat-icon"><span class="material-symbols-rounded">mark_email_read</span></div>
+    <div class="stat-content">
+        <div class="stat-value" id="stats-confermate">0</div>
+        <div class="stat-label">Email confermate</div>
+    </div>
+</div>
+
+
+                </div>
+            </div>
+            
+            <!-- Filtri -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr 200px; gap: 1rem; margin-bottom: 1.5rem;">
+                <div class="search-box">
+                    <span class="material-symbols-rounded">search</span>
+                    <input type="text" id="search-users" placeholder="Cerca per nome o email..." onkeyup="filtraUtenti()">
+                </div>
+                <select id="filter-user-role" class="form-control" onchange="filtraUtenti()">
+                    <option value="">Tutti i ruoli</option>
+                    <option value="admin">Amministratori</option>
+                    <option value="supervisore">Supervisori</option>
+                    <option value="tecnico">Tecnici</option>
+                </select>
+                <select id="filter-user-status" class="form-control" onchange="filtraUtenti()">
+                    <option value="">Tutti</option>
+                    <option value="active">Attivi</option>
+                    <option value="never">Mai loggati</option>
+                </select>
+            </div>
+            
+            <!-- Tabella utenti -->
+            <div class="tables-container">
+                <table class="data-table" id="users-table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Email</th>
+                            <th>Ruolo</th>
+                            <th>Ultimo accesso</th>
+                            <th>Stato</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-table-body">
+                        <tr>
+                            <td colspan="6" class="text-center">
+                                <div class="loading-spinner-small">
+                                    <span class="material-symbols-rounded">hourglass_top</span>
+                                    Caricamento utenti...
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- MODALE NUOVO UTENTE -->
+
+<!-- MODALE NUOVO UTENTE - VERSIONE MIGLIORATA -->
+<div class="modal" id="modal-nuovo-utente">
+    <div class="modal-content" style="max-width: 900px; width: 90%;">
+        <div class="modal-header">
+            <h3>
+                <span class="material-symbols-rounded">person_add</span>
+                Nuovo Utente
+            </h3>
+            <button class="btn-icon-small" onclick="chiudiModalNuovoUtente()">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+        </div>
+        
+        <div class="modal-body">
+            <!-- TABS -->
+            <div style="display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 2px solid var(--border);">
+                <button class="tab-btn active" onclick="switchUserTab('manual')" id="tab-manual-btn" style="padding: 0.75rem 1.5rem; font-size: 1rem;">
+                    <span class="material-symbols-rounded">edit</span>
+                    Crea manualmente
+                </button>
+                <button class="tab-btn" onclick="switchUserTab('import')" id="tab-import-btn" style="padding: 0.75rem 1.5rem; font-size: 1rem;">
+                    <span class="material-symbols-rounded">database</span>
+                    Importa da tabelle
+                </button>
+            </div>
+            
+            <!-- TAB 1: CREAZIONE MANUALE -->
+            <div id="user-tab-manual" class="user-tab-content" style="display: block;">
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem;">
+                    <!-- Colonna sinistra - Dati utente -->
+                    <div style="background: #f8fafc; padding: 1.5rem; border-radius: 12px;">
+                        <h4 style="margin: 0 0 1.5rem 0; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+                            <span class="material-symbols-rounded">person</span>
+                            Dati anagrafici
+                        </h4>
+                        
+                        <div class="form-group" style="margin-bottom: 1.25rem;">
+                            <label for="nuovo-nome" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+                                Nome completo <span style="color: #ef4444;">*</span>
+                            </label>
+                            <input type="text" id="nuovo-nome" class="form-control" placeholder="Mario Rossi" style="width: 100%; padding: 0.75rem; border: 2px solid var(--border); border-radius: 8px;">
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 1.25rem;">
+                            <label for="nuovo-email" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+                                Email <span style="color: #ef4444;">*</span>
+                            </label>
+                            <input type="email" id="nuovo-email" class="form-control" placeholder="mario.rossi@example.com" style="width: 100%; padding: 0.75rem; border: 2px solid var(--border); border-radius: 8px;">
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 1.25rem;">
+                            <label for="nuovo-ruolo" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+                                Ruolo <span style="color: #ef4444;">*</span>
+                            </label>
+                            <select id="nuovo-ruolo" class="form-control" style="width: 100%; padding: 0.75rem; border: 2px solid var(--border); border-radius: 8px;">
+                                <option value="">Seleziona ruolo...</option>
+                                <option value="admin">👑 Amministratore</option>
+                                <option value="supervisore">👁️ Supervisore</option>
+                                <option value="tecnico">🔧 Tecnico</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Colonna destra - Password e conferma -->
+                    <div style="background: #f8fafc; padding: 1.5rem; border-radius: 12px;">
+                        <h4 style="margin: 0 0 1.5rem 0; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+                            <span class="material-symbols-rounded">key</span>
+                            Credenziali
+                        </h4>
+                        
+                        <div class="form-group" style="margin-bottom: 1.25rem;">
+                            <label for="nuovo-password" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+                                Password
+                            </label>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="text" id="nuovo-password" class="form-control" value="Esa123!" style="flex: 1; padding: 0.75rem; border: 2px solid var(--border); border-radius: 8px; background: #f1f5f9;">
+                                <button type="button" class="btn btn-secondary" onclick="generaPassword()" style="padding: 0.75rem 1rem; white-space: nowrap;">
+                                    <span class="material-symbols-rounded">refresh</span>
+                                    Genera
+                                </button>
+                            </div>
+                            <small style="display: block; margin-top: 0.5rem; color: #64748b;">
+                                L'utente potrà cambiare la password al primo accesso
+                            </small>
+                        </div>
+                        
+                        <div style="background: #e0f2fe; border-radius: 8px; padding: 1rem; margin-top: 1rem; border-left: 4px solid #0284c7;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; color: #0369a1;">
+                                <span class="material-symbols-rounded">info</span>
+                                <strong>Nota bene:</strong>
+                            </div>
+                            <p style="margin: 0.5rem 0 0 0; color: #075985; font-size: 0.9rem;">
+                                L'utente riceverà un'email di conferma e dovrà verificare il proprio indirizzo prima del primo accesso.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- TAB 2: IMPORTA DA TABELLE -->
+            <div id="user-tab-import" class="user-tab-content" style="display: none;">
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem;">
+                    <!-- Tecnici senza account -->
+                    <div style="background: #f8fafc; padding: 1.5rem; border-radius: 12px;">
+                        <h4 style="margin: 0 0 1rem 0; color: #3b82f6; display: flex; align-items: center; gap: 0.5rem;">
+                            <span class="material-symbols-rounded">engineering</span>
+                            Tecnici senza account
+                            <span class="badge badge-info" id="tecnici-count" style="margin-left: auto;">0</span>
+                        </h4>
+                        
+                        <div style="max-height: 300px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; background: white;">
+                            <div id="lista-tecnici-import" style="padding: 0.5rem;">
+                                <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                    <span class="material-symbols-rounded">sync</span>
+                                    <p>Caricamento tecnici...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Supervisori senza account -->
+                    <div style="background: #f8fafc; padding: 1.5rem; border-radius: 12px;">
+                        <h4 style="margin: 0 0 1rem 0; color: #f59e0b; display: flex; align-items: center; gap: 0.5rem;">
+                            <span class="material-symbols-rounded">visibility</span>
+                            Supervisori senza account
+                            <span class="badge badge-warning" id="supervisori-count" style="margin-left: auto;">0</span>
+                        </h4>
+                        
+                        <div style="max-height: 300px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; background: white;">
+                            <div id="lista-supervisori-import" style="padding: 0.5rem;">
+                                <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                    <span class="material-symbols-rounded">sync</span>
+                                    <p>Caricamento supervisori...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Pulsanti selezione -->
+                <div style="display: flex; gap: 1rem; justify-content: flex-end; margin: 1.5rem 0;">
+                    <button type="button" class="btn btn-secondary" onclick="selezionaTuttiTecnici()">
+                        <span class="material-symbols-rounded">select_all</span>
+                        Seleziona tutti
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="deselezionaTutti()">
+                        <span class="material-symbols-rounded">deselect</span>
+                        Deseleziona tutti
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- FOOTER - Bottoni azione -->
+        <div class="modal-footer" style="display: flex; gap: 1rem; justify-content: flex-end; padding: 1.5rem; border-top: 1px solid var(--border);">
+            <button class="btn btn-secondary" onclick="chiudiModalNuovoUtente()">
+                Annulla
+            </button>
+            
+            <!-- Pulsanti contestuali (visibili in base al tab) -->
+            <button class="btn btn-primary" id="btn-salva-utente" onclick="salvaNuovoUtente()" style="display: inline-flex;">
+                <span class="material-symbols-rounded">save</span>
+                Crea Utente
+            </button>
+            
+            <button class="btn btn-success" id="btn-importa-utenti" onclick="importaSelezionati()" style="display: none;">
+                <span class="material-symbols-rounded">cloud_upload</span>
+                Importa selezionati
+            </button>
+        </div>
+    </div>
+</div>
+
+
+
+
 <!-- NUOVO TAB: Fogli Lavoro - STILE FOGLIOLAVORO -->
 <div id="tab-fogli" class="tab-content">
     <div class="card">
@@ -2529,17 +2858,154 @@ window.rimuoviFile = rimuoviFileWrapper;
 </script>
 
 
+
+
+
+<script>
+
+(function() {
+        console.log('🚀 Avvio admin...');
+        
+        // Funzione principale
+        async function initAdmin() {
+            // 1. Controlla sessione
+            const sessionData = JSON.parse(localStorage.getItem('flox_session'));
+            if (!sessionData) {
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            const ruolo = sessionData.profile.ruolo;
+            console.log('👤 Ruolo:', ruolo);
+            
+            // 2. Nascondi sezioni per supervisore
+            if (ruolo === 'supervisore') {
+                document.querySelectorAll('.nav-section').forEach(section => {
+                    const hasDatabase = section.querySelector('[data-tab="config"]');
+                    const hasSincro = section.querySelector('[data-tab="analyze"]');
+                    if (hasDatabase || hasSincro) {
+                        section.style.display = 'none';
+                    }
+                });
+            }
+            
+            // 3. Aggiorna header
+            const userNameEl = document.getElementById('user-name');
+            const userRoleEl = document.getElementById('user-role');
+            const iconEl = document.querySelector('.user-info .material-symbols-rounded');
+            
+            if (userNameEl) {
+                userNameEl.textContent = sessionData.profile?.nome_completo || sessionData.user?.email;
+            }
+            
+            if (userRoleEl) {
+                const testi = {
+                    'admin': '👑 Amministratore',
+                    'supervisore': '👁️ Supervisore',
+                    'tecnico': '🔧 Tecnico'
+                };
+                userRoleEl.textContent = testi[ruolo] || ruolo;
+            }
+            
+            if (iconEl) {
+                const icone = {
+                    'admin': 'admin_panel_settings',
+                    'supervisore': 'visibility',
+                    'tecnico': 'engineering'
+                };
+                iconEl.textContent = icone[ruolo] || 'account_circle';
+            }
+        }
+        
+        // Esegui quando il DOM è pronto
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initAdmin);
+        } else {
+            initAdmin();
+        }
+    })();
+
+
+
+    (function() {
+        console.log('👤 Avvio script aggiornamento info utente...');
+        
+        function aggiornaInfoUtente() {
+            console.log('👤 Tentativo aggiornamento info utente...');
+            
+            const session = JSON.parse(localStorage.getItem('flox_session'));
+            if (!session) {
+                console.log('❌ Nessuna sessione trovata');
+                return false;
+            }
+            
+            const userNameEl = document.getElementById('user-name');
+            const userRoleEl = document.getElementById('user-role');
+            const iconEl = document.querySelector('.user-info .material-symbols-rounded');
+            
+            console.log('🔍 Elementi trovati:', { 
+                userName: userNameEl, 
+                userRole: userRoleEl, 
+                icon: iconEl 
+            });
+            
+            if (!userNameEl || !userRoleEl || !iconEl) {
+                console.log('⏳ Elementi non ancora disponibili, riprovo...');
+                return false;
+            }
+            
+            // Aggiorna nome
+            userNameEl.textContent = session.profile?.nome_completo || session.user?.email || 'Utente';
+            
+            // Aggiorna ruolo e icona
+            const ruolo = session.profile?.ruolo || 'utente';
+            switch(ruolo) {
+                case 'admin': 
+                    userRoleEl.textContent = '👑 Amministratore'; 
+                    iconEl.textContent = 'admin_panel_settings';
+                    break;
+                case 'supervisore': 
+                    userRoleEl.textContent = '👁️ Supervisore'; 
+                    iconEl.textContent = 'visibility';
+                    break;
+                case 'tecnico': 
+                    userRoleEl.textContent = '🔧 Tecnico'; 
+                    iconEl.textContent = 'engineering';
+                    break;
+            }
+            
+            console.log('✅ Info utente aggiornate con successo!');
+            return true;
+        }
+        
+        // Prova subito
+        if (!aggiornaInfoUtente()) {
+            // Se non funziona, riprova ogni 100ms per massimo 3 secondi
+            let tentativi = 0;
+            const interval = setInterval(() => {
+                tentativi++;
+                console.log(`⏳ Tentativo ${tentativi}...`);
+                
+                if (aggiornaInfoUtente() || tentativi >= 30) {
+                    clearInterval(interval);
+                    if (tentativi >= 30) {
+                        console.log('❌ Timeout: impossibile aggiornare info utente');
+                    }
+                }
+            }, 100);
+        }
+    })();
+</script>
+<script src="login.js"></script>
 <script src="db-config.js"></script>
 <script src="admin_database.js"></script>
 <script src="db-rules.js"></script>  
 <script src="admin_veicoli_manager.js"></script>
 <script src="admin_reperibilita.js"></script>
-
 <script src="admin_parco.js"></script>
 <script src="admin_annotazioni.js"></script>
-<script src="admin_foglio.js"></script>  
-
-
+<script src="admin_foglio.js"></script>
+<script src="admin_users.js"></script>
 
 </body>
 </html>

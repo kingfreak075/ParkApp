@@ -2377,59 +2377,63 @@ function handleConfigFile(event) {
 }
 
 // SAVE CONFIG
-async function saveConfig() {
-    const urlInput = document.getElementById('supabase-url');
-    const keyInput = document.getElementById('supabase-key');
+window.saveConfig = function() {
+    const url = document.getElementById('supabase-url').value.trim();
+    const anonKey = document.getElementById('supabase-key').value.trim();
+    const serviceKey = document.getElementById('supabase-service-key').value.trim();
     
-    if (!urlInput || !keyInput) {
-        showNotification('Elementi di configurazione non trovati', 'error');
+    if (!url || !anonKey) {
+        alert('Inserisci URL e Anon Key');
         return;
     }
     
-    const url = urlInput.value.trim();
-    let key = keyInput.value;
+    // Salva le chiavi separatamente
+    localStorage.setItem('supabase_url', url);
+    localStorage.setItem('supabase_key', anonKey);
     
-    // Gestione campo password nascosto
-    if (key === '••••••••••••••••') {
-        key = getSupabaseKey();
-        if (!key) {
-            showNotification('Inserisci la chiave Supabase', 'error');
-            return;
-        }
+    // Salva la configurazione completa con service key
+    localStorage.setItem('db_config', JSON.stringify({
+        url: url,
+        anonKey: anonKey,
+        serviceKey: serviceKey || anonKey // Se serviceKey non fornita, usa anonKey come fallback
+    }));
+    
+    localStorage.setItem('config_caricata', 'true');
+    localStorage.setItem('config_timestamp', new Date().toISOString());
+    
+    // Resetta il client quando cambia la configurazione
+    if (window.resetSupabaseClient) {
+        window.resetSupabaseClient();
+    }
+    
+    alert('Configurazione salvata!');
+    updateConfigDisplay();
+    
+    console.log('Configurazione salvata:', {
+        url: url,
+        anonKey: anonKey.substring(0, 10) + '...',
+        serviceKey: serviceKey ? serviceKey.substring(0, 10) + '...' : 'non fornita'
+    });
+};
+
+function updateConfigDisplay() {
+    const config = JSON.parse(localStorage.getItem('db_config') || '{}');
+    const url = localStorage.getItem('supabase_url') || '-';
+    const anonKey = localStorage.getItem('supabase_key') || '-';
+    
+    document.getElementById('config-url').textContent = url ? url.substring(0, 30) + '...' : '-';
+    document.getElementById('config-key-status').textContent = anonKey ? '✓ Presente' : '-';
+    document.getElementById('config-service-status').textContent = config.serviceKey ? '✓ Presente' : '-';
+    
+    if (url && anonKey) {
+        document.getElementById('config-status').textContent = 'Configurato';
+        document.getElementById('config-status').className = 'value status-online';
     } else {
-        key = key.trim();
-    }
-    
-    if (!url || !key) {
-        showNotification('Inserisci URL e Anon Key', 'error');
-        return;
-    }
-    
-    if (!url.startsWith('https://')) {
-        showNotification('URL deve iniziare con https://', 'error');
-        return;
-    }
-    
-    showLoading('Salvataggio configurazione', 'Validazione dati...');
-    
-    try {
-        saveDbConfig(url, key);
-        showNotification('Configurazione salvata con successo', 'success');
-        
-        // Aggiorna UI
-        loadInitialConfig();
-        updateDbStatus();
-        
-        // Test automatico
-        await testConnection();
-        
-    } catch (error) {
-        console.error('Errore salvataggio configurazione:', error);
-        showNotification(`Errore: ${error.message}`, 'error');
-    } finally {
-        hideLoading();
+        document.getElementById('config-status').textContent = 'Non configurato';
+        document.getElementById('config-status').className = 'value status-offline';
     }
 }
+
 
 // RESET CONFIG
 function resetConfig() {
@@ -2456,31 +2460,26 @@ function exportConfig() {
 function togglePassword() {
     const input = document.getElementById('supabase-key');
     const icon = document.getElementById('toggle-icon');
-    
-    if (!input || !icon) return;
-    
     if (input.type === 'password') {
         input.type = 'text';
         icon.textContent = 'visibility_off';
-        
-        // Se mostra placeholder, reimposta
-        if (input.value === '••••••••••••••••') {
-            const actualKey = getSupabaseKey();
-            if (actualKey) {
-                input.value = actualKey;
-            }
-        }
     } else {
         input.type = 'password';
         icon.textContent = 'visibility';
-        
-        // Nascondi chiave reale
-        if (input.value !== '••••••••••••••••') {
-            input.value = '••••••••••••••••';
-        }
     }
 }
 
+function toggleServiceKey() {
+    const input = document.getElementById('supabase-service-key');
+    const icon = document.getElementById('toggle-service-icon');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.textContent = 'visibility_off';
+    } else {
+        input.type = 'password';
+        icon.textContent = 'visibility';
+    }
+}
 // REMOVE FILE
 function removeFile() {
     const fileInfo = document.getElementById('file-info');

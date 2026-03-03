@@ -232,7 +232,7 @@ async function caricaPagina(page) {
             parcoImpiantiFiltrati = [...parcoImpiantiList];
         }
         
-        renderizzaTabella();
+        renderizzaTabellaParco();
         aggiornaControlliPaginazione();
         
     } catch (error) {
@@ -492,7 +492,7 @@ function filtraImpianti() {
 // RENDERING TABELLA
 // ============================================
 
-function renderizzaTabella() {
+function renderizzaTabellaParco() {
     const tbody = document.getElementById('tabella-parco-body');
     
     if (parcoImpiantiFiltrati.length === 0) {
@@ -1117,7 +1117,7 @@ function confrontaCSVconDB(datiCSV) {
         modificati: [],
         dateAggiornate: [],
         eliminati: [],
-        mappaDateAggiornate: {}  // Per tenere traccia delle date aggiornate
+        mappaDateAggiornate: {}
     };
     
     // Crea mappa DB per lookup veloce
@@ -1143,35 +1143,33 @@ function confrontaCSVconDB(datiCSV) {
             let hasModifiche = false;
             const modifiche = {};
             
-      // Campi da confrontare (tutti tranne le date)
-const campi = ['tipo', 'zona', 'giro', 'tecnico', 'periodicit', 'venditore', 
-              'manut', 'mese_sem', 'amministratore', 'esattore', 'cliente', 
-              'Indirizzo', 'localit', 'prov', 'note'];
-
-// Nella funzione confrontaCSVconDB, sostituisci la parte del confronto campi con:
-
-campi.forEach(campo => {
-    let valCSV = row[campo] || null;
-    let valDB = dbRow[campo] || null;
-    
-    // NORMALIZZA ENTRAMBI I VALORI prima del confronto
-    valCSV = normalizzaStringa(valCSV);
-    valDB = normalizzaStringa(valDB);
-    
-    // CONVERSIONE: se entrambi sono numerici, converti in numero per il confronto
-    if (!isNaN(valCSV) && !isNaN(valDB)) {
-        valCSV = Number(valCSV);
-        valDB = Number(valDB);
-    }
-    
-    if (valCSV !== valDB) {
-        hasModifiche = true;
-        modifiche[campo] = {
-            vecchio: dbRow[campo],  // Mantieni valore originale per visualizzazione
-            nuovo: row[campo]
-        };
-    }
-});
+            // Campi da confrontare (tutti tranne le date)
+            const campi = ['tipo', 'zona', 'giro', 'tecnico', 'periodicit', 'venditore', 
+                          'manut', 'mese_sem', 'amministratore', 'esattore', 'cliente', 
+                          'Indirizzo', 'localit', 'prov', 'note'];
+            
+            campi.forEach(campo => {
+                let valCSV = row[campo] || null;
+                let valDB = dbRow[campo] || null;
+                
+                // Normalizza entrambi i valori
+                valCSV = normalizzaStringa(valCSV);
+                valDB = normalizzaStringa(valDB);
+                
+                // CONVERSIONE: se entrambi sono numerici, converti in numero per il confronto
+                if (!isNaN(valCSV) && !isNaN(valDB)) {
+                    valCSV = Number(valCSV);
+                    valDB = Number(valDB);
+                }
+                
+                if (valCSV !== valDB) {
+                    hasModifiche = true;
+                    modifiche[campo] = {
+                        vecchio: dbRow[campo],  // Mantieni valore originale per visualizzazione
+                        nuovo: row[campo]
+                    };
+                }
+            });
             
             // Gestione date (confronto speciale)
             const dateAggiornate = {};
@@ -1207,16 +1205,18 @@ campi.forEach(campo => {
         }
     });
     
-    // Trova eliminati (in DB ma non in CSV)
+    // Trova eliminati (in DB ma non in CSV) - INCLUDE L'ID
     parcoImpiantiList.forEach(imp => {
         if (!impiantiCSV.has(imp.impianto)) {
-            result.eliminati.push(imp);
+            result.eliminati.push({
+                ...imp,  // Include automaticamente id, impianto e tutti gli altri campi
+                impianto: imp.impianto
+            });
         }
     });
     
     return result;
 }
-
 function confrontaDate(dataCSV, dataDB) {
     // Se una è vuota, vince l'altra
     if (!dataCSV && !dataDB) return null;
@@ -1464,17 +1464,9 @@ async function eseguiImportParco() {
             const impianto = parcoImportAnalisi.nuovi[idx];
             if (!impianto) continue;
             
-            // Prepara dati
-            const dati = { ...impianto };
-            
-            // Converti date se presenti
-            if (dati.ult_sem && dati.ult_sem.includes('/')) {
-                // Mantieni formato gg/mm/aaaa
-            }
-            
             const { error } = await supabase
                 .from('Parco_app')
-                .insert([dati]);
+                .insert([impianto]);
             
             if (!error) risultati.inseriti++;
         }
@@ -1486,12 +1478,9 @@ async function eseguiImportParco() {
             const item = parcoImportAnalisi.modificati[idx];
             if (!item) continue;
             
-            // Prepara dati aggiornati
-            const dati = { ...item.datiCompleti };
-            
             const { error } = await supabase
                 .from('Parco_app')
-                .update(dati)
+                .update(item.datiCompleti)
                 .eq('impianto', item.impianto);
             
             if (!error) risultati.aggiornati++;
@@ -1514,53 +1503,31 @@ async function eseguiImportParco() {
             }
         }
         
-// 4. ELIMINA SELEZIONATI (soft delete - per ora eliminazione fisica)
-const checkEliminati = document.querySelectorAll('.check-eliminato:checked');
-console.log('🔍 Checkbox eliminati selezionati:', checkEliminati.length);
-
-const impiantiDaEliminare = [];
-for (const cb of checkEliminati) {
-    const idx = cb.id.split('-')[1];
-    console.log('🔍 Indice checkbox:', idx);
-    
-    const impianto = parcoImportAnalisi.eliminati[idx];
-    console.log('🔍 Impianto trovato:', impianto);
-    
-    if (impianto) {
-        impiantiDaEliminare.push(impianto.impianto);
-        console.log('🔍 Aggiunto alla lista eliminazione:', impianto.impianto);
-    }
-}
-
-console.log('🔍 Lista finale impianti da eliminare:', impiantiDaEliminare);
-
-if (impiantiDaEliminare.length > 0) {
-    console.log('🔍 Eseguo DELETE per:', impiantiDaEliminare);
-    
-    const { data, error } = await supabase
-        .from('Parco_app')
-        .delete()
-        .in('impianto', impiantiDaEliminare);
-    
-    console.log('🔍 Risultato DELETE - data:', data);
-    console.log('🔍 Risultato DELETE - error:', error);
-    
-    if (error) {
-        console.error('❌ Errore DELETE:', error);
-        mostraNotifica(`Errore eliminazione: ${error.message}`, 'error');
-    } else {
-        risultati.eliminati = impiantiDaEliminare.length;
-        console.log('✅ DELETE completata con successo');
-    }
-}
+        // 4. ELIMINA SELEZIONATI (usando ID)
+        const checkEliminati = document.querySelectorAll('.check-eliminato:checked');
+        console.log('🔍 Checkbox eliminati selezionati:', checkEliminati.length);
         
-        if (impiantiDaEliminare.length > 0) {
-            const { error } = await supabase
-                .from('Parco_app')
-                .delete()
-                .in('impianto', impiantiDaEliminare);
+        for (const cb of checkEliminati) {
+            const idx = cb.id.split('-')[1];
+            const impiantoData = parcoImportAnalisi.eliminati[idx];
             
-            if (!error) risultati.eliminati = impiantiDaEliminare.length;
+            if (impiantoData && impiantoData.id) {
+                console.log('🔍 Elimino con ID:', impiantoData.id, 'Impianto:', impiantoData.impianto);
+                
+                const { error } = await supabase
+                    .from('Parco_app')
+                    .delete()
+                    .eq('id', impiantoData.id);
+                
+                if (!error) {
+                    risultati.eliminati++;
+                    console.log('✅ Eliminato:', impiantoData.impianto);
+                } else {
+                    console.error('❌ Errore eliminazione:', error);
+                }
+            } else {
+                console.warn('⚠️ Record senza ID, skip:', impiantoData?.impianto);
+            }
         }
         
         nascondiLoading();
@@ -1580,7 +1547,6 @@ if (impiantiDaEliminare.length > 0) {
         nascondiLoading();
     }
 }
-
 function generaLogParco(risultati) {
     const data = new Date();
     const fileName = `log_parco_${data.getFullYear()}${(data.getMonth()+1).toString().padStart(2,'0')}${data.getDate().toString().padStart(2,'0')}_${data.getHours().toString().padStart(2,'0')}${data.getMinutes().toString().padStart(2,'0')}${data.getSeconds().toString().padStart(2,'0')}.txt`;
