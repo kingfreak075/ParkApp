@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hasha PIN - UNA SOLA VOLTA (Crypto Native)</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #00ff00; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+        .log { margin-top: 20px; white-space: pre-wrap; max-height: 500px; overflow-y: auto; background: #000; padding: 10px; border-radius: 5px; }
+        input { padding: 8px; width: 100%; max-width: 600px; background: #333; color: #0f0; border: 1px solid #0f0; }
+    </style>
+</head>
+<body>
+    <h1>⚠️ ATTENZIONE: Esegui UNA SOLA VOLTA</h1>
+    <p>Questo script hasherà tutti i PIN dei tecnici usando Web Crypto API.</p>
+    <p>Assicurati di aver fatto un backup!</p>
+    
+    <div>
+        <label>Service Key:</label><br>
+        <input type="password" id="serviceKey" size="60" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlcmxmdWZubW9seXJteGV5cWZkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MDM2MDIzMCwiZXhwIjoyMDU1OTM2MjMwfQ.xZbK5hZetE9ZldyKmkAYifJ5Z37g37QRJ9cUQ26QEWg">
+    </div>
+    
+    <button onclick="hashaTutti()" style="margin-top: 20px;">▶ Avvia hashing PIN</button>
+    <button onclick="document.getElementById('log').innerHTML = ''" style="margin-top: 20px; margin-left: 10px;">🗑️ Pulisci log</button>
+    
+    <div id="log" class="log"></div>
+    
+    <script>
+        const SUPABASE_URL = 'https://berlfufnmolyrmxeyqfd.supabase.co';
+        
+        function log(msg, isError = false) {
+            const logDiv = document.getElementById('log');
+            const color = isError ? '#ff6b6b' : '#00ff00';
+            logDiv.innerHTML += `<span style="color: ${color};">${msg}</span><br>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(msg);
+        }
+        
+        // Funzione per hashare con SHA-256 (in esadecimale)
+        async function hashPIN(pin) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(pin);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            return hashHex;
+        }
+        
+        async function hashaTutti() {
+            const serviceKey = document.getElementById('serviceKey').value.trim();
+            if (!serviceKey) {
+                alert('Inserisci la Service Key');
+                return;
+            }
+            
+            log('🚀 Inizializzazione client Supabase...');
+            const supabase = window.supabase.createClient(SUPABASE_URL, serviceKey);
+            
+            log('🔍 Cerco tecnici con PIN da hashare...');
+            
+            try {
+                // 1. Tecnici
+                const { data: tecnici, error: errTecnici } = await supabase
+                    .from('tecnici')
+                    .select('uid, pin')
+                    .not('pin', 'is', null)
+                    .is('pin_hash', null);
+                
+                if (errTecnici) {
+                    log('❌ Errore tecnici: ' + errTecnici.message, true);
+                    return;
+                }
+                
+                log(`📊 Trovati ${tecnici.length} tecnici con PIN da hashare`);
+                
+                if (tecnici.length === 0) {
+                    log('✅ Nessun PIN da hashare per i tecnici');
+                } else {
+                    for (let i = 0; i < tecnici.length; i++) {
+                        const t = tecnici[i];
+                        try {
+                            // Genera hash del PIN con SHA-256
+                            const hash = await hashPIN(t.pin);
+                            
+                            // Aggiorna il record
+                            const { error } = await supabase
+                                .from('tecnici')
+                                .update({ pin_hash: hash })
+                                .eq('uid', t.uid);
+                            
+                            if (error) throw error;
+                            
+                            log(`✅ [${i+1}/${tecnici.length}] Tecnico ${t.uid} aggiornato`);
+                        } catch (err) {
+                            log(`❌ [${i+1}/${tecnici.length}] Errore tecnico ${t.uid}: ${err.message}`, true);
+                        }
+                        
+                        // Piccola pausa per non sovraccaricare
+                        await new Promise(r => setTimeout(r, 100));
+                    }
+                }
+                
+                log(''); // Riga vuota
+                log('📊 Verifica finale...');
+                
+                const { data: checkTecnici } = await supabase
+                    .from('tecnici')
+                    .select('uid')
+                    .not('pin', 'is', null)
+                    .is('pin_hash', null);
+                
+                if (checkTecnici?.length === 0) {
+                    log('✅ Tutti i PIN dei tecnici sono stati hashati correttamente!');
+                } else {
+                    log(`⚠️ Ancora ${checkTecnici?.length || 0} tecnici da hashare`, true);
+                }
+                
+                log(''); // Riga vuota
+                log('🎉 OPERAZIONE COMPLETATA!');
+                log('⚠️ Ricorda di eliminare questo file!');
+                
+            } catch (error) {
+                log('❌ Errore generale: ' + error.message, true);
+            }
+        }
+    </script>
+</body>
+</html>

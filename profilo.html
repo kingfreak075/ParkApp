@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ParkApp - Il Mio Profilo</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db-config.js"></script>
+    <script src="auth.js"></script>
+    
+    <style>
+        /* Stili identici a prima... */
+    </style>
+</head>
+<body class="bg-app">
+    <div class="app-container">
+        <div class="profile-container">
+            <!-- Bottone indietro -->
+            <button onclick="window.location.href='menu.html'" class="btn-back">
+                <span class="material-symbols-rounded">arrow_back</span>
+                Torna al Menu
+            </button>
+            
+            <!-- Container messaggi -->
+            <div id="message-container" class="message-container"></div>
+            
+            <!-- Loading iniziale -->
+            <div id="loading-iniziale" style="text-align: center; padding: 2rem;">
+                <div class="loading-spinner-large"></div>
+                <p style="margin-top: 1rem;">Caricamento profilo...</p>
+            </div>
+            
+            <!-- Contenuto profilo (nascosto inizialmente) -->
+            <div id="profile-content" style="display: none;">
+                <!-- Intestazione profilo -->
+                <div class="profile-header">
+                    <div class="profile-avatar">
+                        <span class="material-symbols-rounded">person</span>
+                    </div>
+                    <div class="profile-name" id="profile-name">-</div>
+                    <div class="profile-role" id="profile-role">-</div>
+                </div>
+                
+                <!-- Scheda Informazioni -->
+                <div class="profile-card">
+                    <div class="card-title">
+                        <span class="material-symbols-rounded">info</span>
+                        Informazioni Personali
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">Email</span>
+                        <span class="info-value" id="info-email">-</span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">ID</span>
+                        <span class="info-value" id="info-id">-</span>
+                    </div>
+                </div>
+                
+                <!-- Cambio PIN -->
+                <div class="profile-card">
+                    <div class="card-title">
+                        <span class="material-symbols-rounded">pin</span>
+                        Cambia PIN
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>PIN Attuale</label>
+                        <input type="password" id="pin-attuale" maxlength="4" inputmode="numeric" placeholder="4 cifre" class="form-input">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Nuovo PIN</label>
+                        <input type="password" id="pin-nuovo" maxlength="4" inputmode="numeric" placeholder="4 cifre" class="form-input">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Conferma PIN</label>
+                        <input type="password" id="pin-conferma" maxlength="4" inputmode="numeric" placeholder="4 cifre" class="form-input">
+                    </div>
+                    
+                    <button onclick="cambiaPin()" class="btn-save" id="btn-pin">
+                        <span class="material-symbols-rounded">save</span>
+                        Aggiorna PIN
+                    </button>
+                </div>
+                
+                <!-- Cambio Password -->
+                <div class="profile-card">
+                    <div class="card-title">
+                        <span class="material-symbols-rounded">password</span>
+                        Cambia Password
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Password Attuale</label>
+                        <input type="password" id="password-attuale" placeholder="Minimo 6 caratteri" class="form-input">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Nuova Password</label>
+                        <input type="password" id="password-nuova" placeholder="Minimo 6 caratteri" class="form-input">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Conferma Password</label>
+                        <input type="password" id="password-conferma" placeholder="Minimo 6 caratteri" class="form-input">
+                    </div>
+                    
+                    <button onclick="cambiaPassword()" class="btn-save" id="btn-password">
+                        <span class="material-symbols-rounded">save</span>
+                        Aggiorna Password
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+         // Controlla se è primo accesso
+document.addEventListener('DOMContentLoaded', function() {
+    // Controlla se è primo accesso
+    const urlParams = new URLSearchParams(window.location.search);
+    const primoAccesso = urlParams.get('primo_accesso') || localStorage.getItem('primo_accesso');
+    
+    if (primoAccesso === 'true') {
+        mostraMessaggio('⚠️ Prima configurazione: cambia la tua password', 'warning');
+        localStorage.removeItem('primo_accesso');
+        
+        // Evidenzia la sezione cambio password
+        document.querySelector('.profile-card:last-child').style.border = '2px solid var(--primary)';
+    }
+});
+
+
+
+        // ============================================
+        // VARIABILI GLOBALI
+        // ============================================
+        let utenteCorrente = null;
+        let supabase = null;
+
+        // ============================================
+        // INIZIALIZZAZIONE
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('📱 Profilo.html caricato');
+            
+            // Verifica login
+            utenteCorrente = authGetUtente();
+            
+            if (!utenteCorrente) {
+                console.log('❌ Nessun utente loggato, redirect a index');
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            console.log('✅ Utente loggato:', utenteCorrente.nome_completo);
+            
+            supabase = getSupabaseClient();
+            if (!supabase) {
+                mostraMessaggio('Database non configurato', 'error');
+                return;
+            }
+            
+            // Mostra dati utente
+            visualizzaDatiUtente();
+            
+            // Nascondi loading e mostra contenuto
+            document.getElementById('loading-iniziale').style.display = 'none';
+            document.getElementById('profile-content').style.display = 'block';
+        });
+
+        // ============================================
+        // VISUALIZZA DATI UTENTE
+        // ============================================
+        function visualizzaDatiUtente() {
+            document.getElementById('profile-name').textContent = utenteCorrente.nome_completo || '-';
+            document.getElementById('profile-role').textContent = utenteCorrente.ruolo || 'tecnico';
+            document.getElementById('info-email').textContent = utenteCorrente.Mail || utenteCorrente.email || '-';
+            document.getElementById('info-id').textContent = utenteCorrente.id || '-';
+        }
+
+        // ============================================
+        // CAMBIA PIN
+        // ============================================
+        async function cambiaPin() {
+            const pinAttuale = document.getElementById('pin-attuale').value;
+            const pinNuovo = document.getElementById('pin-nuovo').value;
+            const pinConferma = document.getElementById('pin-conferma').value;
+            
+            // Validazioni
+            if (!pinAttuale || !pinNuovo || !pinConferma) {
+                mostraMessaggio('Compila tutti i campi', 'error');
+                return;
+            }
+            
+            if (!/^\d{4}$/.test(pinNuovo)) {
+                mostraMessaggio('Il PIN deve essere di 4 cifre', 'error');
+                return;
+            }
+            
+            if (pinNuovo !== pinConferma) {
+                mostraMessaggio('I nuovi PIN non coincidono', 'error');
+                return;
+            }
+            
+            if (pinAttuale === pinNuovo) {
+                mostraMessaggio('Il nuovo PIN deve essere diverso', 'error');
+                return;
+            }
+            
+            // Disabilita bottone
+            const btn = document.getElementById('btn-pin');
+            const testoOriginale = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span> Aggiornamento...';
+            
+            try {
+                const email = utenteCorrente.Mail || utenteCorrente.email;
+                const risultato = await authCambiaPin(email, pinAttuale, pinNuovo);
+                
+                if (risultato.success) {
+                    mostraMessaggio('✅ PIN aggiornato con successo!', 'success');
+                    
+                    // Aggiorna utente corrente
+                    utenteCorrente.pin = pinNuovo;
+                    sessionStorage.setItem('utenteCorrente', JSON.stringify(utenteCorrente));
+                    
+                    // Pulisci campi
+                    document.getElementById('pin-attuale').value = '';
+                    document.getElementById('pin-nuovo').value = '';
+                    document.getElementById('pin-conferma').value = '';
+                } else {
+                    mostraMessaggio('❌ ' + (risultato.error || 'Errore'), 'error');
+                }
+            } catch (error) {
+                console.error('Errore:', error);
+                mostraMessaggio('❌ Errore di connessione', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = testoOriginale;
+            }
+        }
+
+        // ============================================
+        // CAMBIA PASSWORD
+        // ============================================
+        async function cambiaPassword() {
+            const passwordAttuale = document.getElementById('password-attuale').value;
+            const passwordNuova = document.getElementById('password-nuova').value;
+            const passwordConferma = document.getElementById('password-conferma').value;
+            
+            // Validazioni
+            if (!passwordAttuale || !passwordNuova || !passwordConferma) {
+                mostraMessaggio('Compila tutti i campi', 'error');
+                return;
+            }
+            
+            if (passwordNuova.length < 6) {
+                mostraMessaggio('La nuova password deve essere di almeno 6 caratteri', 'error');
+                return;
+            }
+            
+            if (passwordNuova !== passwordConferma) {
+                mostraMessaggio('Le nuove password non coincidono', 'error');
+                return;
+            }
+            
+            if (passwordAttuale === passwordNuova) {
+                mostraMessaggio('La nuova password deve essere diversa', 'error');
+                return;
+            }
+            
+            // Disabilita bottone
+            const btn = document.getElementById('btn-password');
+            const testoOriginale = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span> Aggiornamento...';
+            
+            try {
+                const email = utenteCorrente.Mail || utenteCorrente.email;
+                
+                // Verifica password attuale
+                const { error: signInError } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: passwordAttuale
+                });
+                
+                if (signInError) {
+                    mostraMessaggio('❌ Password attuale errata', 'error');
+                    return;
+                }
+                
+                // Cambia password
+                const { error: updateError } = await supabase.auth.updateUser({
+                    password: passwordNuova
+                });
+                
+                if (updateError) throw updateError;
+                
+                mostraMessaggio('✅ Password aggiornata con successo!', 'success');
+                
+                // Pulisci campi
+                document.getElementById('password-attuale').value = '';
+                document.getElementById('password-nuova').value = '';
+                document.getElementById('password-conferma').value = '';
+                
+            } catch (error) {
+                console.error('Errore:', error);
+                mostraMessaggio('❌ Errore durante l\'aggiornamento', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = testoOriginale;
+            }
+        }
+
+        // ============================================
+        // MOSTRA MESSAGGIO
+        // ============================================
+        function mostraMessaggio(testo, tipo) {
+            const container = document.getElementById('message-container');
+            const msg = document.createElement('div');
+            msg.className = `message ${tipo}`;
+            msg.textContent = testo;
+            container.innerHTML = '';
+            container.appendChild(msg);
+            
+            setTimeout(() => {
+                if (container.contains(msg)) {
+                    msg.remove();
+                }
+            }, 5000);
+        }
+
+        // Esponi funzioni
+        window.cambiaPin = cambiaPin;
+        window.cambiaPassword = cambiaPassword;
+    </script>
+</body>
+</html>

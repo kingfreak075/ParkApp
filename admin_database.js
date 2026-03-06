@@ -2,7 +2,16 @@
 // Gestione interfaccia admin unificata per FloX
 // Versione 2.0 - Con gestione errori migliorata per Supabase
 // ==========================================================
+// admin_database.js
+// ==========================================================
+// DIPENDE DA: db-config.js, db-rules.js
+// Assicurati che questi file siano caricati PRIMA nell'HTML:
+// <script src="db-config.js"></script>
+// <script src="db-rules.js"></script>
+// <script src="admin_database.js"></script>
+// ==========================================================
 
+// ... (tutto il resto del file rimane identico) ...
 // VARIABILI GLOBALI
 let currentTab = 'config';
 let currentTable = null;
@@ -105,7 +114,85 @@ function initializePersonnelManagement() {
 
 
 
+window.exportConfig = function() {
+    try {
+        const url = localStorage.getItem('supabase_url');
+        const anonKey = localStorage.getItem('supabase_key');
+        const config = JSON.parse(localStorage.getItem('db_config') || '{}');
+        const serviceKey = config.serviceKey || '';
+        const timestamp = new Date().toISOString();
+        
+        if (!url || !anonKey) {
+            showNotification('❌ Nessuna configurazione da esportare', 'error');
+            return;
+        }
+        
+        const content = `# FloX Database Configuration
+# Generated: ${timestamp}
+# Format: KEY=VALUE
 
+SUPABASE_URL=${url}
+SUPABASE_KEY=${anonKey}
+SUPABASE_SERVICE_KEY=${serviceKey}
+
+# End of configuration`;
+        
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
+        const downloadUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        
+        a.href = downloadUrl;
+        a.download = `FloX_DB_Config_${new Date().toISOString().split('T')[0]}.kf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(downloadUrl);
+        
+        showNotification('✅ Configurazione esportata', 'success');
+    } catch (error) {
+        showNotification(`Errore: ${error.message}`, 'error');
+    }
+};
+
+window.handleConfigFile = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    if (!file.name.match(/\.(kf|txt|json)$/i)) {
+        showNotification('❌ Formato non supportato', 'error');
+        return;
+    }
+    
+    const fileInfo = document.getElementById('file-info');
+    const fileName = document.getElementById('file-name');
+    
+    if (fileInfo) fileInfo.style.display = 'block';
+    if (fileName) fileName.textContent = file.name;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const success = window.importDbConfig(e.target.result);
+            if (success) {
+                showNotification(`✅ Configurazione importata`, 'success');
+                if (typeof updateConfigDisplay === 'function') updateConfigDisplay();
+                setTimeout(() => testConnection(), 500);
+            }
+        } catch (error) {
+            showNotification(`❌ Errore: ${error.message}`, 'error');
+            if (fileInfo) fileInfo.style.display = 'none';
+        }
+    };
+    reader.readAsText(file);
+};
+
+window.removeFile = function() {
+    const fileInfo = document.getElementById('file-info');
+    const fileInput = document.getElementById('file-kf');
+    if (fileInfo) fileInfo.style.display = 'none';
+    if (fileInput) fileInput.value = '';
+    showNotification('📁 File rimosso', 'info');
+};
 
 
 
@@ -2122,19 +2209,21 @@ function setupTabNavigation() {
 }
 
 // SETUP FILE INPUTS
+
 function setupFileInputs() {
     const configFileInput = document.getElementById('file-kf');
     const csvFileInput = document.getElementById('file-csv');
     
     if (configFileInput) {
+        configFileInput.removeEventListener('change', handleConfigFile);
         configFileInput.addEventListener('change', handleConfigFile);
     }
     
     if (csvFileInput) {
+        csvFileInput.removeEventListener('change', handleCSVFile);
         csvFileInput.addEventListener('change', handleCSVFile);
     }
 }
-
 // SETUP EVENT LISTENERS
 function setupEventListeners() {
     // Metodi configurazione
@@ -2416,24 +2505,46 @@ window.saveConfig = function() {
     });
 };
 
-function updateConfigDisplay() {
+window.updateConfigDisplay = function() {
     const config = JSON.parse(localStorage.getItem('db_config') || '{}');
     const url = localStorage.getItem('supabase_url') || '-';
     const anonKey = localStorage.getItem('supabase_key') || '-';
+    const timestamp = localStorage.getItem('config_timestamp');
     
-    document.getElementById('config-url').textContent = url ? url.substring(0, 30) + '...' : '-';
-    document.getElementById('config-key-status').textContent = anonKey ? '✓ Presente' : '-';
-    document.getElementById('config-service-status').textContent = config.serviceKey ? '✓ Presente' : '-';
+    document.getElementById('config-project').textContent = url ? url.replace('https://', '').split('.')[0] : '-';
+    
+    const statusEl = document.getElementById('config-status');
+    const statusHeader = document.getElementById('config-status-header');
+    const quickTest = document.getElementById('connection-quick-test');
     
     if (url && anonKey) {
-        document.getElementById('config-status').textContent = 'Configurato';
-        document.getElementById('config-status').className = 'value status-online';
+        statusEl.textContent = 'Configurato';
+        statusEl.className = 'value status-online';
+        if (statusHeader) statusHeader.innerHTML = '🟢 Connesso';
+        if (quickTest) quickTest.innerHTML = '✅ Configurazione presente';
     } else {
-        document.getElementById('config-status').textContent = 'Non configurato';
-        document.getElementById('config-status').className = 'value status-offline';
+        statusEl.textContent = 'Non configurato';
+        statusEl.className = 'value status-offline';
+        if (statusHeader) statusHeader.innerHTML = '⚫ Non configurato';
+        if (quickTest) quickTest.innerHTML = '⏳ In attesa di configurazione';
     }
-}
+    
+    document.getElementById('config-url').textContent = url ? url.substring(0, 30) + '...' : '-';
+    document.getElementById('config-key-status').innerHTML = anonKey ? 
+        '<span class="badge badge-success">✓ Presente</span>' : 
+        '<span class="badge" style="background: #94a3b8; color: white;">Non presente</span>';
+    
+    document.getElementById('config-service-status').innerHTML = config.serviceKey ? 
+        '<span class="badge badge-success">✓ Presente</span>' : 
+        '<span class="badge" style="background: #94a3b8; color: white;">Non presente</span>';
+    
+    if (timestamp) {
+        document.getElementById('config-date').textContent = new Date(timestamp).toLocaleString('it-IT');
+    }
+};
 
+// Chiamare all'avvio
+updateConfigDisplay();
 
 // RESET CONFIG
 function resetConfig() {
@@ -5833,6 +5944,64 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 });
+// Funzione per switch tra i metodi di configurazione
+window.switchConfigMethod = function(method) {
+    document.querySelectorAll('[data-method]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.method === method);
+    });
+    
+    document.querySelectorAll('.method-content').forEach(content => {
+        content.style.display = content.id === `method-${method}` ? 'block' : 'none';
+    });
+};
+
+// Funzione per aggiornare il display della configurazione
+window.updateConfigDisplay = function() {
+    const config = JSON.parse(localStorage.getItem('db_config') || '{}');
+    const url = localStorage.getItem('supabase_url') || '-';
+    const anonKey = localStorage.getItem('supabase_key') || '-';
+    const timestamp = localStorage.getItem('config_timestamp');
+    
+    // Aggiorna header
+    document.getElementById('config-project').textContent = url ? url.replace('https://', '').split('.')[0] : '-';
+    
+    // Aggiorna stato
+    const statusEl = document.getElementById('config-status');
+    const statusHeader = document.getElementById('config-status-header');
+    const quickTest = document.getElementById('connection-quick-test');
+    
+    if (url && anonKey) {
+        statusEl.textContent = 'Configurato';
+        statusEl.className = 'value status-online';
+        statusHeader.innerHTML = '🟢 Connesso';
+        quickTest.innerHTML = '✅ Configurazione presente';
+    } else {
+        statusEl.textContent = 'Non configurato';
+        statusEl.className = 'value status-offline';
+        statusHeader.innerHTML = '⚫ Non configurato';
+        quickTest.innerHTML = '⏳ In attesa di configurazione';
+    }
+    
+    // Aggiorna chiavi
+    document.getElementById('config-url').textContent = url ? url.substring(0, 30) + '...' : '-';
+    document.getElementById('config-key-status').innerHTML = anonKey ? 
+        '<span class="badge badge-success">✓ Presente</span>' : 
+        '<span class="badge" style="background: #94a3b8; color: white;">Non presente</span>';
+    
+    document.getElementById('config-service-status').innerHTML = config.serviceKey ? 
+        '<span class="badge badge-success">✓ Presente</span>' : 
+        '<span class="badge" style="background: #94a3b8; color: white;">Non presente</span>';
+    
+    if (timestamp) {
+        document.getElementById('config-date').textContent = new Date(timestamp).toLocaleString('it-IT');
+    }
+};
+
+// Chiama updateConfigDisplay all'avvio
+updateConfigDisplay();
+
+
+
 
 // Collega il bottone upload
     const btnUpload = document.getElementById('btn-upload');

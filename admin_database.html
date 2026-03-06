@@ -152,7 +152,6 @@
             <!-- CONTENT AREA -->
             <div class="content-area">
                 <!-- TAB 1: CONFIGURAZIONE DATABASE -->
-              <!-- TAB 1: CONFIGURAZIONE DATABASE -->
 <div id="tab-config" class="tab-content active">
     <div class="card">
         <div class="card-header">
@@ -167,63 +166,128 @@
                 <button class="btn btn-icon" title="Esporta configurazione" onclick="exportConfig()">
                     <span class="material-symbols-rounded">download</span>
                 </button>
+                <button class="btn btn-icon" title="Aggiorna stato" onclick="updateConfigDisplay()">
+                    <span class="material-symbols-rounded">refresh</span>
+                </button>
             </div>
         </div>
         
         <div class="card-body">
-            <div class="config-grid">
-                <!-- Configurazione attuale -->
-                <div class="config-current">
-                    <h4>Configurazione Attuale</h4>
+            <!-- STATO CONNESSIONE IN EVIDENZA -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px; padding: 1.5rem; margin-bottom: 2rem; color: white;">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <span class="material-symbols-rounded" style="font-size: 2.5rem; background: rgba(255,255,255,0.2); padding: 0.5rem; border-radius: 12px;">cloud</span>
+                            <div>
+                                <div style="font-size: 0.8rem; opacity: 0.9;">STATO CONNESSIONE</div>
+                                <div style="font-size: 1.5rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                                    <span id="config-status-header" class="status-badge">⚫ Non configurato</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="width: 1px; height: 40px; background: rgba(255,255,255,0.3);"></div>
+                        
+                        <div>
+                            <div style="font-size: 0.8rem; opacity: 0.9;">PROGETTO</div>
+                            <div style="font-size: 1.1rem; font-weight: 600;" id="config-project">-</div>
+                        </div>
+                    </div>
                     
-                    <div class="config-info">
-                        <div class="info-item">
-                            <span class="label">Stato:</span>
-                            <span id="config-status" class="value status-offline">Non configurato</span>
+                    <div id="connection-quick-test" style="background: rgba(255,255,255,0.2); padding: 0.5rem 1rem; border-radius: 30px; font-size: 0.9rem;">
+                        ⏳ In attesa di configurazione
+                    </div>
+                </div>
+            </div>
+            
+            <div class="config-grid" style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 2rem;">
+                <!-- PANNELLO SINISTRO: CONFIGURAZIONE ATTUALE -->
+                <div class="config-current" style="background: #f8fafc; border-radius: 16px; padding: 1.5rem;">
+                    <h4 style="margin: 0 0 1.5rem 0; color: var(--text-main); font-weight: 800; display: flex; align-items: center; gap: 0.5rem;">
+                        <span class="material-symbols-rounded" style="color: var(--primary);">check_circle</span>
+                        Configurazione Attuale
+                    </h4>
+                    
+                    <div class="config-info" style="display: grid; gap: 1rem;">
+                        <div class="info-item" style="display: flex; justify-content: space-between; padding: 0.75rem; background: white; border-radius: 12px;">
+                            <span class="label" style="color: #64748b; font-weight: 500;">Stato:</span>
+                            <span id="config-status" class="value status-offline" style="font-weight: 700;">Non configurato</span>
                         </div>
-                        <div class="info-item">
-                            <span class="label">URL Supabase:</span>
-                            <span id="config-url" class="value">-</span>
+                        
+                        <div class="info-item" style="display: flex; justify-content: space-between; padding: 0.75rem; background: white; border-radius: 12px;">
+                            <span class="label" style="color: #64748b; font-weight: 500;">URL Progetto:</span>
+                            <span id="config-url" class="value" style="font-family: monospace;">-</span>
                         </div>
-                        <div class="info-item">
-                            <span class="label">Anon Key:</span>
-                            <span id="config-key-status" class="value">-</span>
+                        
+                        <div class="info-item" style="display: flex; justify-content: space-between; padding: 0.75rem; background: white; border-radius: 12px;">
+                            <span class="label" style="color: #64748b; font-weight: 500;">Anon Key:</span>
+                            <span id="config-key-status" class="value">
+                                <span class="badge" style="background: #94a3b8; color: white;">Non presente</span>
+                            </span>
                         </div>
-                        <div class="info-item">
-                            <span class="label">Service Key:</span>
-                            <span id="config-service-status" class="value">-</span>
+                        
+                        <div class="info-item" style="display: flex; justify-content: space-between; padding: 0.75rem; background: white; border-radius: 12px;">
+                            <span class="label" style="color: #64748b; font-weight: 500;">Service Key:</span>
+                            <span id="config-service-status" class="value">
+                                <span class="badge" style="background: #94a3b8; color: white;">Non presente</span>
+                            </span>
                         </div>
-                        <div class="info-item">
-                            <span class="label">Ultimo test:</span>
-                            <span id="config-last-test" class="value">-</span>
+                        
+                        <div class="info-item" style="display: flex; justify-content: space-between; padding: 0.75rem; background: white; border-radius: 12px;">
+                            <span class="label" style="color: #64748b; font-weight: 500;">Ultimo test:</span>
+                            <span id="config-last-test" class="value" style="color: #64748b;">-</span>
                         </div>
-                        <div class="info-item">
-                            <span class="label">Tempo online:</span>
-                            <span id="config-uptime" class="value">-</span>
+                        
+                        <div class="info-item" style="display: flex; justify-content: space-between; padding: 0.75rem; background: white; border-radius: 12px;">
+                            <span class="label" style="color: #64748b; font-weight: 500;">Configurato il:</span>
+                            <span id="config-date" class="value" style="color: #64748b;">-</span>
                         </div>
+                    </div>
+                    
+                    <!-- AZIONI RAPIDE -->
+                    <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
+                        <button class="btn btn-secondary" onclick="resetConfig()" style="flex: 1;">
+                            <span class="material-symbols-rounded">delete</span>
+                            Resetta
+                        </button>
+                        <button class="btn btn-primary" onclick="testConnection()" style="flex: 1;">
+                            <span class="material-symbols-rounded">bolt</span>
+                            Test
+                        </button>
                     </div>
                 </div>
                 
-                <!-- Metodi di configurazione -->
-                <div class="config-methods">
-                    <h4>Nuova Configurazione</h4>
-                    <div class="tabs-horizontal">
-                        <button class="tab-btn active" data-method="file">File DB.kf</button>
-                        <button class="tab-btn" data-method="manual">Inserimento Manuale</button>
+                <!-- PANNELLO DESTRO: NUOVA CONFIGURAZIONE -->
+                <div class="config-methods" style="background: white; border-radius: 16px; padding: 1.5rem; border: 1px solid var(--border);">
+                    <h4 style="margin: 0 0 1.5rem 0; color: var(--text-main); font-weight: 800; display: flex; align-items: center; gap: 0.5rem;">
+                        <span class="material-symbols-rounded" style="color: var(--primary);">add_circle</span>
+                        Nuova Configurazione
+                    </h4>
+                    
+                    <div class="tabs-horizontal" style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border);">
+                        <button class="tab-btn active" data-method="file" onclick="switchConfigMethod('file')" style="padding: 0.5rem 1rem;">
+                            📁 File DB.kf
+                        </button>
+                        <button class="tab-btn" data-method="manual" onclick="switchConfigMethod('manual')" style="padding: 0.5rem 1rem;">
+                            ✏️ Inserimento Manuale
+                        </button>
                     </div>
                     
-                    <!-- Metodo File -->
+                    <!-- METODO FILE -->
                     <div id="method-file" class="method-content active">
-                        <div class="file-upload-area" id="drop-zone">
+                        <div class="file-upload-area" id="drop-zone" style="border: 2px dashed var(--border); border-radius: 12px; padding: 2rem; text-align: center; background: #f8fafc; cursor: pointer;">
                             <input type="file" id="file-kf" accept=".kf,.txt,.json" hidden>
-                            <span class="material-symbols-rounded">cloud_upload</span>
-                            <p>Trascina il file DB.kf qui o <a href="#" onclick="document.getElementById('file-kf').click()">clicca per selezionare</a></p>
-                            <small>Formati supportati: .kf, .txt, .json</small>
+                            <span class="material-symbols-rounded" style="font-size: 3rem; color: var(--primary);">cloud_upload</span>
+                            <p style="font-weight: 600; color: var(--text-main); margin: 1rem 0 0.5rem 0;">Trascina il file DB.kf qui</p>
+                            <p style="color: #64748b; margin: 0 0 1rem 0;">oppure <a href="#" onclick="document.getElementById('file-kf').click()" style="color: var(--primary);">clicca per selezionare</a></p>
+                            <small style="color: #94a3b8;">Formati supportati: .kf, .txt, .json</small>
                         </div>
-                        <div id="file-info" class="file-info" style="display: none;">
-                            <div class="file-info-content">
-                                <span class="material-symbols-rounded">check_circle</span>
-                                <div>
+                        
+                        <div id="file-info" class="file-info" style="display: none; margin-top: 1rem; padding: 1rem; background: #d1fae5; border-radius: 8px; border-left: 4px solid #10b981;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span class="material-symbols-rounded" style="color: #10b981;">check_circle</span>
+                                <div style="flex: 1;">
                                     <strong>File caricato:</strong>
                                     <span id="file-name"></span>
                                 </div>
@@ -234,43 +298,72 @@
                         </div>
                     </div>
                     
-                    <!-- Metodo Manuale -->
-                    <div id="method-manual" class="method-content">
-                        <div class="form-group">
-                            <label for="supabase-url">SUPABASE URL</label>
-                            <input type="text" id="supabase-url" placeholder="https://tuoprogetto.supabase.co" value="https://berlfufnmolyrmxeyqfd.supabase.co">
-                            <small>Dashboard → Settings → API</small>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="supabase-key">ANON KEY (pubblica)</label>
-                            <div class="input-with-icon">
-                                <input type="password" id="supabase-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
-                                <button class="btn-icon-small" onclick="togglePassword()" type="button">
-                                    <span class="material-symbols-rounded" id="toggle-icon">visibility</span>
-                                </button>
+                    <!-- METODO MANUALE -->
+                    <div id="method-manual" class="method-content" style="display: none;">
+                        <div style="display: grid; gap: 1.25rem;">
+                            <div class="form-group">
+                                <label for="supabase-url" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+                                    SUPABASE URL <span style="color: #ef4444;">*</span>
+                                </label>
+                                <input type="url" id="supabase-url" class="form-control" 
+                                       placeholder="https://tuoprogetto.supabase.co" 
+                                       value="https://berlfufnmolyrmxeyqfd.supabase.co"
+                                       style="width: 100%; padding: 0.75rem; border: 2px solid var(--border); border-radius: 8px;">
+                                <small style="color: #64748b;">Dashboard → Settings → API</small>
                             </div>
-                            <small>Chiave anonima per il client normale</small>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="supabase-service-key">SERVICE ROLE KEY (segreta)</label>
-                            <div class="input-with-icon">
-                                <input type="password" id="supabase-service-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
-                                <button class="btn-icon-small" onclick="toggleServiceKey()" type="button">
-                                    <span class="material-symbols-rounded" id="toggle-service-icon">visibility</span>
-                                </button>
+                            
+                            <div class="form-group">
+                                <label for="supabase-key" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+                                    ANON KEY (pubblica) <span style="color: #ef4444;">*</span>
+                                </label>
+                                <div class="input-with-icon" style="display: flex; gap: 0.5rem;">
+                                    <input type="password" id="supabase-key" class="form-control" 
+                                           placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                                           style="flex: 1; padding: 0.75rem; border: 2px solid var(--border); border-radius: 8px;">
+                                    <button class="btn-icon-small" onclick="togglePassword('supabase-key', 'toggle-icon')" type="button">
+                                        <span class="material-symbols-rounded" id="toggle-icon">visibility</span>
+                                    </button>
+                                </div>
+                                <small style="color: #64748b;">Chiave anonima per il client normale</small>
                             </div>
-                            <small>Chiave segreta per operazioni admin (creazione utenti)</small>
+                            
+                            <div class="form-group">
+                                <label for="supabase-service-key" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+                                    SERVICE ROLE KEY (segreta)
+                                </label>
+                                <div class="input-with-icon" style="display: flex; gap: 0.5rem;">
+                                    <input type="password" id="supabase-service-key" class="form-control" 
+                                           placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                                           style="flex: 1; padding: 0.75rem; border: 2px solid var(--border); border-radius: 8px;">
+                                    <button class="btn-icon-small" onclick="togglePassword('supabase-service-key', 'toggle-service-icon')" type="button">
+                                        <span class="material-symbols-rounded" id="toggle-service-icon">visibility</span>
+                                    </button>
+                                </div>
+                                <small style="color: #64748b;">Chiave segreta per operazioni admin (creazione utenti)</small>
+                            </div>
+                            
+                            <div style="background: #fffbeb; border-radius: 8px; padding: 1rem; margin-top: 0.5rem; border-left: 4px solid #f59e0b;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem; color: #92400e; margin-bottom: 0.25rem;">
+                                    <span class="material-symbols-rounded">info</span>
+                                    <strong>Dove trovare le chiavi?</strong>
+                                </div>
+                                <ol style="margin: 0.5rem 0 0 1.5rem; color: #92400e; font-size: 0.9rem;">
+                                    <li>Vai su <strong>Supabase Dashboard</strong> → <strong>Settings</strong> → <strong>API</strong></li>
+                                    <li>Copia l'URL del progetto</li>
+                                    <li>Copia la <strong>anon public key</strong> (inizia con sb_publishable...)</li>
+                                    <li>Copia la <strong>service_role secret</strong> (inizia con eyJhbGciOiJ...)</li>
+                                </ol>
+                            </div>
                         </div>
                     </div>
                     
-                    <div class="config-actions">
-                        <button class="btn btn-primary" onclick="saveConfig()">
+                    <!-- BOTTONI SALVA/ANNULLA -->
+                    <div class="config-actions" style="display: flex; gap: 1rem; margin-top: 2rem;">
+                        <button class="btn btn-primary" onclick="saveConfig()" style="flex: 2;">
                             <span class="material-symbols-rounded">save</span>
                             Salva Configurazione
                         </button>
-                        <button class="btn btn-secondary" onclick="resetConfig()">
+                        <button class="btn btn-secondary" onclick="resetConfig()" style="flex: 1;">
                             <span class="material-symbols-rounded">delete</span>
                             Resetta
                         </button>

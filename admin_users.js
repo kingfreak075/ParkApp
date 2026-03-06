@@ -42,7 +42,88 @@ function getAdminClient() {
         auth: { persistSession: false }
     });
 }
+// admin_users.js - Versione corretta
+let adminClient = null;
 
+async function caricaUtenti() {
+    try {
+        console.log('📥 Caricamento utenti...');
+        
+        // Ottieni client admin
+        adminClient = getAdminClient();
+        
+        if (!adminClient) {
+            mostraErrore('Configurazione admin mancante. Serve la service_role key.');
+            return;
+        }
+        
+        // Usa l'API admin di Supabase
+        const { data: { users }, error } = await adminClient.auth.admin.listUsers();
+        
+        if (error) throw error;
+        
+        console.log(`✅ Caricati ${users.length} utenti`);
+        visualizzaUtenti(users);
+        
+    } catch (error) {
+        console.error('❌ Errore caricamento:', error);
+        
+        // Messaggio specifico per errore 401
+        if (error.status === 401) {
+            mostraErrore('Token non valido. Verifica la service_role key in configurazione.');
+        } else {
+            mostraErrore('Errore caricamento utenti: ' + error.message);
+        }
+    }
+}
+
+function visualizzaUtenti(users) {
+    const container = document.getElementById('utenti-lista');
+    if (!container) return;
+    
+    container.innerHTML = users.map(user => `
+        <tr>
+            <td>${user.email || '-'}</td>
+            <td>${new Date(user.created_at).toLocaleDateString()}</td>
+            <td>${user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString() : '-'}</td>
+            <td>
+                <span class="badge ${user.email_confirmed_at ? 'verified' : 'unverified'}">
+                    ${user.email_confirmed_at ? '✅ Verificata' : '⏳ In attesa'}
+                </span>
+            </td>
+            <td>
+                <button onclick="modificaUtente('${user.id}')" class="btn-icon">
+                    <span class="material-symbols-rounded">edit</span>
+                </button>
+                <button onclick="sospendiUtente('${user.id}')" class="btn-icon warning">
+                    <span class="material-symbols-rounded">block</span>
+                </button>
+                <button onclick="eliminaUtente('${user.id}')" class="btn-icon danger">
+                    <span class="material-symbols-rounded">delete</span>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+    
+    document.getElementById('total-users').textContent = users.length;
+}
+
+function mostraErrore(messaggio) {
+    const container = document.getElementById('utenti-lista');
+    if (container) {
+        container.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 40px; color: #ef4444;">
+                    <span class="material-symbols-rounded" style="font-size: 3rem;">error</span>
+                    <p style="margin-top: 10px;">${messaggio}</p>
+                </td>
+            </tr>
+        `;
+    }
+}
+
+// Esponi funzioni
+window.caricaUtenti = caricaUtenti;
 // ============================================
 // CARICAMENTO UTENTI (CON SERVICE KEY)
 // ============================================
@@ -444,30 +525,38 @@ window.caricaPersoneSenzaAccount = async function() {
         const { data: authData } = await supabaseService.auth.admin.listUsers();
         const emailEsistenti = new Set(authData.users.map(u => u.email?.toLowerCase()) || []);
         
-        // Carica tecnici
-        const { data: tecnici } = await supabase
+        // Carica tecnici - con uid
+        const { data: tecnici, error: errTecnici } = await supabase
             .from('tecnici')
-            .select('nome_completo, Mail')
+            .select('uid, nome_completo, Mail')
             .not('Mail', 'is', null)
-            .neq('Mail', '');
+            .neq('Mail', '')
+            .is('auth_user_id', null);
+            
+        if (errTecnici) console.error('❌ Errore tecnici:', errTecnici);
         
         tecniciSenzaAccount = (tecnici || []).filter(t => 
             !emailEsistenti.has(t.Mail?.toLowerCase())
         ).map(t => ({
+            uid: t.uid,
             nome_completo: t.nome_completo,
             email: t.Mail
         }));
         
-        // Carica supervisori
-        const { data: supervisori } = await supabase
+        // Carica supervisori - con uid (ORA FUNZIONA!)
+        const { data: supervisori, error: errSuper } = await supabase
             .from('supervisori')
-            .select('Nome, Mail')
+            .select('uid, Nome, Mail')
             .not('Mail', 'is', null)
-            .neq('Mail', '');
+            .neq('Mail', '')
+            .is('auth_user_id', null);
+            
+        if (errSuper) console.error('❌ Errore supervisori:', errSuper);
         
         supervisoriSenzaAccount = (supervisori || []).filter(s => 
             !emailEsistenti.has(s.Mail?.toLowerCase())
         ).map(s => ({
+            uid: s.uid,
             nome_completo: s.Nome,
             email: s.Mail
         }));
@@ -478,31 +567,35 @@ window.caricaPersoneSenzaAccount = async function() {
         console.error('❌ Errore caricamento persone:', error);
     }
 };
-
 // ============================================
 // IMPORTA SELEZIONATI
 // ============================================
 window.importaSelezionati = async function() {
+    console.log('📦 Avvio importazione selezionati...');
+    
+    // Raccogli tutti i selezionati
     const selezionati = [];
     
+    // Tecnici selezionati
     document.querySelectorAll('.check-tecnico:checked').forEach(cb => {
-        const idx = cb.id.split('-')[1];
-        if (tecniciSenzaAccount[idx]) {
-            selezionati.push({
-                ...tecniciSenzaAccount[idx],
-                ruolo: 'tecnico'
-            });
-        }
+        selezionati.push({
+            uid: cb.value,
+            email: cb.dataset.email,
+            nome: cb.dataset.nome,
+            ruolo: cb.dataset.ruolo,
+            tabella: 'tecnici'
+        });
     });
     
+    // Supervisori selezionati
     document.querySelectorAll('.check-supervisore:checked').forEach(cb => {
-        const idx = cb.id.split('-')[1];
-        if (supervisoriSenzaAccount[idx]) {
-            selezionati.push({
-                ...supervisoriSenzaAccount[idx],
-                ruolo: 'supervisore'
-            });
-        }
+        selezionati.push({
+            uid: cb.value,
+            email: cb.dataset.email,
+            nome: cb.dataset.nome,
+            ruolo: cb.dataset.ruolo,
+            tabella: 'supervisori'
+        });
     });
     
     if (selezionati.length === 0) {
@@ -510,55 +603,100 @@ window.importaSelezionati = async function() {
         return;
     }
     
-    if (!confirm(`Creare ${selezionati.length} nuovi utenti?`)) return;
+    if (!confirm(`Creare ${selezionati.length} nuovi utenti in Auth e collegarli alle tabelle?`)) return;
     
-    const importBtn = document.querySelector('#user-tab-import .btn-primary');
-    importBtn.disabled = true;
-    importBtn.innerHTML = `⏳ 0/${selezionati.length}`;
+    // Prendi il bottone CORRETTO (con ID)
+    const importBtn = document.getElementById('btn-importa-utenti');
+    if (importBtn) {
+        importBtn.disabled = true;
+        importBtn.innerHTML = `<span class="material-symbols-rounded">hourglass_top</span> 0/${selezionati.length}`;
+    }
     
     const supabaseService = getAdminClient();
     if (!supabaseService) {
         alert('Service key non configurata');
+        if (importBtn) {
+            importBtn.disabled = false;
+            importBtn.innerHTML = '<span class="material-symbols-rounded">cloud_upload</span> Importa selezionati';
+        }
         return;
     }
     
-    let creati = 0;
-    let errori = [];
+    const risultati = {
+        successi: [],
+        errori: []
+    };
     
     for (let i = 0; i < selezionati.length; i++) {
-        const utente = selezionati[i];
+        const s = selezionati[i];
         
         try {
-            // Crea in auth
-            const { data } = await supabaseService.auth.admin.createUser({
-                email: utente.email,
+            console.log(`🔄 [${i+1}/${selezionati.length}] Creazione ${s.email}...`);
+            
+            // 1. Crea utente in Auth
+            const { data, error } = await supabaseService.auth.admin.createUser({
+                email: s.email,
                 password: 'Esa123!',
                 email_confirm: true,
                 user_metadata: {
-                    nome_completo: utente.nome_completo,
-                    ruolo: utente.ruolo
+                    nome_completo: s.nome,
+                    ruolo: s.ruolo
                 }
             });
             
-            // Aggiorna profilo
+            if (error) throw error;
+            
+            const newUserId = data.user.id;
+            
+            // 2. Aggiorna la tabella corrispondente con auth_user_id USANDO uid
+            const { error: updateError } = await supabaseService
+                .from(s.tabella)
+                .update({ auth_user_id: newUserId })
+                .eq('uid', s.uid);  // USIAMO uid per entrambe le tabelle!
+            
+            if (updateError) throw updateError;
+            
+            // 3. Aggiorna anche il profilo (il trigger dovrebbe aver creato riga vuota)
             await supabaseService
                 .from('profiles')
                 .update({ 
-                    nome_completo: utente.nome_completo, 
-                    ruolo: utente.ruolo 
+                    nome_completo: s.nome, 
+                    ruolo: s.ruolo 
                 })
-                .eq('id', data.user.id);
+                .eq('id', newUserId);
             
-            creati++;
-            importBtn.innerHTML = `⏳ ${creati}/${selezionati.length}`;
+            risultati.successi.push(`${s.nome} (${s.email})`);
             
         } catch (err) {
-            errori.push(`${utente.email}: ${err.message}`);
+            console.error(`❌ Errore per ${s.email}:`, err);
+            risultati.errori.push(`${s.nome} (${s.email}): ${err.message}`);
+        }
+        
+        // Aggiorna il bottone con il progresso
+        if (importBtn) {
+            importBtn.innerHTML = `<span class="material-symbols-rounded">hourglass_top</span> ${risultati.successi.length}/${selezionati.length}`;
         }
     }
     
-    alert(`✅ Creati: ${creati}\n❌ Errori: ${errori.length}`);
-    chiudiModalNuovoUtente();
+    // 4. Mostra riepilogo finale
+    let messaggio = `✅ Completato!\n✔️ Creati con successo: ${risultati.successi.length}\n❌ Errori: ${risultati.errori.length}`;
+    
+    if (risultati.errori.length > 0) {
+        messaggio += '\n\nDettaglio errori:\n' + risultati.errori.join('\n');
+    }
+    
+    alert(messaggio);
+    
+    // 5. Resetta il bottone
+    if (importBtn) {
+        importBtn.disabled = false;
+        importBtn.innerHTML = '<span class="material-symbols-rounded">cloud_upload</span> Importa selezionati';
+    }
+    
+    // 6. Ricarica le liste (alcuni ora hanno auth_user_id)
+    await caricaPersoneSenzaAccount();
+    
+    // 7. Ricarica anche la tabella principale degli utenti
     caricaUtenti();
 };
 
@@ -583,6 +721,10 @@ window.mostraModalNuovoUtente = async function() {
 window.chiudiModalNuovoUtente = function() {
     document.getElementById('modal-nuovo-utente').style.display = 'none';
 };
+
+
+
+
 
 window.switchUserTab = function(tab) {
     console.log('🔄 Cambio tab:', tab);
@@ -621,12 +763,41 @@ window.generaPassword = function() {
 };
 
 window.selezionaTuttiTecnici = function() {
-    document.querySelectorAll('.check-tecnico, .check-supervisore').forEach(cb => cb.checked = true);
+    // Seleziona sia tecnici che supervisori
+    document.querySelectorAll('.check-tecnico, .check-supervisore').forEach(cb => {
+        cb.checked = true;
+    });
+    
+    // Aggiorna eventuale contatore selezionati (opzionale)
+    aggiornaContatoreSelezionati();
 };
 
+
 window.deselezionaTutti = function() {
-    document.querySelectorAll('.check-tecnico, .check-supervisore').forEach(cb => cb.checked = false);
+    // Deseleziona sia tecnici che supervisori
+    document.querySelectorAll('.check-tecnico, .check-supervisore').forEach(cb => {
+        cb.checked = false;
+    });
+    
+    // Aggiorna eventuale contatore selezionati (opzionale)
+    aggiornaContatoreSelezionati();
 };
+
+function aggiornaContatoreSelezionati() {
+    const selezionati = document.querySelectorAll('.check-tecnico:checked, .check-supervisore:checked').length;
+    
+    // Cerca un elemento per mostrare il contatore (se esiste nel tuo HTML)
+    const contatoreEl = document.getElementById('contatore-selezionati');
+    if (contatoreEl) {
+        contatoreEl.textContent = `${selezionati} selezionati`;
+    }
+    
+    // Opzionale: abilita/disabilita il bottone import in base alla selezione
+    const importBtn = document.getElementById('btn-importa-utenti');
+    if (importBtn) {
+        importBtn.disabled = selezionati === 0;
+    }
+}
 
 function renderizzaListeImport() {
     const containerTecnici = document.getElementById('lista-tecnici-import');
@@ -642,10 +813,17 @@ function renderizzaListeImport() {
             `;
         } else {
             let html = '<div style="max-height: 200px; overflow-y: auto;">';
-            tecniciSenzaAccount.forEach((t, idx) => {
+            tecniciSenzaAccount.forEach((t) => {
                 html += `
                     <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; border-bottom: 1px solid var(--border);">
-                        <input type="checkbox" id="tecnico-${idx}" class="check-tecnico" value="${t.email}" checked>
+                        <input type="checkbox" 
+                               id="tecnico-${t.uid}" 
+                               class="check-tecnico" 
+                               value="${t.uid}"
+                               data-email="${t.email}"
+                               data-nome="${t.nome_completo}"
+                               data-ruolo="tecnico"
+                               checked>
                         <div style="flex: 1;">
                             <div><strong>${t.nome_completo}</strong></div>
                             <div style="font-size: 0.85rem; color: var(--text-muted);">${t.email}</div>
@@ -673,10 +851,17 @@ function renderizzaListeImport() {
             `;
         } else {
             let html = '<div style="max-height: 200px; overflow-y: auto;">';
-            supervisoriSenzaAccount.forEach((s, idx) => {
+            supervisoriSenzaAccount.forEach((s) => {
                 html += `
                     <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; border-bottom: 1px solid var(--border);">
-                        <input type="checkbox" id="supervisore-${idx}" class="check-supervisore" value="${s.email}" checked>
+                        <input type="checkbox" 
+                               id="supervisore-${s.uid}" 
+                               class="check-supervisore" 
+                               value="${s.uid}"
+                               data-email="${s.email}"
+                               data-nome="${s.nome_completo}"
+                               data-ruolo="supervisore"
+                               checked>
                         <div style="flex: 1;">
                             <div><strong>${s.nome_completo}</strong></div>
                             <div style="font-size: 0.85rem; color: var(--text-muted);">${s.email}</div>
@@ -690,7 +875,23 @@ function renderizzaListeImport() {
     }
     
     if (countSuper) countSuper.textContent = supervisoriSenzaAccount.length;
+    
+    // Aggiungi listener per aggiornare contatore
+    aggiungiListenerCheckbox();
 }
+
+// Aggiungi questo dopo renderizzaListeImport()
+function aggiungiListenerCheckbox() {
+    document.querySelectorAll('.check-tecnico, .check-supervisore').forEach(cb => {
+        cb.addEventListener('change', aggiornaContatoreSelezionati);
+    });
+}
+
+// Poi chiamala alla fine di renderizzaListeImport()
+// Aggiungi questa riga alla fine della funzione renderizzaListeImport():
+aggiungiListenerCheckbox();
+
+
 
 // ============================================
 // INIZIALIZZAZIONE

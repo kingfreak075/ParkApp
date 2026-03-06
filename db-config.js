@@ -1,62 +1,22 @@
-// db-config.js - VERSIONE CORRETTA CON SINGLETON E ADMIN CLIENT
-// Gestione centralizzata della configurazione Supabase per FloX
-// ==============================================================
-
-// VARIABILE GLOBALE PER IL CLIENT SINGLETON
+// db-config.js - Versione corretta
 let _supabaseClientInstance = null;
-let _adminClientInstance = null;
 
-/**
- * Controlla se la configurazione del database è presente
- * @returns {boolean} True se entrambe URL e KEY sono configurate
- */
 function hasDbConfig() {
     const url = localStorage.getItem('supabase_url');
     const key = localStorage.getItem('supabase_key');
-    
-    // Verifica che non siano stringhe vuote o placeholder
-    const isValidUrl = url && url !== '' && !url.includes('INSERISCI_URL');
-    const isValidKey = key && key !== '' && !key.includes('INSERISCI_KEY');
-    
-    return isValidUrl && isValidKey;
+    return !!(url && key && url !== '' && key !== '');
 }
 
-/**
- * Ottiene l'URL di Supabase dalla configurazione
- * @returns {string} L'URL di Supabase o stringa vuota se non configurato
- */
 function getSupabaseUrl() {
-    const url = localStorage.getItem('supabase_url');
-    return url && !url.includes('INSERISCI_URL') ? url : '';
+    return localStorage.getItem('supabase_url') || '';
 }
 
-/**
- * Ottiene la chiave di Supabase dalla configurazione
- * @returns {string} La chiave di Supabase o stringa vuota se non configurato
- */
 function getSupabaseKey() {
-    const key = localStorage.getItem('supabase_key');
-    return key && !key.includes('INSERISCI_KEY') ? key : '';
+    return localStorage.getItem('supabase_key') || '';
 }
 
-/**
- * Ottiene la service key per operazioni admin
- * @returns {string} La service key o stringa vuota
- */
-function getServiceKey() {
-    const config = JSON.parse(localStorage.getItem('db_config') || '{}');
-    return config.serviceKey || '';
-}
-
-/**
- * Crea e restituisce un client Supabase configurato (SINGLETON)
- * @returns {object} Client Supabase
- * @throws {Error} Se la configurazione non è presente
- */
 function getSupabaseClient() {
-    // Se esiste già, restituisci l'istanza esistente
     if (_supabaseClientInstance) {
-        console.log('✓ Client Supabase riutilizzato (singleton)');
         return _supabaseClientInstance;
     }
     
@@ -64,353 +24,134 @@ function getSupabaseClient() {
     const key = getSupabaseKey();
     
     if (!url || !key) {
-        throw new Error('Configurazione database non trovata. Vai in Configurazione → Database per configurarlo.');
-    }
-    
-    console.log('✓ Nuovo client Supabase creato (singleton)');
-    
-    // Crea il client Supabase (una sola volta)
-    _supabaseClientInstance = supabase.createClient(url, key, {
-        auth: {
-            persistSession: true,
-            autoRefreshToken: true,
-            detectSessionInUrl: true
-        },
-        global: {
-            headers: {
-                'apikey': key
-            }
-        }
-    });
-    
-    return _supabaseClientInstance;
-}
-
-/**
- * Client con service_role key (per operazioni admin)
- * @returns {object} Client admin o null se non configurato
- */
-window.getAdminClient = function() {
-    if (_adminClientInstance) {
-        console.log('✓ Client Admin riutilizzato (singleton)');
-        return _adminClientInstance;
-    }
-    
-    const url = getSupabaseUrl();
-    const serviceKey = getServiceKey();
-    
-    if (!url || !serviceKey) {
-        console.error('❌ Configurazione admin non trovata');
+        console.warn('Database non configurato');
         return null;
     }
     
-    _adminClientInstance = supabase.createClient(
-        url,
-        serviceKey,
-        {
-            auth: {
-                autoRefreshToken: false,
-                persistSession: false
-            }
-        }
-    );
-    
-    console.log('✓ Nuovo client Admin creato (singleton)');
-    return _adminClientInstance;
-};
-
-/**
- * Resetta il client Supabase (utile per riconnessione)
- */
-function resetSupabaseClient() {
-    _supabaseClientInstance = null;
-    _adminClientInstance = null;
-    console.log('✓ Client resettati');
+    _supabaseClientInstance = supabase.createClient(url, key);
+    return _supabaseClientInstance;
 }
 
-/**
- * Ottiene informazioni sulla configurazione corrente
- * @returns {object} Oggetto con informazioni di configurazione
- */
 function getDbConfigInfo() {
     const url = getSupabaseUrl();
     const key = getSupabaseKey();
-    const config = JSON.parse(localStorage.getItem('db_config') || '{}');
     const timestamp = localStorage.getItem('config_timestamp');
-    const tabellaSelezionata = localStorage.getItem('sync_tabella');
     
     return {
         configured: hasDbConfig(),
         url: url,
         urlShort: url ? url.replace('https://', '').substring(0, 20) + '...' : '',
         keyPresent: !!key,
-        keyLength: key ? key.length : 0,
-        serviceKeyPresent: !!config.serviceKey,
-        timestamp: timestamp ? new Date(timestamp).toLocaleString('it-IT') : null,
-        table: tabellaSelezionata,
-        daysSinceConfig: timestamp ? Math.floor((new Date() - new Date(timestamp)) / (1000 * 60 * 60 * 24)) : null,
-        clientInstance: _supabaseClientInstance ? 'Creata' : 'Non creata',
-        adminClientInstance: _adminClientInstance ? 'Creata' : 'Non creata'
+        timestamp: timestamp ? new Date(timestamp).toLocaleString('it-IT') : null
     };
 }
 
-/**
- * Testa la connessione con le credenziali correnti
- * @returns {Promise<object>} Risultato del test
- */
 async function testDbConnection() {
     if (!hasDbConfig()) {
-        return {
-            success: false,
-            error: 'Configurazione non presente'
-        };
+        return { success: false, error: 'Configurazione non presente' };
     }
     
     try {
         const client = getSupabaseClient();
-        
-        // Usa una query semplice e veloce
-        const { data, error } = await client
+        const { error } = await client
             .from('tecnici')
             .select('count', { count: 'exact', head: true });
         
-        if (error) {
-            // Prova con una query più semplice
-            const { error: simpleError } = await client
-                .from('tecnici')
-                .select('id')
-                .limit(1);
-            
-            if (simpleError) throw simpleError;
-            
-            return {
-                success: true,
-                message: 'Connesso a Supabase (query semplice)'
-            };
-        }
+        if (error) throw error;
         
-        return {
-            success: true,
-            message: `Connesso a Supabase (${data || 'OK'})`,
-            count: data
-        };
-        
+        return { success: true, message: 'Connesso a Supabase' };
     } catch (error) {
-        console.error('Test connessione fallito:', error);
-        
-        let messaggioErrore = 'Errore di connessione';
-        if (error.message.includes('JWT')) {
-            messaggioErrore = 'Chiave API non valida';
-        } else if (error.message.includes('fetch')) {
-            messaggioErrore = 'URL non raggiungibile';
-        } else if (error.code === '42501') {
-            messaggioErrore = 'Permessi insufficienti (RLS)';
-        } else if (error.code === '42P01') {
-            messaggioErrore = 'Tabella non trovata';
-        } else if (error.code === 'PGRST116') {
-            messaggioErrore = 'Tabella non esiste nello schema';
-        }
-        
-        return {
-            success: false,
-            error: messaggioErrore,
-            details: error.message,
-            code: error.code
-        };
+        return { success: false, error: error.message };
     }
 }
 
-/**
- * Salva una nuova configurazione
- * @param {string} url - URL di Supabase
- * @param {string} anonKey - Chiave anonima
- * @param {string} serviceKey - Service role key (opzionale)
- * @returns {boolean} True se salvato con successo
- */
-function saveDbConfig(url, anonKey, serviceKey = '') {
-    if (!url || !url.startsWith('https://')) {
-        throw new Error('URL non valido. Deve iniziare con https://');
-    }
-    
-    if (!anonKey || anonKey.length < 20) {
-        throw new Error('Chiave API non valida');
-    }
-    
+function saveDbConfig(url, anonKey) {
     localStorage.setItem('supabase_url', url);
     localStorage.setItem('supabase_key', anonKey);
-    
-    // Salva la configurazione completa con service key
-    localStorage.setItem('db_config', JSON.stringify({
-        url: url,
-        anonKey: anonKey,
-        serviceKey: serviceKey || anonKey // Se non fornita, usa la anon key
-    }));
-    
-    localStorage.setItem('config_caricata', 'true');
     localStorage.setItem('config_timestamp', new Date().toISOString());
-    
-    // Resetta il client quando cambia la configurazione
-    resetSupabaseClient();
-    
-    console.log('Configurazione database salvata:', url.substring(0, 30) + '...');
+    _supabaseClientInstance = null;
     return true;
 }
 
-/**
- * Resetta la configurazione del database
- */
+function importDbConfig(content) {
+    let url = '';
+    let key = '';
+    
+    const lines = content.split('\n');
+    for (const line of lines) {
+        if (line.trim() && !line.trim().startsWith('#')) {
+            if (line.includes('=')) {
+                const [k, v] = line.split('=').map(s => s.trim());
+                if (k.toUpperCase().includes('URL')) url = v;
+                if (k.toUpperCase().includes('KEY') && !k.toUpperCase().includes('SERVICE')) key = v;
+            }
+        }
+    }
+    
+    if (!url || !key) throw new Error('Formato file non valido');
+    return saveDbConfig(url, key);
+}
 function resetDbConfig() {
     localStorage.removeItem('supabase_url');
     localStorage.removeItem('supabase_key');
-    localStorage.removeItem('db_config');
-    localStorage.removeItem('config_caricata');
     localStorage.removeItem('config_timestamp');
-    localStorage.removeItem('sync_tabella');
-    localStorage.removeItem('sync_timestamp');
-    
-    // Resetta anche il client
-    resetSupabaseClient();
-    
-    console.log('Configurazione database resettata');
+    _supabaseClientInstance = null;
+    return true;
 }
 
-/**
- * Esporta la configurazione corrente in formato .kf
- * @returns {string} Contenuto del file .kf
- */
-function exportDbConfig() {
-    if (!hasDbConfig()) {
-        throw new Error('Nessuna configurazione da esportare');
+// Aggiungi in db-config.js
+let _adminClientInstance = null;
+
+function getAdminClient() {
+    if (_adminClientInstance) {
+        return _adminClientInstance;
     }
     
     const url = getSupabaseUrl();
-    const key = getSupabaseKey();
-    const config = JSON.parse(localStorage.getItem('db_config') || '{}');
-    const serviceKey = config.serviceKey || '';
-    const timestamp = new Date().toISOString();
+    // IMPORTANTE: Devi usare la SERVICE_ROLE KEY, non la anon key
+    // La service_role key la trovi in Supabase Dashboard > Project Settings > API > service_role key
+    const serviceRoleKey = localStorage.getItem('supabase_service_key');
     
-    return `# FloX Database Configuration
-# Generated: ${timestamp}
-# Format: KEY=VALUE
-
-SUPABASE_URL=${url}
-SUPABASE_KEY=${key}
-SUPABASE_SERVICE_KEY=${serviceKey}
-
-# End of configuration`;
-}
-
-/**
- * Importa configurazione da stringa
- * @param {string} content - Contenuto del file .kf o .json
- * @returns {boolean} True se importato con successo
- */
-function importDbConfig(content) {
-    let url = '';
-    let anonKey = '';
-    let serviceKey = '';
+    if (!url || !serviceRoleKey) {
+        console.warn('Admin client non configurato');
+        return null;
+    }
     
-    // Prova a parsare come JSON
-    try {
-        const json = JSON.parse(content);
-        url = json.supabase_url || json.SUPABASE_URL || json.url;
-        anonKey = json.supabase_key || json.SUPABASE_KEY || json.key || json.anonKey;
-        serviceKey = json.serviceKey || json.SUPABASE_SERVICE_KEY || '';
-    } catch (e) {
-        // Non è JSON, prova formato key=value
-        const lines = content.split('\n');
-        for (const line of lines) {
-            if (line.trim() && !line.trim().startsWith('#')) {
-                if (line.includes('=')) {
-                    const [chiave, valore] = line.split('=').map(s => s.trim());
-                    const chiaveUp = chiave.toUpperCase();
-                    if (chiaveUp.includes('URL')) {
-                        url = valore;
-                    } else if (chiaveUp.includes('KEY') && !chiaveUp.includes('SERVICE')) {
-                        anonKey = valore;
-                    } else if (chiaveUp.includes('SERVICE')) {
-                        serviceKey = valore;
-                    }
-                }
-            }
+    _adminClientInstance = supabase.createClient(url, serviceRoleKey, {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false
         }
-    }
-    
-    if (!url || !anonKey) {
-        throw new Error('Formato file non valido. Assicurati di avere SUPABASE_URL e SUPABASE_KEY');
-    }
-    
-    return saveDbConfig(url, anonKey, serviceKey);
+    });
+    return _adminClientInstance;
 }
 
-// ==============================================================
-// FUNZIONI AGGIUNTIVE PER MIGLIORARE LE PERFORMANCE
-// ==============================================================
-
-/**
- * Ottiene tutti i tecnici (con caching opzionale)
- * @param {boolean} useCache - Usa cache locale se disponibile
- * @returns {Promise<Array>} Lista di tecnici
- */
-async function getTecnici(useCache = true) {
-    const CACHE_KEY = 'tecnici_cache';
-    const CACHE_TIMESTAMP = 'tecnici_cache_timestamp';
-    const CACHE_DURATION = 5 * 60 * 1000; // 5 minuti
-    
-    // Controlla cache se richiesto
-    if (useCache) {
-        const cached = localStorage.getItem(CACHE_KEY);
-        const timestamp = localStorage.getItem(CACHE_TIMESTAMP);
-        
-        if (cached && timestamp) {
-            const age = Date.now() - parseInt(timestamp);
-            if (age < CACHE_DURATION) {
-                console.log('✓ Tecnici caricati dalla cache');
-                return JSON.parse(cached);
-            }
-        }
+// Funzione per salvare anche la service key (opzionale, solo per admin)
+function saveAdminConfig(url, anonKey, serviceKey) {
+    localStorage.setItem('supabase_url', url);
+    localStorage.setItem('supabase_key', anonKey);
+    if (serviceKey) {
+        localStorage.setItem('supabase_service_key', serviceKey);
     }
-    
-    // Carica dal database
-    const client = getSupabaseClient();
-    const { data, error } = await client
-        .from('tecnici')
-        .select('id, nome_completo, ruolo, pin')
-        .order('nome_completo', { ascending: true });
-    
-    if (error) throw error;
-    
-    // Salva in cache
-    if (data && useCache) {
-        localStorage.setItem(CACHE_KEY, JSON.stringify(data));
-        localStorage.setItem(CACHE_TIMESTAMP, Date.now().toString());
-        console.log('✓ Tecnici salvati in cache');
-    }
-    
-    return data || [];
+    localStorage.setItem('config_timestamp', new Date().toISOString());
+    _supabaseClientInstance = null;
+    _adminClientInstance = null;
+    return true;
 }
 
-/**
- * Pulisce la cache dei tecnici
- */
-function clearTecniciCache() {
-    localStorage.removeItem('tecnici_cache');
-    localStorage.removeItem('tecnici_cache_timestamp');
-    console.log('✓ Cache tecnici pulita');
-}
+window.getAdminClient = getAdminClient;
+window.saveAdminConfig = saveAdminConfig;
 
-// Esponi le funzioni globalmente
+
+
+// Aggiungi anche all'export
+window.resetDbConfig = resetDbConfig;
 window.hasDbConfig = hasDbConfig;
 window.getSupabaseUrl = getSupabaseUrl;
 window.getSupabaseKey = getSupabaseKey;
 window.getSupabaseClient = getSupabaseClient;
-window.getAdminClient = getAdminClient;
-window.resetSupabaseClient = resetSupabaseClient;
 window.getDbConfigInfo = getDbConfigInfo;
 window.testDbConnection = testDbConnection;
 window.saveDbConfig = saveDbConfig;
-window.resetDbConfig = resetDbConfig;
-window.exportDbConfig = exportDbConfig;
 window.importDbConfig = importDbConfig;
-window.getTecnici = getTecnici;
-window.clearTecniciCache = clearTecniciCache;
+window.resetDbConfig = resetDbConfig;

@@ -1,19 +1,18 @@
-
 <!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ParkApp - Configurazione</title>
-    <!-- Stili uniformi -->
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
-    <!-- Supabase JS -->
+    
+    <!-- File JS modulari -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- File di configurazione DB -->
     <script src="db-config.js"></script>
     <script src="check-db-config.js"></script>
+    
     <style>
         /* ================================
            STILI MOBILE-FIRST (450px max)
@@ -519,11 +518,11 @@
 </head>
 <body class="bg-app">
     <div class="app-container">
-        <!-- HEADER COMPATTO -->
+        <!-- HEADER COMPATTO - UNICO HEADER -->
         <header class="app-header-config">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                <!-- Pulsante Indietro -->
-                <button onclick="window.location.href='menu.html'" style="
+                <!-- Pulsante Indietro - VISIBILE SOLO SE DB CONFIGURATO -->
+                <button id="back-button" onclick="tornaAlMenu()" style="
                     background: none;
                     border: none;
                     padding: 0.5rem;
@@ -637,26 +636,38 @@
         </footer>
     </div>
 
-    <!-- SCRIPT PRINCIPALE - MANTENIAMO TUTTE LE FUNZIONI ORIGINALI -->
     <script>
         // VARIABILI GLOBALI PER DB
         let supabaseClient = null;
         let fileCaricato = null;
 
-        // Funzione per caricare diverse sezioni nel contenuto
+        // ============================================
+        // FUNZIONE PER TORNARE AL MENU (definita PRIMA)
+        // ============================================
+        function tornaAlMenu() {
+            const dbInfo = getDbConfigInfo();
+            if (dbInfo.configured) {
+                window.location.href = 'menu.html';
+            } else {
+                mostraMessaggio('⚠️ Devi prima configurare il database', 'warning');
+            }
+        }
+
+        // ============================================
+        // GESTIONE SEZIONI
+        // ============================================
         function loadSection(section) {
             const mainContent = document.getElementById('main-content');
             
-            // Attiva tab
+            // Aggiorna tab attivo
             document.querySelectorAll('.config-tab').forEach(tab => {
                 tab.classList.remove('active');
             });
             event.target.classList.add('active');
             
-            // Cambia contenuto in base alla sezione selezionata
             if (section === 'profilo') {
                 mainContent.innerHTML = `
-                    <!-- SEZIONE PROFILO (predefinita) -->
+                    <!-- SEZIONE PROFILO -->
                     <div id="profilo-section">
                         <!-- Stato Database -->
                         <div class="config-section">
@@ -712,132 +723,113 @@
                         </div>
                     </div>
                 `;
-                
                 setTimeout(loadProfileInfoMobile, 100);
-                
-            } else if (section === 'database') {
+            } 
+            else if (section === 'database') {
                 mainContent.innerHTML = `
                     <!-- SEZIONE DATABASE -->
                     <div id="database-section">
-                        <!-- Configurazione attuale -->
+                        <!-- Configurazione Database -->
                         <div class="config-section">
                             <div class="section-header">
-                                <span class="material-symbols-rounded">settings</span>
-                                <h2 class="section-title">Configurazione Attuale</h2>
+                                <span class="material-symbols-rounded">database</span>
+                                <h2 class="section-title">Configura Database</h2>
                             </div>
                             
-                            <div id="current-config">
-                                <!-- Popolato dinamicamente da JS -->
-                            </div>
-                        </div>
-
-                        <!-- Carica file -->
-                        <div class="config-section">
-                            <div class="section-header">
-                                <span class="material-symbols-rounded">upload</span>
-                                <h2 class="section-title">Carica File Config</h2>
-                            </div>
+                            <div id="messaggio-stato-mobile" class="message-mobile"></div>
                             
-                            <div style="position: relative; width: 100%;">
-                                <input type="file" id="file-kf" accept=".kf,.txt,.json" 
-                                       style="position: absolute; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 2;">
-                                <div class="drop-zone-mobile" id="drop-zone-mobile">
-                                    <span class="material-symbols-rounded">cloud_upload</span>
-                                    <div class="drop-zone-title">Trascina il file DB.kf qui</div>
-                                    <div class="drop-zone-subtitle">Oppure clicca per selezionare</div>
-                                    <div class="file-format-badge">.kf .txt .json</div>
+                            <!-- Configurazione attuale -->
+                            <div id="current-config" style="margin-bottom: 1.5rem;"></div>
+                            
+                            <!-- Inserimento manuale -->
+                            <div class="input-group">
+                                <label class="input-label">Supabase URL</label>
+                                <div class="input-with-icon">
+                                    <input type="url" id="supabase-url" class="input-field" 
+                                           placeholder="https://tuo-progetto.supabase.co">
+                                    <span class="material-symbols-rounded" style="right: 0.5rem;">link</span>
                                 </div>
                             </div>
                             
+                            <div class="input-group">
+                                <label class="input-label">Anon Key</label>
+                                <div class="input-with-icon">
+                                    <input type="password" id="supabase-key" class="input-field" 
+                                           placeholder="eyJhbGciOiJIUzI1NiIs...">
+                                    <span class="material-symbols-rounded" id="toggle-key-icon" 
+                                          onclick="togglePassword()" style="cursor: pointer;">visibility</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Bottoni azione -->
+                            <div class="action-buttons" style="grid-template-columns: 1fr 1fr;">
+                                <button class="btn-action btn-primary" onclick="testConnessione()" id="btn-test">
+                                    <span class="material-symbols-rounded" id="icon-test">wifi</span>
+                                    <span id="text-test">Test Connessione</span>
+                                </button>
+                                <button class="btn-action btn-secondary" onclick="esportaConfigurazione()">
+                                    <span class="material-symbols-rounded">download</span>
+                                    Esporta
+                                </button>
+                            </div>
+                            
+                            <div class="separator">
+                                <span>OPPURE</span>
+                            </div>
+                            
+                            <!-- Drag & Drop per file .kf -->
+                            <div id="drop-zone-mobile" class="drop-zone-mobile" onclick="document.getElementById('file-kf').click()">
+                                <span class="material-symbols-rounded">upload_file</span>
+                                <div class="drop-zone-title">Carica file .kf</div>
+                                <div class="drop-zone-subtitle">Trascina qui o clicca per selezionare</div>
+                                <span class="file-format-badge">Formato: .kf</span>
+                                <input type="file" id="file-kf" accept=".kf,.txt,.json" style="display: none;">
+                            </div>
+                            
+                            <!-- File info -->
                             <div id="file-info-mobile" class="file-info-mobile" style="display: none;">
                                 <div class="file-info-content">
                                     <h4>File caricato</h4>
-                                    <p id="file-name-mobile"></p>
+                                    <p id="file-name-mobile">nomefile.kf</p>
                                 </div>
-                                <button onclick="rimuoviFile()" style="background: none; border: none; color: #dc2626; cursor: pointer;">
-                                    <span class="material-symbols-rounded">close</span>
+                                <span class="material-symbols-rounded" onclick="rimuoviFile()" 
+                                      style="cursor: pointer; color: #15803d;">close</span>
+                            </div>
+                            
+                            <!-- Reset configurazione -->
+                            <div style="margin-top: 2rem;">
+                                <button class="btn-action btn-danger btn-full" onclick="resetConfigurazione()">
+                                    <span class="material-symbols-rounded">settings_backup_restore</span>
+                                    Reset Configurazione Database
                                 </button>
                             </div>
                         </div>
-
-                        <!-- Separatore -->
-                        <div class="separator">
-                            <span>OPPURE</span>
-                        </div>
-
-                        <!-- Inserimento manuale -->
-                        <div class="config-section">
-                            <div class="section-header">
-                                <span class="material-symbols-rounded">keyboard</span>
-                                <h2 class="section-title">Inserimento Manuale</h2>
-                            </div>
-                            
-                            <!-- URL -->
-                            <div class="input-group">
-                                <label class="input-label">SUPABASE URL</label>
-                                <input type="text" id="supabase-url" placeholder="https://tuoprogetto.supabase.co" class="input-field">
-                                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
-                                    Dashboard → Settings → API
-                                </div>
-                            </div>
-                            
-                            <!-- Key -->
-                            <div class="input-group">
-                                <label class="input-label">ANON KEY</label>
-                                <div class="input-with-icon">
-                                    <input type="password" id="supabase-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." class="input-field">
-                                    <span class="material-symbols-rounded" onclick="togglePassword()" id="toggle-key-icon">visibility</span>
-                                </div>
-                                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
-                                    Chiave anonima (pubblica) del progetto
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Pulsanti azione -->
-                        <div class="action-buttons">
-                            <button id="btn-test" onclick="testConnessione()" class="btn-action btn-primary">
-                                <span id="icon-test" class="material-symbols-rounded">wifi</span>
-                                <span id="text-test">Test Connessione</span>
-                            </button>
-                            
-                            <button id="btn-export" onclick="esportaConfigurazione()" class="btn-action btn-secondary">
-                                <span class="material-symbols-rounded">download</span>
-                                Export
-                            </button>
-                            
-                            <button id="btn-reset" onclick="resetConfigurazione()" class="btn-action btn-danger">
-                                <span class="material-symbols-rounded">delete</span>
-                                Reset
-                            </button>
-                        </div>
-
-                        <!-- Messaggio stato -->
-                        <div id="messaggio-stato-mobile" class="message-mobile"></div>
                     </div>
                 `;
-                
                 setTimeout(initDBSection, 10);
             }
         }
 
-        // CARICA INFORMAZIONI PROFILO (versione mobile)
+        // ============================================
+        // CARICA INFORMAZIONI PROFILO
+        // ============================================
         function loadProfileInfoMobile() {
             try {
-                // Informazioni Database
                 const dbInfo = getDbConfigInfo();
                 
-                // Aggiorna indicatori DB
                 const indicator = document.getElementById('db-status-indicator');
+                const backButton = document.getElementById('back-button');
+                
                 if (dbInfo.configured) {
                     indicator.style.background = '#22c55e';
                     indicator.title = `DB configurato • ${dbInfo.urlShort || 'N/A'}`;
+                    if (backButton) backButton.style.display = 'flex';
                 } else {
                     indicator.style.background = '#f59e0b';
                     indicator.title = 'Database non configurato';
+                    if (backButton) backButton.style.display = 'none';
                 }
                 
-                // Aggiorna cards stato DB
                 const dbStatusCards = document.getElementById('db-status-cards');
                 if (dbStatusCards) {
                     dbStatusCards.innerHTML = `
@@ -877,7 +869,6 @@
                     `;
                 }
                 
-                // Aggiorna info app
                 const appInfo = document.getElementById('app-info');
                 if (appInfo) {
                     appInfo.innerHTML = `
@@ -904,16 +895,13 @@
                     `;
                 }
                 
-                // Mostra tutte le chiavi localStorage
                 const storageItemsDiv = document.getElementById('storage-items');
                 if (storageItemsDiv) {
                     const items = [];
-                    
                     for (let i = 0; i < localStorage.length; i++) {
                         const key = localStorage.key(i);
                         let value = localStorage.getItem(key);
                         
-                        // Formatta il valore
                         let displayValue = value;
                         if (key.includes('key') || key.includes('token') || key.includes('password')) {
                             displayValue = '••••••••••••••••';
@@ -932,55 +920,44 @@
                         `);
                     }
                     
-                    storageItemsDiv.innerHTML = items.length ? 
-                        items.join('') : 
+                    storageItemsDiv.innerHTML = items.length ? items.join('') : 
                         '<p style="color: #64748b; font-style: italic;">Nessun dato salvato nel localStorage</p>';
                 }
-                
             } catch (error) {
                 console.error('Errore caricamento info:', error);
             }
         }
 
+        // ============================================
         // RESET TUTTI I DATI APP
+        // ============================================
         function resetAppData() {
             if (!confirm('⚠️ ATTENZIONE!\n\nStai per cancellare TUTTI i dati locali dell\'applicazione, inclusi:\n• Configurazione database\n• Credenziali\n• Dati utente\n• Impostazioni\n\nSei sicuro di voler procedere?')) {
                 return;
             }
             
             try {
-                // Cancella tutto il localStorage
                 localStorage.clear();
-                
-                // Mostra messaggio
                 alert('✅ Tutti i dati locali sono stati cancellati.\nL\'applicazione verrà ricaricata.');
-                
-                // Ricarica la pagina
-                setTimeout(() => {
-                    location.reload();
-                }, 1000);
-                
+                setTimeout(() => location.reload(), 1000);
             } catch (error) {
                 alert('❌ Errore durante il reset: ' + error.message);
             }
         }
 
+        // ============================================
         // INIZIALIZZAZIONE SEZIONE DATABASE
+        // ============================================
         function initDBSection() {
-            // Carica configurazione salvata e mostra info
             mostraInfoConfigurazione();
-            
-            // Setup drag & drop
             setupDragAndDrop();
             
-            // Setup file input
             const fileInput = document.getElementById('file-kf');
             if (fileInput) {
                 fileInput.addEventListener('change', handleFileSelect);
             }
         }
 
-        // FUNZIONE: Mostra info configurazione corrente
         function mostraInfoConfigurazione() {
             if (hasDbConfig()) {
                 const info = getDbConfigInfo();
@@ -993,9 +970,7 @@
                                 <h3>URL Database</h3>
                                 <div class="db-status-value">${info.urlShort || '-'}</div>
                             </div>
-                            <div class="db-status-badge success">
-                                CONFIGURATO
-                            </div>
+                            <div class="db-status-badge success">CONFIGURATO</div>
                         </div>
                         
                         <div class="db-status-card">
@@ -1007,7 +982,6 @@
                     `;
                 }
                 
-                // Popola campi manuali
                 const urlInput = document.getElementById('supabase-url');
                 const keyInput = document.getElementById('supabase-key');
                 
@@ -1022,9 +996,7 @@
                                 <h3>Stato Database</h3>
                                 <div class="db-status-value">Non configurato</div>
                             </div>
-                            <div class="db-status-badge error">
-                                NON CONFIG
-                            </div>
+                            <div class="db-status-badge error">NON CONFIG</div>
                         </div>
                         
                         <div class="db-status-card">
@@ -1038,7 +1010,6 @@
             }
         }
 
-        // FUNZIONE: Setup drag & drop
         function setupDragAndDrop() {
             const dropZone = document.getElementById('drop-zone-mobile');
             if (!dropZone) return;
@@ -1066,14 +1037,12 @@
             });
         }
 
-        // FUNZIONE: Gestione selezione file
         function handleFileSelect(event) {
             if (event.target.files.length) {
                 handleFile(event.target.files[0]);
             }
         }
 
-        // FUNZIONE: Processa file
         function handleFile(file) {
             if (!file.name.match(/\.(kf|txt|json)$/i)) {
                 mostraMessaggio('Formato file non supportato. Usa .kf, .txt o .json', 'error');
@@ -1099,7 +1068,6 @@
                     const success = importDbConfig(e.target.result);
                     if (success) {
                         mostraMessaggio(`✅ Configurazione caricata da ${file.name}`, 'success');
-                        // Popola campi manuali
                         const info = getDbConfigInfo();
                         const urlInput = document.getElementById('supabase-url');
                         const keyInput = document.getElementById('supabase-key');
@@ -1107,8 +1075,11 @@
                         if (urlInput) urlInput.value = info.url || '';
                         if (keyInput) keyInput.value = '••••••••••••••••';
                         
-                        // Aggiorna info
                         mostraInfoConfigurazione();
+                        
+                        // Aggiorna back button dopo configurazione
+                        const backButton = document.getElementById('back-button');
+                        if (backButton) backButton.style.display = 'flex';
                     }
                 } catch (error) {
                     mostraMessaggio(`Errore: ${error.message}`, 'error');
@@ -1118,7 +1089,6 @@
             reader.readAsText(file);
         }
 
-        // FUNZIONE: Rimuovi file caricato
         function rimuoviFile() {
             fileCaricato = null;
             const fileInfo = document.getElementById('file-info-mobile');
@@ -1128,7 +1098,6 @@
             if (fileInput) fileInput.value = '';
         }
 
-        // FUNZIONE: Mostra/nascondi password
         function togglePassword() {
             const input = document.getElementById('supabase-key');
             const toggleIcon = document.getElementById('toggle-key-icon');
@@ -1138,34 +1107,25 @@
             if (input.type === 'password') {
                 input.type = 'text';
                 toggleIcon.textContent = 'visibility_off';
-                
-                // Se il campo mostra placeholder, reimposta a vuoto quando si mostra
                 if (input.value === '••••••••••••••••') {
                     const actualKey = getSupabaseKey();
-                    if (actualKey) {
-                        input.value = actualKey;
-                    }
+                    if (actualKey) input.value = actualKey;
                 }
             } else {
                 input.type = 'password';
                 toggleIcon.textContent = 'visibility';
-                
-                // Nascondi la chiave reale
                 if (input.value !== '••••••••••••••••') {
                     input.value = '••••••••••••••••';
                 }
             }
         }
 
-        // FUNZIONE: Test connessione Supabase
         async function testConnessione() {
             const url = document.getElementById('supabase-url').value.trim();
             const keyInput = document.getElementById('supabase-key');
             
-            // Gestione speciale per campo password "nascosto"
             let key = keyInput.value;
             if (key === '••••••••••••••••') {
-                // Usa la chiave salvata
                 key = getSupabaseKey();
                 if (!key) {
                     mostraMessaggio('Inserisci la chiave Supabase', 'error');
@@ -1175,7 +1135,6 @@
                 key = key.trim();
             }
             
-            // Validazione input
             if (!url || !key) {
                 mostraMessaggio('Inserisci URL e Anon Key', 'error');
                 return;
@@ -1186,7 +1145,6 @@
                 return;
             }
             
-            // Aggiorna UI pulsante
             const btnTest = document.getElementById('btn-test');
             const iconTest = document.getElementById('icon-test');
             const textTest = document.getElementById('text-test');
@@ -1198,27 +1156,28 @@
             textTest.textContent = 'Connessione...';
             
             try {
-                // SALVA CONFIGURAZIONE PRIMA DEL TEST
                 saveDbConfig(url, key);
-                
-                // TEST CONNESIONE
                 const testResult = await testDbConnection();
                 
                 if (testResult.success) {
-                    // Successo
                     mostraMessaggio(`✅ ${testResult.message}`, 'success');
-                    
-                    // Aggiorna info
                     mostraInfoConfigurazione();
                     loadProfileInfoMobile();
                     
+                    // Mostra back button dopo configurazione riuscita
+                    const backButton = document.getElementById('back-button');
+                    if (backButton) backButton.style.display = 'flex';
+                    
+                    setTimeout(() => {
+                        if (confirm('✅ Database configurato con successo! Vuoi tornare al menu principale?')) {
+                            window.location.href = 'menu.html';
+                        }
+                    }, 1500);
                 } else {
                     throw new Error(testResult.error || 'Connessione fallita');
                 }
-                
             } catch (error) {
                 console.error('Errore connessione:', error);
-                
                 let messaggio = 'Errore di connessione';
                 if (error.message.includes('JWT') || error.message.includes('token')) {
                     messaggio = 'Anon Key non valida o scaduta';
@@ -1229,9 +1188,7 @@
                 } else {
                     messaggio = error.message.substring(0, 100);
                 }
-                
                 mostraMessaggio(`❌ ${messaggio}`, 'error');
-                
             } finally {
                 btnTest.disabled = false;
                 btnTest.style.opacity = '1';
@@ -1241,7 +1198,6 @@
             }
         }
 
-        // FUNZIONE: Esporta configurazione corrente
         function esportaConfigurazione() {
             if (!hasDbConfig()) {
                 mostraMessaggio('Configura prima URL e Key', 'error');
@@ -1249,9 +1205,16 @@
             }
             
             try {
-                const contenuto = exportDbConfig();
+                // Verifica se exportDbConfig esiste, altrimenti crea il contenuto manualmente
+                let contenuto;
+                if (typeof exportDbConfig === 'function') {
+                    contenuto = exportDbConfig();
+                } else {
+                    const url = getSupabaseUrl();
+                    const key = getSupabaseKey();
+                    contenuto = `# ParkApp Database Configuration\n# Generated on ${new Date().toLocaleString()}\n\nSUPABASE_URL=${url}\nSUPABASE_ANON_KEY=${key}`;
+                }
                 
-                // Crea blob e scarica
                 const blob = new Blob([contenuto], { type: 'text/plain' });
                 const urlBlob = URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -1261,38 +1224,34 @@
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(urlBlob);
-                
                 mostraMessaggio('✅ Configurazione esportata come ParkApp_DB_Config.kf', 'success');
-                
             } catch (error) {
                 mostraMessaggio(`Errore esportazione: ${error.message}`, 'error');
             }
         }
 
-        // FUNZIONE: Reset configurazione DB
         function resetConfigurazione() {
             if (!confirm('Sei sicuro di voler resettare la configurazione del database?\nTutti i dati di connessione verranno cancellati.')) {
                 return;
             }
             
             try {
-                // Cancella solo i dati di configurazione DB dal localStorage
-                localStorage.removeItem('flox_db_url');
-                localStorage.removeItem('flox_db_key');
-                localStorage.removeItem('flox_db_timestamp');
+                if (typeof resetDbConfig === 'function') {
+                    resetDbConfig();
+                } else {
+                    localStorage.removeItem('supabase_url');
+                    localStorage.removeItem('supabase_key');
+                    localStorage.removeItem('config_timestamp');
+                    _supabaseClientInstance = null;
+                }
                 
-                // Resetta variabili
                 supabaseClient = null;
                 fileCaricato = null;
                 
-                // Aggiorna UI
                 mostraMessaggio('✅ Configurazione database resettata', 'success');
-                
-                // Aggiorna info
                 mostraInfoConfigurazione();
                 loadProfileInfoMobile();
                 
-                // Resetta campi input
                 const urlInput = document.getElementById('supabase-url');
                 const keyInput = document.getElementById('supabase-key');
                 
@@ -1301,20 +1260,19 @@
                     keyInput.value = '';
                     keyInput.type = 'password';
                     const toggleIcon = document.getElementById('toggle-key-icon');
-                    if (toggleIcon) {
-                        toggleIcon.textContent = 'visibility';
-                    }
+                    if (toggleIcon) toggleIcon.textContent = 'visibility';
                 }
                 
-                // Rimuovi file se presente
-                rimuoviFile();
+                // Nascondi back button dopo reset
+                const backButton = document.getElementById('back-button');
+                if (backButton) backButton.style.display = 'none';
                 
+                rimuoviFile();
             } catch (error) {
                 mostraMessaggio(`Errore reset: ${error.message}`, 'error');
             }
         }
 
-        // FUNZIONE: Mostra messaggi (versione mobile)
         function mostraMessaggio(testo, tipo = 'info') {
             const messaggioDiv = document.getElementById('messaggio-stato-mobile');
             if (!messaggioDiv) return;
@@ -1334,27 +1292,31 @@
             }
             
             messaggioDiv.style.display = 'block';
-            
-            setTimeout(() => {
-                messaggioDiv.style.display = 'none';
-            }, 5000);
+            setTimeout(() => messaggioDiv.style.display = 'none', 5000);
         }
 
-        // Inizializza la pagina
+        // ============================================
+        // INIZIALIZZAZIONE PAGINA
+        // ============================================
         document.addEventListener('DOMContentLoaded', function() {
-            // Aggiorna indicatore DB
             const dbInfo = getDbConfigInfo();
             const indicator = document.getElementById('db-status-indicator');
+            const backButton = document.getElementById('back-button');
             
             if (dbInfo.configured) {
                 indicator.style.background = '#22c55e';
                 indicator.title = `DB configurato • ${dbInfo.urlShort || 'N/A'}`;
+                if (backButton) backButton.style.display = 'flex';
             } else {
                 indicator.style.background = '#f59e0b';
                 indicator.title = 'Database non configurato';
+                if (backButton) backButton.style.display = 'none';
+                
+                setTimeout(() => {
+                    mostraMessaggio('⚠️ Configura il database per iniziare', 'warning');
+                }, 500);
             }
             
-            // Carica profilo iniziale
             loadProfileInfoMobile();
         });
     </script>
