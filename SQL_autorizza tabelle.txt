@@ -1,0 +1,7 @@
+-- Esempio per una tabella generica: l'Admin può fare TUTTO
+CREATE POLICY "Admin full access" 
+ON "public"."NOME_DELLA_TABELLA" 
+AS PERMISSIVE FOR ALL 
+TO authenticated 
+USING (auth.jwt() ->> 'email' = 'tua_email_admin@esempio.com') -- Sostituisci con la tua mail
+WITH CHECK (auth.jwt() ->> 'email' = 'tua_email_admin@esempio.com');

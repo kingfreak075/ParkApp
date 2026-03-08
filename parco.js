@@ -1,11 +1,16 @@
-const SUPABASE_URL = 'https://berlfufnmolyrmxeyqfd.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_a3USDfV7gbuauU2Kd6DuQQ_8PFVElpy';
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// ✅ SOSTITUITO con client centralizzato
+const supabaseClient = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
 
 const listaDiv = document.getElementById('listaImpianti');
 const searchMain = document.getElementById('searchMain');
 
 async function caricaImpianti() {
+    // ✅ AGGIUNTO controllo client
+    if (!supabaseClient) {
+        listaDiv.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 2rem;">Errore di connessione al database</p>';
+        return;
+    }
+    
     const searchVal = searchMain.value.trim();
     
     let query = supabaseClient.from('Parco_app').select('*');
@@ -18,7 +23,7 @@ async function caricaImpianti() {
     const { data, error } = await query.order('impianto').limit(30);
 
     if (error) {
-        listaDiv.innerHTML = `<p class="text-red-500 text-center p-10">${error.message}</p>`;
+        listaDiv.innerHTML = `<p style="text-align: center; color: #ef4444; padding: 2rem;">${error.message}</p>`;
         return;
     }
 
@@ -27,6 +32,7 @@ async function caricaImpianti() {
 
 /**
  * Genera l'interfaccia a lista con controllo disdette
+ * ⚠️ IDENTICO ALL'ORIGINALE - NON MODIFICATO
  */
 function renderizzaLista(impianti) {
     if (impianti.length === 0) {

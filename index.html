@@ -8,371 +8,163 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
     
-    <!-- 🔴 ORDINE CORRETTO DEGLI SCRIPT 🔴 -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="db-config.js"></script>
-    <script src="db-rules.js"></script>
     <script src="auth.js"></script>
-    <script src="check-db-config.js"></script>
     
     <style>
-        /* Stili specifici per index.html */
-        .login-container {
-            background: white;
-            border-radius: 24px;
-            padding: 2rem;
-            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
-            max-width: 400px;
-            margin: 0 auto;
-        }
+        /* ... (stili precedenti conservati) ... */
+        .login-container { background: white; border-radius: 24px; padding: 2rem; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto; text-align: center; }
+        .input-group { display: flex; align-items: center; background: #f8fafc; border-radius: 12px; padding: 0 15px; margin-bottom: 15px; border: 2px solid #e2e8f0; transition: border-color 0.2s; }
+        .form-input { flex: 1; padding: 15px; border: none; background: transparent; font-size: 1rem; outline: none; }
+        .btn-primary { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: 700; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; }
         
-        .input-group {
-            display: flex;
-            align-items: center;
-            background: #f8fafc;
-            border-radius: 12px;
-            padding: 0 15px;
-            margin-bottom: 15px;
-            border: 2px solid #e2e8f0;
-            transition: border-color 0.2s;
-        }
+        /* STILE MODALE SUPERVISORE */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+        .modal-content { background: white; border-radius: 24px; padding: 2rem; max-width: 400px; width: 100%; text-align: center; animation: modalPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes modalPop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         
-        .input-group:focus-within {
-            border-color: var(--primary);
-        }
-        
-        .input-group .material-symbols-rounded {
-            color: #94a3b8;
-            font-size: 1.2rem;
-        }
-        
-        .form-input {
-            flex: 1;
-            padding: 15px;
-            border: none;
-            background: transparent;
-            font-size: 1rem;
-            font-family: 'Inter', sans-serif;
-            outline: none;
-        }
-        
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 15px;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            cursor: pointer;
-            transition: all 0.2s;
-            width: 100%;
-        }
-        
-        .btn-primary:active {
-            transform: scale(0.98);
-            opacity: 0.9;
-        }
-        
-        .btn-primary:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .btn-config {
-            background: #f1f5f9;
-            color: #475569;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 10px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .btn-config:hover {
-            background: #e2e8f0;
-        }
-        
-        .message-container {
-            margin-bottom: 20px;
-        }
-        
-        .message {
-            padding: 12px;
-            border-radius: 10px;
-            font-weight: 600;
-            text-align: center;
-            animation: slideDown 0.3s ease-out;
-        }
-        
-        .message.success {
-            background: #22c55e;
-            color: white;
-        }
-        
-        .message.error {
-            background: #ef4444;
-            color: white;
-        }
-        
-        .message.warning {
-            background: #f59e0b;
-            color: white;
-        }
-        
-        .message.info {
-            background: #3b82f6;
-            color: white;
-        }
-        
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .logo-container {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-        
-        .logo-icon {
-            font-size: 4rem;
-            color: var(--primary);
-        }
-        
-        .app-title {
-            font-size: 1.8rem;
-            font-weight: 800;
-            margin: 0;
-            color: var(--primary);
-        }
-        
-        .app-subtitle {
-            color: #64748b;
-            margin: 0;
-        }
-        
-        .register-link {
-            text-align: center;
-            margin-top: 1rem;
-        }
-        
-        .register-link a {
-            color: var(--primary);
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-/* Stili per il modale password */
-#password-modal {
-    animation: fadeIn 0.3s ease-out;
-}
-
-#password-modal input:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-
+        .modal-btn { padding: 18px; border-radius: 15px; border: 2px solid #e2e8f0; margin-bottom: 12px; display: flex; align-items: center; gap: 15px; width: 100%; cursor: pointer; transition: all 0.2s; background: white; text-align: left; }
+        .modal-btn:hover { border-color: var(--primary); background: #f0f9ff; }
+        .modal-btn b { display: block; font-size: 1.1rem; color: #1e293b; }
+        .modal-btn span.desc { font-size: 0.85rem; color: #64748b; font-weight: 400; }
+        .modal-btn i { font-size: 2.5rem; color: var(--primary); }
     </style>
 </head>
 <body class="bg-app">
     <div class="app-container" style="justify-content: center;">
-        <!-- Logo e titolo -->
-        <div class="logo-container">
-            <span class="material-symbols-rounded logo-icon">login</span>
-            <h1 class="app-title">ParkApp</h1>
-            <p class="app-subtitle">Accedi all'area riservata</p>
-        </div>
-
-        <!-- Form di login -->
- <!-- Form di login (CORRETTO con <form>) -->
-<div class="login-container">
-    <div id="message-container" class="message-container"></div>
-    
-    <form id="login-form" onsubmit="event.preventDefault(); handleLogin();">
-        <div class="input-group">
-            <span class="material-symbols-rounded">mail</span>
-            <input type="email" id="email" placeholder="Email" class="form-input" autocomplete="email" required>
-        </div>
         
-        <div class="input-group">
-            <span class="material-symbols-rounded">pin</span>
-            <input type="password" id="pin" placeholder="PIN" maxlength="4" class="form-input" autocomplete="current-password" required pattern="\d{4}" inputmode="numeric">
-        </div>
-        
-        <button type="submit" class="btn-primary" id="login-button">
-            <span class="material-symbols-rounded">login</span>
-            ACCEDI
-        </button>
-    </form>
-    
-    <div class="register-link">
-        <a href="register.html">Non hai un account? Registrati</a>
-    </div>
-    
-    <div style="margin-top: 1rem; text-align: center;">
-        <button onclick="window.location.href='config.html'" class="btn-config">
-            <span class="material-symbols-rounded">settings</span>
-            Configura Database
-        </button>
-    </div>
-</div>
+        <div class="login-container">
+            <div id="message-container"></div>
+            
+            <div id="vista-login-completo">
+                <div style="margin-bottom: 2rem;">
+                    <span class="material-symbols-rounded" style="font-size: 4rem; color: var(--primary);">shield_person</span>
+                    <h1 style="font-size: 1.8rem; font-weight: 800; margin: 0; color: var(--primary);">ParkApp</h1>
+                    <p style="color: #64748b;">Accedi al sistema</p>
+                </div>
 
-        <!-- Footer -->
-        <footer class="app-footer">
-            <span class="footer-text">EDIT BY KINGFREAK Version 1.0</span>
-        </footer>
+                <form onsubmit="event.preventDefault(); gestisciLogin();">
+                    <div class="input-group">
+                        <span class="material-symbols-rounded">mail</span>
+                        <input type="email" id="email" placeholder="Email" class="form-input" required>
+                    </div>
+                    <div class="input-group">
+                        <span class="material-symbols-rounded">lock</span>
+                        <input type="password" id="password" placeholder="Password" class="form-input" required>
+                    </div>
+                    <button type="submit" class="btn-primary" id="btn-login">ACCEDI</button>
+                </form>
+            </div>
+
+            <div id="vista-login-pin" style="display: none;">
+                <div style="margin-bottom: 2rem;">
+                    <h1 style="font-size: 1.5rem;">Bentornato!</h1>
+                    <p id="nome-bentornato" style="font-weight: 600; color: var(--primary);"></p>
+                </div>
+                <form onsubmit="event.preventDefault(); gestisciLoginPinUI();">
+                    <div class="input-group" style="max-width: 200px; margin: 0 auto 15px;">
+                        <input type="password" id="pin" placeholder="PIN" maxlength="4" class="form-input" style="text-align: center; letter-spacing: 5px;" inputmode="numeric">
+                    </div>
+                    <button type="submit" class="btn-primary" id="btn-pin">SBLOCCA</button>
+                </form>
+                <a onclick="resetDispositivo()" style="font-size: 0.8rem; color: #64748b; cursor: pointer; text-decoration: underline; display: block; margin-top: 1rem;">Usa un altro account</a>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-supervisore" class="modal-overlay">
+        <div class="modal-content">
+            <h2 style="margin-top: 0; color: #1e293b;">Benvenuto Supervisore</h2>
+            <p style="color: #64748b; margin-bottom: 2rem;">Scegli come vuoi operare oggi:</p>
+            
+            <button class="modal-btn" onclick="window.location.href='menu.html'">
+                <i class="material-symbols-rounded">smartphone</i>
+                <div>
+                    <b>App Mobile</b>
+                    <span class="desc">Per l'uso sul campo e veicoli</span>
+                </div>
+            </button>
+
+            <button class="modal-btn" onclick="window.location.href='admin_database.html'">
+                <i class="material-symbols-rounded">desktop_windows</i>
+                <div>
+                    <b>Console PC</b>
+                    <span class="desc">Gestione dati e reportistica</span>
+                </div>
+            </button>
+        </div>
     </div>
 
     <script>
-        // ============================================
-        // VARIABILI GLOBALI
-        // ============================================
-        let supabaseClient = null;
-
-        // ============================================
-        // INIZIALIZZAZIONE PAGINA
-        // ============================================
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('📱 Index.html caricato');
-            
-            // Controlla se l'utente è già loggato
-            if (typeof authGetUtente === 'function') {
-                const utente = authGetUtente();
-                if (utente) {
-                    console.log('Utente già loggato:', utente.nome_completo);
-                    window.location.href = 'menu.html';
-                    return;
-                }
-            }
-            
-            // Controlla configurazione database
-            if (typeof hasDbConfig === 'function') {
-                if (!hasDbConfig()) {
-                    mostraMessaggio('⚠️ Database non configurato. Vai in Configurazione.', 'warning');
-                } else {
-                    console.log('✅ Database configurato:', getDbConfigInfo().urlShort);
-                }
-            } else {
-                console.error('❌ db-config.js non caricato correttamente');
-                mostraMessaggio('❌ Errore di caricamento. Ricarica la pagina.', 'error');
-            }
-            
-            // Aggiungi listener per tasto Enter
-            const pinInput = document.getElementById('pin');
-            if (pinInput) {
-                pinInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        handleLogin();
-                    }
-                });
+        document.addEventListener('DOMContentLoaded', () => {
+            const emailSalvata = localStorage.getItem('dispositivo_email');
+            if (emailSalvata) {
+                document.getElementById('vista-login-completo').style.display = 'none';
+                document.getElementById('vista-login-pin').style.display = 'block';
+                document.getElementById('nome-bentornato').textContent = localStorage.getItem(`nome_${emailSalvata}`);
             }
         });
 
-        // ============================================
-        // GESTIONE LOGIN
-        // ============================================
-        async function handleLogin() {
-            const email = document.getElementById('email').value.trim();
-            const pin = document.getElementById('pin').value.trim();
+        async function gestisciLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('btn-login');
             
-            if (!email || !pin) {
-                mostraMessaggio('❌ Inserisci email e PIN', 'error');
-                return;
-            }
-            
-            // Validazione PIN (4 cifre)
-            if (!/^\d{4}$/.test(pin)) {
-                mostraMessaggio('❌ Il PIN deve essere di 4 cifre', 'error');
-                return;
-            }
-            
-            // Validazione email base
-            if (!email.includes('@') || !email.includes('.')) {
-                mostraMessaggio('❌ Inserisci un email valida', 'error');
-                return;
-            }
-            
-            // Mostra loading
-            const btn = document.getElementById('login-button');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<span class="material-symbols-rounded">hourglass_empty</span> ACCESSO...';
             btn.disabled = true;
+            btn.textContent = "VERIFICA...";
+
+            const res = await authLoginCompleto(email, password);
             
-            try {
-                // Verifica che authAccedi esista
-                if (typeof authAccedi !== 'function') {
-                    throw new Error('Funzione di login non disponibile');
-                }
-                
-                const success = await authAccedi(email, pin);
-                
-                if (success) {
-                    mostraMessaggio('✅ Login effettuato! Reindirizzamento...', 'success');
-                    setTimeout(() => {
-                        window.location.href = 'menu.html';
-                    }, 1500);
-                } else {
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                }
-            } catch (error) {
-                console.error('Errore login:', error);
-                mostraMessaggio('❌ Errore durante il login: ' + error.message, 'error');
-                btn.innerHTML = originalText;
+            if (res.success) {
+                const utente = authGetUtente();
+                smistaUtente(utente);
+            } else {
+                alert("Errore: " + res.error);
                 btn.disabled = false;
+                btn.textContent = "ACCEDI";
             }
         }
 
-        // ============================================
-        // FUNZIONE PER MOSTRARE MESSAGGI
-        // ============================================
-        function mostraMessaggio(testo, tipo = 'info') {
-            const container = document.getElementById('message-container');
-            if (!container) return;
-            
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${tipo}`;
-            messageDiv.textContent = testo;
-            
-            // Pulisci il container e aggiungi il nuovo messaggio
-            container.innerHTML = '';
-            container.appendChild(messageDiv);
-            
-            // Rimuovi automaticamente dopo 5 secondi
-            setTimeout(() => {
-                if (container.contains(messageDiv)) {
-                    messageDiv.remove();
-                }
-            }, 5000);
+        async function gestisciLoginPinUI() {
+            const pin = document.getElementById('pin').value;
+            const res = await authLoginPin(pin);
+            if (res.success) {
+                const utente = authGetUtente();
+                smistaUtente(utente);
+            } else {
+                alert("PIN Errato");
+            }
         }
 
-        // ============================================
-        // FUNZIONI DI UTILITY (esposte globalmente)
-        // ============================================
-        window.handleLogin = handleLogin;
-        window.mostraMessaggio = mostraMessaggio;
+        // LA LOGICA DI SMISTAMENTO INTELLIGENTE
+        function smistaUtente(utente) {
+            const ruolo = (utente.ruolo || 'tecnico').toLowerCase();
+            
+            if (ruolo === 'admin') {
+                // Admin: Diretto alla console
+                window.location.href = 'admin_database.html';
+            } 
+            else if (ruolo === 'supervisore') {
+                // Supervisore: Mostra il modale di scelta
+                document.getElementById('modal-supervisore').style.display = 'flex';
+            } 
+            else {
+                // Tecnico: Logica standard (Profilo se primo accesso, altrimenti Menu)
+                // Se password è quella temporanea, forza il profilo
+                const passInserita = document.getElementById('password').value;
+                if (utente.pin === '1234' || passInserita === 'Esa123!') {
+                    window.location.href = 'profilo.html?primo_access=true';
+                } else {
+                    window.location.href = 'menu.html';
+                }
+            }
+        }
+
+        function resetDispositivo() {
+            authScollegaDispositivo();
+            window.location.reload();
+        }
     </script>
 </body>
 </html>

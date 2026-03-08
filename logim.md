@@ -1,162 +1,180 @@
-🚀 PROMPT SVILUPPO FUTURO - ParkApp v4.3+
-OBIETTIVO
-Integrare le seguenti funzionalità nella pagina index.html (versione con login email+PIN) per migliorare robustezza, UX e debug.
+Stiamo facendo un passo indietro per ricostruire il flusso corretto di autenticazione e gestione profilo. Ecco un prompt dettagliato che riassume tutto il percorso, le regole e i passaggi da seguire per implementare correttamente l'applicazione. Lo scrivo in modo che tu possa usarlo come riferimento per la prossima sessione.
 
-📦 MODIFICHE DA IMPLEMENTARE
-9. FALLBACK OFFLINE
-Se Supabase non risponde, mostrare messaggio chiaro
+PROMPT: Flusso di autenticazione e gestione profilo per ParkApp
+Contesto
+L'applicazione ParkApp ha due livelli di autenticazione:
 
-Testo: "❌ Database non raggiungibile. Verifica connessione internet o contatta l'assistenza"
+Tabella tecnici (database Supabase) – contiene i dati anagrafici, il PIN (4 cifre), il ruolo e lo stato dell'account.
 
-Opzionale: cache locale delle ultime credenziali per accesso limitato offline
+Auth Supabase – gestisce l'accesso tramite email/password (password standard iniziale Esa123!).
 
-File da modificare: index.html (funzione testConnessione() e gestione errori)
+Gli utenti (tecnici) sono precaricati nella tabella tecnici con PIN e ruolo. Alcuni di essi hanno anche un corrispondente account in Auth (collegato tramite auth_user_id), ma non tutti.
 
-10. LOG SESSIONI LOCALI
-Salvare in localStorage un array di log con:
+Obiettivo
+Realizzare un flusso di login intelligente che:
 
-Timestamp
+Verifichi le credenziali sulla tabella tecnici (email + PIN).
 
-Email tentativo
+Controlli l'esistenza dell'utente in Auth Supabase.
 
-Esito (successo/fallimento/motivo)
+Gestisca i casi:
 
-IP/device (se disponibile)
+Primo accesso (password standard): login OK, reindirizzamento a profilo.html per il cambio password obbligatorio.
 
-Visualizzare nel pannello debug (doppio tap)
+Accesso successivo dallo stesso dispositivo: solo PIN, login diretto (grazie a dispositivo riconosciuto).
 
-Mantenere ultimi 50 log
+Accesso da un nuovo dispositivo: richiesta della password Auth (tramite modale) e, se corretta, salvataggio del dispositivo.
 
-Nuova funzione: aggiungiLogSessione(email, esito, motivo)
+Permetta all'utente loggato di cambiare PIN (tabella tecnici) e password (Auth Supabase) dalla pagina profilo.html.
 
-Visualizzazione: in debug-panel
+Mantenga la sessione coerente dopo le modifiche.
 
-11. PIN TEMPORANEO
-Aggiungere campo pin_scadenza (timestamp) nella tabella tecnici
+Regole e vincoli
+Il campo email nella tabella tecnici si chiama Mail (con la M maiuscola). È univoco.
 
-Se presente e non scaduto, il PIN funziona anche se diverso da quello principale
+Il PIN è di 4 cifre, memorizzato in chiaro (per semplicità, ma in produzione andrebbe hashato).
 
-Logica: controllare prima PIN normale, poi PIN temporaneo con scadenza
+La password Auth standard è Esa123!.
 
-Messaggio: "🔑 Accesso con PIN temporaneo. Scade il: [data]"
+Il riconoscimento del dispositivo si basa su un ID generato e salvato in localStorage (device_id), associato all'email.
 
-Modifiche: funzione accedi() e query Supabase
+Le password Auth non vengono mai memorizzate in chiaro se non nel localStorage criptato (ma per ora in chiaro, attenzione).
 
-12. AUTENTICAZIONE BIOMETRICA (struttura futura)
-Aggiungere check all'avvio: window.PublicKeyCredential ? 'biometria supportata' : 'non supportata'
+Dopo il cambio password, la sessione Auth deve rimanere valida (non è necessario rifare il login).
 
-Preparare variabile biometricSupported e flag in localStorage
+Struttura dei file coinvolti
+index.html – pagina di login.
 
-Non implementare ancora la biometria, solo struttura pronta
+auth.js – contiene tutta la logica di autenticazione.
 
-Aggiungere: pulsante "Impronta digitale" (disabilitato) con tooltip "Prossimamente"
+db-config.js – gestisce la configurazione del client Supabase.
 
-13. TEMA SCURO AUTOMATICO
-Media query @media (prefers-color-scheme: dark)
+profilo.html – pagina per la gestione del profilo (cambio PIN/password).
 
-Adattare colori:
+menu.html – pagina principale dopo il login.
 
-Sfondo sfumato: versioni più scure dei gradienti
+Passi da implementare (dettaglio)
+1. Login (auth.js – funzione _accedi(email, pin))
+Pulizia input: rimuovere spazi e caratteri speciali dall'email.
 
-Container: background più scuro, testo chiaro
+Verifica tabella tecnici:
 
-Bottoni: mantenere visibilità
+Usare il campo Mail (maiuscolo) per cercare l'utente.
 
-Testare su dispositivi con tema scuro attivo
+Se non trovato → messaggio "Email non registrata".
 
-File: aggiungere sezione CSS media query
+Se trovato ma attivo === false → messaggio "Account in attesa".
 
-14. TOAST NOTIFICATIONS
-Sostituire il messaggio statico con notifiche toast
+Se PIN errato → messaggio "PIN errato".
 
-Posizione: in alto (sotto l'header) o in basso
+Verifica dispositivo conosciuto:
 
-Durata: 3 secondi, poi fade out
+Leggere da localStorage l'array dispositivi_${email}.
 
-Tipi: success (verde), error (rosso), warning (arancione), info (blu)
+Confrontare con device_id corrente.
 
-Mantenere compatibilità con il vecchio mostraMessaggio() ma reindirizzare a toast
+Se presente, recuperare la password salvata (password_${email}) e tentare il login Auth con quella.
 
-Nuova funzione: mostraToast(testo, tipo, durata = 3000)
+Se successo → authSuccess = true.
 
-15. CONFERMA REGISTRAZIONE VIA EMAIL
-Dopo registrazione, mostrare messaggio:
-"✅ Richiesta inviata! Riceverai una email di conferma quando l'admin approverà il profilo."
+Se fallisce → rimuovere il dispositivo e proseguire.
 
-Opzionale: simulare invio email (solo frontend)
+Se non ancora autenticato, tenta con password standard:
 
-Preparare struttura per futura integrazione con Supabase Edge Functions
+Eseguire signInWithPassword con Esa123!.
 
-Modifica: funzione registrati()
+Se successo:
 
-16. CHECKLIST CONFIGURAZIONE
-Se !hasDbConfig() mostrare checklist interattiva:
+Salvare dispositivo e password standard.
 
-1. Configura URL e Key Supabase
+Impostare flag primo_accesso in localStorage.
 
-2. Crea tabella tecnici (con struttura: id, Mail, nome_completo, pin, attivo, Telefono, ruolo, pin_scadenza)
+Salvare utente in sessione (sessionStorage) e reindirizzare a profilo.html?primo_accesso=true.
 
-3. Inserisci almeno un tecnico con attivo=true
+Restituire true (interrompere il flusso).
 
-4. Verifica permessi RLS
+Se nessuno dei precedenti ha funzionato:
 
-Link a config.html per punto 1
+Salvare i dati temporanei (email, tecnico) in sessionStorage.
 
-Nuova funzione: mostraChecklistConfigurazione()
+Mostrare un modale per richiedere la password Auth (funzione mostraModalePassword).
 
-17. RESET PIN
-Aggiungere link "Hai dimenticato il PIN?" sotto il campo email
+Restituire false (in attesa della password dal modale).
 
-Aprire modal con:
+Login completato:
 
-Campo email (precompilato se presente)
+Salvare utente in sessionStorage e dati essenziali in localStorage.
 
-Bottone "Richiedi nuovo PIN"
+Reindirizzare a menu.html.
 
-Invia richiesta a Supabase (tabella richieste_reset o notifica admin)
+2. Modale password (auth.js)
+Creare un overlay con campo password e pulsanti "Continua" / "Annulla".
 
-Messaggio: "Richiesta inviata all'amministratore. Riceverai un PIN temporaneo via email."
+Alla conferma, recuperare email e tecnico da sessionStorage, tentare login Auth con la password inserita.
 
-Nuova funzione: apriModalResetPin()
+Se OK: salvare dispositivo e password, pulire sessione temporanea, completare login e reindirizzare.
 
-🔧 PRIORITÀ CONSIGLIATA
-Fallback offline (9) - Gestione errori base
+Se errata: mostrare errore e rimanere nel modale.
 
-Toast notifications (14) - UX immediata
+3. Pagina profilo.html
+Caricamento:
 
-Tema scuro (13) - Rapido da implementare
+Verificare presenza utente in sessione (authGetUtente()), altrimenti redirect a index.html.
 
-Log sessioni (10) - Debug migliorato
+Mostrare dati anagrafici (nome, email, ruolo, ID).
 
-Reset PIN (17) - Funzionalità richiesta
+Se parametro primo_accesso=true o flag in localStorage, mostrare messaggio ed evidenziare la sezione cambio password.
 
-PIN temporaneo (11) - Estensione reset
+Cambio PIN:
 
-Checklist configurazione (16) - Per nuovi utenti
+Validare campi (tutti obbligatori, nuovo PIN 4 cifre, conferma uguale, diverso dal vecchio).
 
-Biometria (12) - Struttura futura
+Chiamare authCambiaPin(email, vecchioPin, nuovoPin) (da auth.js).
 
-Conferma email (15) - Richiede backend
+In caso di successo, aggiornare l'oggetto utenteCorrente in sessione e pulire i campi.
 
-📁 FILE INTERESSATI
-index.html (principale)
+Cambio password Auth:
 
-style.css (eventuali stili aggiuntivi)
+Validare campi (nuova password >= 6 caratteri, conferma uguale, diversa dalla vecchia).
 
-db-config.js (per controlli configurazione)
+Verificare la password attuale con signInWithPassword.
 
-menu.html (per verificare compatibilità)
+Se OK, chiamare updateUser({ password: nuovaPassword }).
 
-✅ TEST DA EFFETTUARE
-Connessione assente / presente
+In caso di successo, mostrare messaggio e pulire campi. Non è necessario rifare il login.
 
-Login con PIN errato / corretto
+Attenzione: non dichiarare una variabile globale supabase per evitare conflitti; usare getSupabaseClient() quando serve.
 
-Account attivo / non attivo
+4. Protezione pagine
+In ogni pagina protetta (menu, profilo, ecc.), all'avvio verificare la presenza di utenteCorrente in sessione; se assente, redirect a index.html.
 
-Tema chiaro / scuro
+In menu.html, aggiungere icona profilo (account_circle) che porta a profilo.html.
 
-Dispositivi mobile / desktop
+5. Gestione errori e feedback
+Usare una funzione mostraMessaggio(testo, tipo) per mostrare notifiche temporanee.
 
-Browser con/senza supporto biometria
+Disabilitare i pulsanti durante le operazioni asincrone e mostrare spinner di caricamento.
 
+Catturare eccezioni e mostrare messaggi user-friendly.
+
+Note tecniche importanti
+Ordine di inclusione script: in ogni pagina, includere prima Supabase JS, poi db-config.js, poi auth.js.
+
+Conflitto di variabili: evitare di dichiarare supabase come variabile globale in più file; usare funzioni come getSupabaseClient().
+
+Sincronizzazione sessione: dopo cambio PIN/password, aggiornare l'oggetto in sessionStorage per riflettere le modifiche.
+
+LocalStorage vs SessionStorage: usare sessionStorage per i dati dell'utente corrente (più sicuro), localStorage per configurazioni e dispositivi conosciuti.
+
+Prossimi passi (da verificare)
+Testare il login con un utente che ha solo tabella (no Auth) → deve bloccare con messaggio "Contatta amministratore".
+
+Testare il primo accesso con password standard → redirect a profilo con messaggio.
+
+Testare il cambio PIN e verificare che il nuovo PIN funzioni al prossimo login.
+
+Testare il cambio password e verificare che la nuova password funzioni al prossimo accesso da un altro dispositivo.
+
+Verificare che dopo il cambio password, le query alle tabelle continuino a funzionare (sessione Auth valida).
+
+Verificare che il riconoscimento dispositivo funzioni (stesso browser, stesso dispositivo).

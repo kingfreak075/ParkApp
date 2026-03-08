@@ -7,7 +7,8 @@
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
-    <!-- File JS modulari -->
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="db-config.js"></script>
     <script src="auth.js"></script>
     <script src="check-db-config.js"></script>
@@ -21,40 +22,18 @@
                     <div id="nome-tecnico" style="font-size: 1.1rem; color: var(--primary); font-weight: 700;">-</div>
                 </div>
                 
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <!-- Icona profilo cliccabile -->
-                   <!-- Icona profilo cliccabile con hover in JS -->
-<button onclick="window.location.href='profilo.html'" 
-        id="profile-icon"
-        style="
-            background: none;
-            border: none;
-            color: var(--primary);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 8px;
-            border-radius: 50%;
-            transition: background 0.2s;
-        ">
-    <span class="material-symbols-rounded" style="font-size: 2rem;">account_circle</span>
-</button>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <div id="role-badge" style="padding: 4px 10px; border-radius: 20px; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: white; letter-spacing: 0.5px; display: none;">
+                        -
+                    </div>
+
+                    <button onclick="window.location.href='profilo.html'" 
+                            id="profile-icon"
+                            style="background: none; border: none; color: var(--primary); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 4px; border-radius: 50%; transition: background 0.2s;">
+                        <span class="material-symbols-rounded" style="font-size: 2.2rem;">account_circle</span>
+                    </button>
                     
-                    <!-- Bottone logout (solo icona) -->
-                    <button onclick="logout()" style="
-                        background: #fee2e2;
-                        color: #ef4444;
-                        border: none;
-                        width: 40px;
-                        height: 40px;
-                        border-radius: 50%;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        cursor: pointer;
-                        transition: all 0.2s;
-                    ">
+                    <button onclick="eseguiLogout()" style="background: #fee2e2; color: #ef4444; border: none; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; margin-left: 5px;">
                         <span class="material-symbols-rounded" style="font-size: 1.3rem;">logout</span>
                     </button>
                 </div>
@@ -62,231 +41,118 @@
         </header>
 
         <main style="padding: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-            <button onclick="window.location.href='parco.html'" class="menu-item">
-                <span class="material-symbols-rounded">apartment</span>
-                PARCO
+            <button onclick="window.location.href='parco.html'" class="menu-item-v2">
+                <span class="material-symbols-rounded">apartment</span> PARCO
             </button>
-            <button onclick="window.location.href='manutenzioni.html'" class="menu-item">
-                <span class="material-symbols-rounded">build</span>
-                MANUTENZIONE
+            <button onclick="window.location.href='manutenzioni.html'" class="menu-item-v2">
+                <span class="material-symbols-rounded">build</span> MANUTENZIONE
             </button>
-            <button onclick="window.location.href='gestione.html'" class="menu-item">
-                <span class="material-symbols-rounded">schedule</span>
-                GESTIONE
+            <button onclick="window.location.href='gestione.html'" class="menu-item-v2">
+                <span class="material-symbols-rounded">schedule</span> GESTIONE
             </button>
-            <button onclick="window.location.href='montaggi.html'" class="menu-item">
-                <span class="material-symbols-rounded">construction</span>
-                MONTAGGIO
+            <button onclick="window.location.href='montaggi.html'" class="menu-item-v2">
+                <span class="material-symbols-rounded">construction</span> MONTAGGIO
             </button>
-            <button onclick="window.location.href='agenda.html'" class="menu-item">
-                <span class="material-symbols-rounded">event_note</span>
-                AGENDA
+            <button onclick="window.location.href='agenda.html'" class="menu-item-v2">
+                <span class="material-symbols-rounded">event_note</span> AGENDA
             </button>
-            <button onclick="window.location.href='calendario.html'" class="menu-item">
-                <span class="material-symbols-rounded">calendar_month</span>
-                CALENDARIO
+            <button onclick="window.location.href='calendario.html'" class="menu-item-v2">
+                <span class="material-symbols-rounded">calendar_month</span> CALENDARIO
             </button>
-            <button onclick="window.location.href='gestione_veicoli.html'" class="menu-item">
-                <span class="material-symbols-rounded">directions_car</span>
-                GESTIONE AUTO
+            <button onclick="window.location.href='gestione_veicoli.html'" class="menu-item-v2">
+                <span class="material-symbols-rounded">directions_car</span> GESTIONE AUTO
             </button>
-            <button onclick="window.location.href='note_spese.html'" class="menu-item">
-                <span class="material-symbols-rounded">payments</span>
-                NOTE SPESE
+            <button onclick="window.location.href='note_spese.html'" class="menu-item-v2">
+                <span class="material-symbols-rounded">payments</span> NOTE SPESE
             </button>
-            <button onclick="window.location.href='reperibilita_tecnico.html'" class="menu-item">
-                <span class="material-symbols-rounded">emergency</span>
-                REPERIBILITÀ
+            <button onclick="window.location.href='reperibilita_tecnico.html'" class="menu-item-v2">
+                <span class="material-symbols-rounded">emergency</span> REPERIBILITÀ
             </button>
-            <button onclick="window.location.href='config.html'" class="menu-item">
-                <span class="material-symbols-rounded">settings</span>
-                CONFIGURAZIONE
+            <button onclick="window.location.href='config.html'" class="menu-item-v2">
+                <span class="material-symbols-rounded">settings</span> CONFIGURAZIONE
             </button>
         </main>
 
         <footer class="app-footer">
-            <span class="footer-text">EDIT BY KINGFREAK Version 1.0</span>
+            <span class="footer-text">EDIT BY KINGFREAK Version 2.0</span>
         </footer>
     </div>
 
     <script>
-        // ============================================
-        // CONTROLLO LOGIN - Se non loggato → index
-        // ============================================
         document.addEventListener('DOMContentLoaded', function() {
-            // Aggiungi hover effect con JS
-const profileIcon = document.getElementById('profile-icon');
-if (profileIcon) {
-    profileIcon.addEventListener('mouseenter', function() {
-        this.style.background = 'var(--primary-light)';
-    });
-    profileIcon.addEventListener('mouseleave', function() {
-        this.style.background = 'none';
-    });
-}
+            const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
             
-            
-            
-            
-            const utente = getUtenteCorrente();
-            
-            // Se non c'è utente loggato, redirect a index
             if (!utente) {
-                console.log('❌ Nessun utente loggato, redirect a index.html');
                 window.location.href = 'index.html';
                 return;
             }
             
-            // Se c'è utente, mostra nome
-            if (utente && utente.nome_completo) {
-                document.getElementById('nome-tecnico').innerText = utente.nome_completo;
-            }
+            // Mostra il nome
+            document.getElementById('nome-tecnico').innerText = utente.nome_completo || 'Utente';
             
-            // Controlla configurazione database
-            const configInfo = getDbConfigInfo();
+            // LOGICA BADGE RUOLO
+            const badge = document.getElementById('role-badge');
+            const ruolo = (utente.ruolo || 'tecnico').toLowerCase();
             
-            // Aggiungi indicatore visivo se configurato
-            if (configInfo.configured) {
-                const header = document.querySelector('.app-header');
-                if (header) {
-                    const indicator = document.createElement('div');
-                    indicator.id = 'db-status-indicator';
-                    indicator.style.cssText = `
-                        position: absolute;
-                        top: 15px;
-                        right: 15px;
-                        width: 10px;
-                        height: 10px;
-                        background: #22c55e;
-                        border-radius: 50%;
-                        border: 2px solid white;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                        cursor: help;
-                        z-index: 10;
-                    `;
-                    indicator.title = `DB configurato\n${configInfo.urlShort}\n${configInfo.timestamp ? 'Dal: ' + configInfo.timestamp : ''}`;
-                    header.style.position = 'relative';
-                    header.appendChild(indicator);
-                    
-                    indicator.addEventListener('mouseenter', function() {
-                        const tooltip = document.createElement('div');
-                        tooltip.id = 'db-tooltip';
-                        tooltip.style.cssText = `
-                            position: absolute;
-                            top: 25px;
-                            right: 0;
-                            background: white;
-                            padding: 10px;
-                            border-radius: 8px;
-                            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                            font-size: 0.75rem;
-                            color: #475569;
-                            z-index: 100;
-                            min-width: 200px;
-                            border: 1px solid #e2e8f0;
-                        `;
-                        tooltip.innerHTML = `
-                            <div style="font-weight: 800; color: #1e293b; margin-bottom: 5px;">Database Configurato</div>
-                            <div style="margin-bottom: 3px;"><strong>URL:</strong> ${configInfo.urlShort}</div>
-                            <div style="margin-bottom: 3px;"><strong>Configurato il:</strong> ${configInfo.timestamp || '-'}</div>
-                            <div><strong>Tabelle sincronizzate:</strong> ${configInfo.table ? 'Sì (' + configInfo.table + ')' : 'No'}</div>
-                        `;
-                        this.appendChild(tooltip);
-                    });
-                    
-                    indicator.addEventListener('mouseleave', function() {
-                        const tooltip = document.getElementById('db-tooltip');
-                        if (tooltip) tooltip.remove();
-                    });
-                }
+            badge.innerText = ruolo;
+            badge.style.display = 'block';
+
+            // Colori diversi in base al ruolo
+            if (ruolo === 'admin') {
+                badge.style.background = '#ef4444'; // Rosso per Admin
+            } else if (ruolo === 'supervisore') {
+                badge.style.background = '#f59e0b'; // Arancione per Supervisore
             } else {
-                const header = document.querySelector('.app-header');
-                if (header) {
-                    const warning = document.createElement('div');
-                    warning.style.cssText = `
-                        position: absolute;
-                        top: 15px;
-                        right: 15px;
-                        width: 10px;
-                        height: 10px;
-                        background: #f59e0b;
-                        border-radius: 50%;
-                        border: 2px solid white;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                        cursor: pointer;
-                        z-index: 10;
-                    `;
-                    warning.title = 'Database non configurato - Clicca per configurare';
-                    warning.onclick = function() {
-                        if (confirm('Database non configurato. Vuoi andare alla configurazione?')) {
-                            window.location.href = 'config.html';
-                        }
-                    };
-                    header.style.position = 'relative';
-                    header.appendChild(warning);
-                }
+                badge.style.background = '#22c55e'; // Verde per Tecnico
             }
+            
+            if (typeof gestisciIndicatoreDB === 'function') gestisciIndicatoreDB();
         });
 
-        // ============================================
-        // FUNZIONE LOGOUT
-        // ============================================
-       function logout() {
-    if(confirm("Sei sicuro di voler uscire?")) {
-        // Aggiungi overlay loading
-        const overlay = document.createElement('div');
-        overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255,255,255,0.9);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-        `;
-        overlay.innerHTML = '<div class="loading-spinner-large"></div>';
-        document.body.appendChild(overlay);
-        
-        setTimeout(() => {
-            authLogout();
-            window.location.href = 'index.html';
-        }, 500);
-    }
-}
+        async function eseguiLogout() {
+            if(confirm("Sei sicuro di voler uscire?")) {
+                const supabase = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+                if (supabase) await supabase.auth.signOut();
+                if (typeof authLogout === 'function') authLogout();
+                window.location.href = 'index.html';
+            }
+        }
     </script>
 
     <style>
-        .menu-item {
+        /* STILE TASTI MIGLIORATO */
+        .menu-item-v2 {
             background: white;
-            border: none;
-            border-radius: 16px;
-            padding: 25px 10px;
+            border: 2px solid #f1f5f9;
+            border-radius: 18px;
+            padding: 22px 10px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 12px;
             font-weight: 700;
-            font-size: 0.8rem;
-            color: var(--primary);
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-            transition: transform 0.2s;
+            font-size: 0.75rem;
+            color: #1e293b;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+            transition: all 0.2s ease;
             cursor: pointer;
         }
-        .menu-item:active { transform: scale(0.95); }
-        .menu-item .material-symbols-rounded { font-size: 2.2rem; }
-        .disabled { opacity: 0.5; color: #64748b; background: #f1f5f9; }
-        
-        /* Stile per l'header */
-        .app-header {
-            position: relative;
-            padding: 1rem;
-            background: white;
-            border-bottom: 1px solid var(--border);
+        .menu-item-v2:active { 
+            transform: scale(0.96); 
+            background: #f8fafc;
+            box-shadow: none;
         }
+        .menu-item-v2 .material-symbols-rounded { 
+            font-size: 2.2rem; 
+            color: var(--primary);
+            transition: transform 0.2s ease;
+        }
+        .menu-item-v2:hover .material-symbols-rounded {
+            transform: translateY(-3px);
+        }
+        
+        .app-header { padding: 1.2rem; background: white; border-bottom: 1px solid #f1f5f9; }
     </style>
 </body>
 </html>

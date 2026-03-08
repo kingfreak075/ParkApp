@@ -2960,56 +2960,64 @@ window.rimuoviFile = rimuoviFileWrapper;
         console.log('🚀 Avvio admin...');
         
         // Funzione principale
-        async function initAdmin() {
-            // 1. Controlla sessione
-            const sessionData = JSON.parse(localStorage.getItem('flox_session'));
-            if (!sessionData) {
-                window.location.href = 'login.html';
-                return;
+   async function initAdmin() {
+    // 1. Recupera l'utente dal nuovo sistema auth.js
+    const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+
+    // 2. Controllo Sicurezza: Se non c'è utente o è un tecnico, rispedisci alla nuova index
+    if (!utente || utente.ruolo === 'tecnico') {
+        console.warn('⚠️ Accesso non autorizzato o sessione scaduta');
+        window.location.href = 'index.html';
+        return;
+    }
+
+    const ruolo = utente.ruolo; // 'admin' o 'supervisore'
+    console.log('👤 Accesso Console garantito per:', utente.nome_completo, `[${ruolo}]`);
+
+    // 3. Logica per Supervisore: Nascondi sezioni sensibili
+    // Manteniamo la tua logica originale che è ottima e basata sulle classi HTML
+    if (ruolo === 'supervisore') {
+        document.querySelectorAll('.nav-section').forEach(section => {
+            const hasDatabase = section.querySelector('[data-tab="config"]');
+            const hasSincro = section.querySelector('[data-tab="analyze"]');
+            if (hasDatabase || hasSincro) {
+                section.style.display = 'none';
             }
-            
-            const ruolo = sessionData.profile.ruolo;
-            console.log('👤 Ruolo:', ruolo);
-            
-            // 2. Nascondi sezioni per supervisore
-            if (ruolo === 'supervisore') {
-                document.querySelectorAll('.nav-section').forEach(section => {
-                    const hasDatabase = section.querySelector('[data-tab="config"]');
-                    const hasSincro = section.querySelector('[data-tab="analyze"]');
-                    if (hasDatabase || hasSincro) {
-                        section.style.display = 'none';
-                    }
-                });
-            }
-            
-            // 3. Aggiorna header
-            const userNameEl = document.getElementById('user-name');
-            const userRoleEl = document.getElementById('user-role');
-            const iconEl = document.querySelector('.user-info .material-symbols-rounded');
-            
-            if (userNameEl) {
-                userNameEl.textContent = sessionData.profile?.nome_completo || sessionData.user?.email;
-            }
-            
-            if (userRoleEl) {
-                const testi = {
-                    'admin': '👑 Amministratore',
-                    'supervisore': '👁️ Supervisore',
-                    'tecnico': '🔧 Tecnico'
-                };
-                userRoleEl.textContent = testi[ruolo] || ruolo;
-            }
-            
-            if (iconEl) {
-                const icone = {
-                    'admin': 'admin_panel_settings',
-                    'supervisore': 'visibility',
-                    'tecnico': 'engineering'
-                };
-                iconEl.textContent = icone[ruolo] || 'account_circle';
-            }
-        }
+        });
+    }
+
+    // 4. Aggiorna Header con i nuovi dati di Supabase
+    const userNameEl = document.getElementById('user-name');
+    const userRoleEl = document.getElementById('user-role');
+    const iconEl = document.querySelector('.user-info .material-symbols-rounded');
+
+    if (userNameEl) {
+        userNameEl.textContent = utente.nome_completo || utente.Mail;
+    }
+
+    if (userRoleEl) {
+        const testi = {
+            'admin': '👑 Amministratore',
+            'supervisore': '👁️ Supervisore'
+        };
+        userRoleEl.textContent = testi[ruolo] || ruolo;
+    }
+
+    if (iconEl) {
+        const icone = {
+            'admin': 'admin_panel_settings',
+            'supervisore': 'visibility'
+        };
+        iconEl.textContent = icone[ruolo] || 'account_circle';
         
+        // Colore distintivo per l'icona
+        iconEl.style.color = ruolo === 'admin' ? '#ef4444' : '#f59e0b';
+    }
+    
+    // 5. Opzionale: Se il pannello ha bisogno di sapere che è inizializzato
+    // (alcuni script usano variabili flag)
+    window.isInitialized = true;
+}
         // Esegui quando il DOM è pronto
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', initAdmin);
@@ -3024,52 +3032,52 @@ window.rimuoviFile = rimuoviFileWrapper;
         console.log('👤 Avvio script aggiornamento info utente...');
         
         function aggiornaInfoUtente() {
-            console.log('👤 Tentativo aggiornamento info utente...');
-            
-            const session = JSON.parse(localStorage.getItem('flox_session'));
-            if (!session) {
-                console.log('❌ Nessuna sessione trovata');
-                return false;
-            }
-            
-            const userNameEl = document.getElementById('user-name');
-            const userRoleEl = document.getElementById('user-role');
-            const iconEl = document.querySelector('.user-info .material-symbols-rounded');
-            
-            console.log('🔍 Elementi trovati:', { 
-                userName: userNameEl, 
-                userRole: userRoleEl, 
-                icon: iconEl 
-            });
-            
-            if (!userNameEl || !userRoleEl || !iconEl) {
-                console.log('⏳ Elementi non ancora disponibili, riprovo...');
-                return false;
-            }
-            
-            // Aggiorna nome
-            userNameEl.textContent = session.profile?.nome_completo || session.user?.email || 'Utente';
-            
-            // Aggiorna ruolo e icona
-            const ruolo = session.profile?.ruolo || 'utente';
-            switch(ruolo) {
-                case 'admin': 
-                    userRoleEl.textContent = '👑 Amministratore'; 
-                    iconEl.textContent = 'admin_panel_settings';
-                    break;
-                case 'supervisore': 
-                    userRoleEl.textContent = '👁️ Supervisore'; 
-                    iconEl.textContent = 'visibility';
-                    break;
-                case 'tecnico': 
-                    userRoleEl.textContent = '🔧 Tecnico'; 
-                    iconEl.textContent = 'engineering';
-                    break;
-            }
-            
-            console.log('✅ Info utente aggiornate con successo!');
-            return true;
-        }
+    console.log('👤 Tentativo aggiornamento info utente (Nuovo Sistema)...');
+    
+    // 1. Usa il nuovo sistema invece di flox_session
+    const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+    
+    if (!utente) {
+        console.log('❌ Nessun utente trovato in sessione');
+        return false;
+    }
+    
+    const userNameEl = document.getElementById('user-name');
+    const userRoleEl = document.getElementById('user-role');
+    const iconEl = document.querySelector('.user-info .material-symbols-rounded');
+    
+    // Se gli elementi non sono ancora pronti nel DOM, ritorniamo false per far riprovare il ciclo
+    if (!userNameEl || !userRoleEl || !iconEl) {
+        console.log('⏳ Elementi non ancora disponibili, riprovo...');
+        return false;
+    }
+    
+    // Aggiorna nome (usando i campi del nuovo oggetto utente)
+    userNameEl.textContent = utente.nome_completo || utente.Mail || 'Utente';
+    
+    // Aggiorna ruolo e icona
+    const ruolo = (utente.ruolo || 'tecnico').toLowerCase();
+    switch(ruolo) {
+        case 'admin': 
+            userRoleEl.textContent = '👑 Amministratore'; 
+            iconEl.textContent = 'admin_panel_settings';
+            iconEl.style.color = '#ef4444'; // Rosso Admin
+            break;
+        case 'supervisore': 
+            userRoleEl.textContent = '👁️ Supervisore'; 
+            iconEl.textContent = 'visibility';
+            iconEl.style.color = '#f59e0b'; // Arancione Supervisore
+            break;
+        case 'tecnico': 
+            userRoleEl.textContent = '🔧 Tecnico'; 
+            iconEl.textContent = 'engineering';
+            iconEl.style.color = '#22c55e'; // Verde Tecnico
+            break;
+    }
+    
+    console.log('✅ Info utente aggiornate con successo tramite Supabase!');
+    return true;
+}
         
         // Prova subito
         if (!aggiornaInfoUtente()) {
@@ -3088,9 +3096,43 @@ window.rimuoviFile = rimuoviFileWrapper;
             }, 100);
         }
     })();
+
+
+// Nuova funzione di Logout universale
+window.logout = async function() {
+    if (confirm("Sei sicuro di voler uscire dalla Console Admin?")) {
+        console.log("🚪 Esecuzione logout...");
+        
+        try {
+            // 1. Logout da Supabase Auth (chiude la sessione sul server)
+            const supabase = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+            if (supabase) {
+                await supabase.auth.signOut();
+            }
+
+            // 2. Pulizia sessione locale (tramite la funzione in auth.js)
+            if (typeof authLogout === 'function') {
+                authLogout();
+            }
+
+            // 3. Ritorno alla pagina di login intelligente
+            console.log("👋 Reindirizzamento a index.html");
+            window.location.href = 'index.html';
+            
+        } catch (error) {
+            console.error("Errore durante il logout:", error);
+            // Forza comunque il ritorno alla home in caso di errore
+            window.location.href = 'index.html';
+        }
+    }
+};
+
+
+
 </script>
-<script src="login.js"></script>
+<!--  <script src="login.js"></script>   -->
 <script src="db-config.js"></script>
+<script src="auth.js"></script>
 <script src="admin_database.js"></script>
 <script src="db-rules.js"></script>  
 <script src="admin_veicoli_manager.js"></script>
