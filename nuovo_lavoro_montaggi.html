@@ -12,6 +12,23 @@
 <!-- ✅ AGGIUNTO: File di configurazione DB centrale -->
 <script src="db-config.js"></script>
 <script src="check-db-config.js"></script>
+<!-- ✅ AGGIUNTO: Auth.js per gestione login -->
+<script src="auth.js"></script>
+<!-- ✅ GATEKEEPER: Protezione pagina -->
+<script>
+    (function() {
+        const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+        if (!utente) {
+            window.location.href = 'index.html';
+        }
+    })();
+</script>
+<!-- ✅ CONFIGURAZIONE FOOTER -->
+<script>
+    window.FOOTER_CONFIG = {
+        testo: "EDIT BY KINGFREAK Version 1.0"
+    };
+</script>
     <style>
         :root {
             --primary: #2563eb;
@@ -148,19 +165,6 @@
             color: white;
         }
 
-        .header-app {
-            background: white;
-            padding: 15px 20px;
-            display: flex;
-            align-items: center;
-            position: fixed;
-            top: 0;
-            width: 100%;
-            z-index: 100;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            box-sizing: border-box;
-        }
-
         .section-card {
             background: white;
             border-radius: 16px;
@@ -242,18 +246,75 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             cursor: pointer;
         }
+
+        /* Header App migliorato */
+        .app-header-custom {
+            background: white;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            width: 100%;
+            z-index: 100;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+        }
+
+        /* Notifiche */
+        .notifica {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 2000;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 500;
+            max-width: 90%;
+            width: auto;
+            height: 28px;
+            min-height: 28px;
+            line-height: 1;
+            animation: slideUp 0.2s ease;
+            pointer-events: none;
+        }
+
+        .notifica.successo { background: #22c55e; }
+        .notifica.errore { background: #ef4444; }
+        .notifica.info { background: #334155; }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translate(-50%, 20px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
     </style>
 </head>
-<body>
+<div class="app-container">
+        <!-- Header con indicatore DB e nome tecnico -->
+        <header class="app-header" style="position: relative;">
+            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+              <button onclick="window.history.back()" class="btn-scheda" style="height: 40px; width: 40px; display: flex; align-items: center; justify-content: center; border: none; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <span class="material-symbols-rounded" style="color: var(--primary);">arrow_back</span>
+</button>
+                
+                <div style="flex-grow: 1;">
+                    <h1 style="font-size: 1.25rem; font-weight: 800; color: var(--primary); margin: 0;">Inserimento Montaggio</h1>
+                    <p id="tecnico-display" style="margin: 0; font-size: 0.85rem; color: var(--text-muted); font-weight: 600;"></p>
+                </div>
+                
+                <!-- ✅ INDICATORE DB STATICO -->
+                <div id="db-status-dot" style="position: absolute; top: 15px; right: 15px; width: 14px; height: 14px; background: #22c55e; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2); z-index: 10;"></div>
+            </div>
 
-    <div class="header-app">
-        <button onclick="history.back()" class="btn-scheda">
-            <span class="material-symbols-rounded">arrow_back</span>
-        </button>
-        <h2 style="font-size: 1.1rem; font-weight: 800; margin: 0;">Inserimento Montaggio</h2>
-    </div>
-
-    <div class="container" style="margin-top: 70px;">
+    <div class="container">
         
         <!-- Card Tipo Lavoro Fisso -->
         <div class="tipo-lavoro-card">
@@ -270,13 +331,11 @@
             <div id="display-cliente" style="font-size: 0.85rem; color: #475569; margin-top: 6px; font-weight: 600;">-</div>
         </div>
 
-<!-- DATA LAVORO (SPOSTATA QUI) -->
-<div class="section-card">
-    <label class="label-field">Data Lavoro</label>
-
-    <input type="date" id="data-lavoro" class="input-modern" onchange="controllaGiornoFestivo()">
-</div>
-
+        <!-- DATA LAVORO -->
+        <div class="section-card">
+            <label class="label-field">Data Lavoro</label>
+            <input type="date" id="data-lavoro" class="input-modern" onchange="controllaGiornoFestivo()">
+        </div>
 
         <!-- Sezione Tipologia Ore -->
         <div class="section-card">
@@ -339,73 +398,86 @@
             <label class="label-field">Note Lavoro</label>
             <textarea id="note" class="input-modern" style="height: 80px; padding-top: 10px;" placeholder="Descrivi il lavoro di montaggio..."></textarea>
             
-          
-
             <button onclick="salvaIntervento()" class="btn-primary">
                 CONFERMA E SALVA MONTAGGIO
             </button>
         </div>
+        
+        <!-- FOOTER CENTRALIZZATO -->
+        <footer class="app-footer" style="margin-top: 20px;">
+            <span class="footer-text" id="footer-text"></span>
+        </footer>
     </div>
 
-
-
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const configInfo = getDbConfigInfo();
-        
-        if (!configInfo.configured) {
-            console.warn('Database non configurato per ParkApp');
-            mostraIndicatoreDB(false);
-        } else {
-            console.log('DB configurato:', configInfo.urlShort);
-            mostraIndicatoreDB(true);
-        }
-    });
-    
-    function mostraIndicatoreDB(isConfigured) {
-        const header = document.querySelector('.app-header') || 
-                      document.querySelector('header') || 
-                      document.querySelector('div[style*="position: sticky"]');
-        
-        if (!header) return;
-        
-        // Crea o aggiorna indicatore
-        let indicator = document.getElementById('db-status-indicator');
-        if (!indicator) {
-            indicator = document.createElement('div');
-            indicator.id = 'db-status-indicator';
-            indicator.style.cssText = `
-                position: absolute;
-                top: 15px;
-                right: 15px;
-                width: 10px;
-                height: 10px;
-                border-radius: 50%;
-                border: 2px solid white;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                cursor: pointer;
-                z-index: 10;
-            `;
-            indicator.onclick = function() {
-                if (confirm('Database non configurato. Vuoi andare alla configurazione?')) {
-                    window.location.href = 'config.html';
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // ✅ NOME TECNICO DA authGetUtente()
+            const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+            const display = document.getElementById('tecnico-display');
+            if (utente && utente.nome_completo && display) {
+                display.innerText = "Tecnico: " + utente.nome_completo;
+            }
+            
+            // ✅ FOOTER CENTRALIZZATO
+            const footerEl = document.getElementById('footer-text');
+            if (footerEl && window.FOOTER_CONFIG) {
+                footerEl.innerText = window.FOOTER_CONFIG.testo;
+            } else if (footerEl) {
+                footerEl.innerText = 'EDIT BY KINGFREAK Version 1.0';
+            }
+            
+            const configInfo = getDbConfigInfo();
+            
+            if (!configInfo.configured) {
+                console.warn('Database non configurato per ParkApp');
+                // Modifica colore indicatore
+                const dot = document.getElementById('db-status-dot');
+                if (dot) {
+                    dot.style.background = '#f59e0b';
+                    dot.style.boxShadow = '0 0 0 4px rgba(245, 158, 11, 0.2)';
+                    dot.style.cursor = 'pointer';
+                    dot.onclick = function() {
+                        if (confirm('Database non configurato. Vuoi andare alla configurazione?')) {
+                            window.location.href = 'config.html';
+                        }
+                    };
                 }
-            };
-            header.style.position = 'relative';
-            header.appendChild(indicator);
-        }
+            } else {
+                console.log('DB configurato:', configInfo.urlShort);
+                // Già verde di default
+            }
+        });
         
-        if (isConfigured) {
-            indicator.style.background = '#22c55e'; // Verde
-            indicator.title = `DB configurato • ${configInfo.urlShort}`;
-            indicator.onclick = null;
-        } else {
-            indicator.style.background = '#f59e0b'; // Giallo/arancione
-            indicator.title = 'Database non configurato - Clicca per configurare';
+        function mostraNotifica(messaggio, tipo = 'info') {
+            // Funzione per notifiche compatte
+            const notifica = document.createElement('div');
+            notifica.className = `notifica ${tipo}`;
+            
+            let icona = 'info';
+            if (tipo === 'successo') icona = 'check_circle';
+            if (tipo === 'errore') icona = 'error';
+            
+            notifica.innerHTML = `
+                <span class="material-symbols-rounded" style="font-size: 14px;">${icona}</span>
+                <span>${messaggio}</span>
+            `;
+            
+            document.body.appendChild(notifica);
+            
+            setTimeout(() => {
+                if (notifica.parentNode) {
+                    notifica.style.opacity = '0';
+                    notifica.style.transform = 'translateX(-50%) translateY(-5px)';
+                    notifica.style.transition = 'all 0.15s ease';
+                    
+                    setTimeout(() => {
+                        if (notifica.parentNode) notifica.remove();
+                    }, 150);
+                }
+            }, 1500);
         }
-    }
-</script>
+    </script>
+    
     <script src="nuovo_lavoro_montaggi.js"></script>
 </body>
 </html>

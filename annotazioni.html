@@ -12,22 +12,374 @@
 <!-- ✅ AGGIUNTO: File di configurazione DB centrale -->
 <script src="db-config.js"></script>
 <script src="check-db-config.js"></script>
-</head>
-<body style="background-color: #f8fafc; margin: 0;">
+<!-- ✅ AGGIUNTO: Auth.js per gestione login -->
+<script src="auth.js"></script>
+<!-- ✅ GATEKEEPER: Protezione pagina -->
+<script>
+    (function() {
+        const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+        if (!utente) {
+            window.location.href = 'index.html';
+        }
+    })();
+</script>
+<!-- ✅ CONFIGURAZIONE FOOTER -->
+<script>
+    window.FOOTER_CONFIG = {
+        testo: "EDIT BY KINGFREAK Version 1.0"
+    };
+</script>
+<style>
+    /* Stili per notifiche */
+    .notifica {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #1e293b;
+        color: white;
+        padding: 12px 24px;
+        border-radius: 100px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 2000;
+        font-family: 'Inter', sans-serif;
+        max-width: 90%;
+    }
+    
+    .notifica.successo {
+        background: #22c55e;
+    }
+    
+    .notifica.errore {
+        background: #ef4444;
+    }
+    
+    /* Stili per stati vuoti e caricamento */
+    .stato-caricamento {
+        text-align: center;
+        padding: 40px 20px;
+        color: #64748b;
+    }
+    
+    .stato-caricamento .material-symbols-rounded {
+        font-size: 48px;
+        opacity: 0.3;
+        margin-bottom: 10px;
+        animation: spin 1s linear infinite;
+    }
+    
+    .messaggio-vuoto {
+        text-align: center;
+        padding: 40px 20px;
+        color: #64748b;
+    }
+    
+    .messaggio-vuoto .material-symbols-rounded {
+        font-size: 48px;
+        opacity: 0.3;
+        margin-bottom: 10px;
+    }
+    
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    
+    /* Stili per card annotazioni */
+    .card-annotazione {
+        background: white;
+        border-radius: 16px;
+        padding: 16px;
+        margin-bottom: 12px;
+        border: 1px solid #e2e8f0;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    
+    .card-annotazione:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    
+    .card-annotazione-espansa {
+        border-color: #2563eb;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+    }
+    
+    .annotazione-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+    
+    .annotazione-data {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #475569;
+    }
+    
+    .annotazione-tipo-badge {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.7rem;
+        font-weight: 800;
+        padding: 4px 8px;
+        border-radius: 20px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .annotazione-tipo-badge.manutenzione {
+        background: #e0f2fe;
+        color: #0369a1;
+    }
+    
+    .annotazione-tipo-badge.appuntamento {
+        background: #fef3c7;
+        color: #92400e;
+    }
+    
+    .annotazione-tipo-badge.nota {
+        background: #f1f5f9;
+        color: #475569;
+    }
+    
+    .annotazione-contenuto {
+        margin-bottom: 12px;
+    }
+    
+    .annotazione-testo, .annotazione-testo-completo {
+        font-size: 0.9rem;
+        line-height: 1.5;
+        color: #1e293b;
+        white-space: pre-wrap;
+    }
+    
+    .annotazione-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 8px;
+        border-top: 1px dashed #e2e8f0;
+    }
+    
+    .annotazione-tecnico {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.75rem;
+        color: #64748b;
+    }
+    
+    .annotazione-azioni {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .btn-azione {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-azione.cancella {
+        color: #ef4444;
+    }
+    
+    .btn-azione.cancella:hover {
+        background: #fef2f2;
+        transform: scale(1.1);
+    }
+    
+    /* Stili per pulsanti tipo */
+    .btn-tipo-opzione {
+        width: 100%;
+        padding: 12px;
+        margin-bottom: 8px;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        background: white;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: left;
+    }
+    
+    .btn-tipo-opzione.selezionato {
+        border-color: #2563eb;
+        background: #eff6ff;
+    }
+    
+    .btn-tipo-opzione .icona-tipo {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .btn-tipo-opzione[data-tipo="0"] .icona-tipo {
+        background: #e0f2fe;
+        color: #0369a1;
+    }
+    
+    .btn-tipo-opzione[data-tipo="1"] .icona-tipo {
+        background: #fef3c7;
+        color: #92400e;
+    }
+    
+    .btn-tipo-opzione[data-tipo="2"] .icona-tipo {
+        background: #f1f5f9;
+        color: #475569;
+    }
+    
+    .btn-tipo-opzione .testo-tipo {
+        flex: 1;
+    }
+    
+    .btn-tipo-opzione .tipo-titolo {
+        font-weight: 800;
+        color: #1e293b;
+        font-size: 0.95rem;
+    }
+    
+    .btn-tipo-opzione .tipo-descrizione {
+        font-size: 0.7rem;
+        color: #64748b;
+    }
+    
+    .btn-tipo-opzione .checkmark-selezione {
+        color: #2563eb;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+    
+    .btn-tipo-opzione.selezionato .checkmark-selezione {
+        opacity: 1;
+    }
+    
+    /* Stili filtri - VERSIONE MIGLIORATA */
+    .filtri-container {
+        background: white;
+        border-radius: 16px;
+        padding: 16px;
+        margin-bottom: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    
+    .filtro-tipo-compatto {
+        width: 100%;
+        padding: 10px 5px;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        background: white;
+        font-family: 'Inter', sans-serif;
+        font-weight: 700;
+        font-size: 0.75rem;
+        color: #64748b;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .filtro-tipo-compatto.attivo {
+        border-color: #2563eb;
+        background: #2563eb;
+        color: white;
+    }
+    
+    .filtro-tipo-compatto:hover {
+        border-color: #2563eb;
+    }
+    
+    @keyframes slideUp {
+        from { transform: translateY(50px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+    
+    /* Migliorie per mobile */
+    @media (max-width: 480px) {
+        #btn-nuova-annotazione {
+            bottom: 90px;
+            right: 16px;
+            width: 52px;
+            height: 52px;
+        }
+        
+        .filtro-tipo-compatto {
+            font-size: 0.7rem;
+            padding: 8px 2px;
+        }
+        
+        .filtri-container {
+            padding: 12px;
+        }
+    }
+.filtro-tipo-compatto {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    width: 100% !important;
+    padding: 8px 2px !important;
+    font-size: 0.7rem !important;
+    line-height: 1.2 !important;
+    word-break: break-word !important;
+    white-space: normal !important;
+}
 
+/* Font specifici per testi più lunghi */
+.filtro-tipo-compatto[data-tipo="0"],
+.filtro-tipo-compatto[data-tipo="1"] {
+    font-size: 0.65rem !important;
+}
+
+/* Animazione notifica */
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translate(-50%, 20px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+}
+</style>
+</head>
+<body class="bg-app">
     <div class="app-container">
-        <!-- HEADER FISSO -->
-        <div class="app-header">
+        <!-- HEADER FISSO con indicatore DB e nome tecnico -->
+        <header class="app-header" style="position: relative;">
             <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
-                <button onclick="tornaIndietro()" style="background: none; border: none; cursor: pointer;">
-                    <span class="material-symbols-rounded" style="color: #64748b;">arrow_back</span>
+                <button onclick="tornaIndietro()" class="btn-scheda" style="height: 40px; width: 40px; display: flex; align-items: center; justify-content: center; border: none; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <span class="material-symbols-rounded" style="color: var(--primary);">arrow_back</span>
                 </button>
-                <div>
-                    <h1 style="margin: 0; font-size: 1.2rem; font-weight: 800;">Annotazioni</h1>
-                    <div id="codice-impianto-header" style="font-size: 0.9rem; color: #2563eb; font-weight: 700; margin-top: 4px;">
-                        Caricamento...
-                    </div>
+                
+                <div style="flex-grow: 1;">
+                    <h1 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: var(--primary);">Annotazioni</h1>
+                    <p id="tecnico-display" style="margin: 0; font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Tecnico: Caricamento...</p>
                 </div>
+                
+                <!-- ✅ INDICATORE DB STATICO (verde con glow) -->
+                <div id="db-status-dot" style="position: absolute; top: 15px; right: 15px; width: 14px; height: 14px; background: #22c55e; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2); z-index: 10;"></div>
             </div>
 
             <!-- CARD RIEPILOGO IMPIANTO -->
@@ -47,30 +399,35 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </header>
 
         <!-- CORPO DELLA PAGINA -->
-        <main id="main-content" style="padding: 15px; padding-bottom: 180px !important;">
-            <!-- FILTRO TIPO -->
-            <div class="filtri-container">
-                <div style="font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
-                    Filtra per tipo
-                </div>
-                <div class="filtri-wrapper">
-                    <button onclick="filtraAnnotazioni('tutti')" class="filtro-tipo-compatto attivo" data-tipo="tutti">
-                        Tutti
-                    </button>
-                    <button onclick="filtraAnnotazioni('0')" class="filtro-tipo-compatto" data-tipo="0">
-                        Manutenzione
-                    </button>
-                    <button onclick="filtraAnnotazioni('1')" class="filtro-tipo-compatto" data-tipo="1">
-                        Appuntamento
-                    </button>
-                    <button onclick="filtraAnnotazioni('2')" class="filtro-tipo-compatto" data-tipo="2">
-                        Note
-                    </button>
-                </div>
-            </div>
+        <main id="main-content" style="padding: 15px; padding-bottom: 100px !important;">
+            <!-- FILTRO TIPO - VERSIONE MIGLIORATA A GRIGLIA -->
+            <!-- FILTRO TIPO - VERSIONE A 4 COLONNE CON TESTI CORTI -->
+<div class="filtri-container">
+    <div style="font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
+        FILTRA PER TIPO
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;">
+        <button onclick="filtraAnnotazioni('tutti')" class="filtro-tipo-compatto attivo" data-tipo="tutti" 
+                style="padding: 10px 2px; font-size: 0.65rem;">
+            TUTTI
+        </button>
+        <button onclick="filtraAnnotazioni('0')" class="filtro-tipo-compatto" data-tipo="0" 
+                style="padding: 10px 2px; font-size: 0.6rem;">
+            MANUT.
+        </button>
+        <button onclick="filtraAnnotazioni('1')" class="filtro-tipo-compatto" data-tipo="1" 
+                style="padding: 10px 2px; font-size: 0.6rem;">
+            APPUNT.
+        </button>
+        <button onclick="filtraAnnotazioni('2')" class="filtro-tipo-compatto" data-tipo="2" 
+                style="padding: 10px 2px; font-size: 0.65rem;">
+            NOTE
+        </button>
+    </div>
+</div>
 
             <!-- SEZIONE CRONOLOGIA -->
             <div style="margin-bottom: 20px;">
@@ -85,17 +442,32 @@
 
                 <!-- LISTA ANNOTAZIONI -->
                 <div id="lista-annotazioni">
-                    <div style="text-align: center; padding: 40px 20px; color: #64748b;">
-                        <span class="material-symbols-rounded" style="font-size: 48px; opacity: 0.3; margin-bottom: 10px;">note_add</span>
+                    <div class="messaggio-vuoto">
+                        <span class="material-symbols-rounded">note_add</span>
                         <div style="font-weight: 600;">Nessuna annotazione presente</div>
                         <div style="font-size: 0.85rem; margin-top: 5px;">Aggiungi la prima annotazione</div>
                     </div>
                 </div>
             </div>
 
-            <!-- PULSANTE NUOVA ANNOTAZIONE (FLOATING) -->
-            <button onclick="mostraFormNuovaAnnotazione()" id="btn-nuova-annotazione" style="position: fixed; bottom: 100px; right: 20px; width: 56px; height: 56px; border-radius: 50%; background: #2563eb; color: white; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); z-index: 90;">
-                <span class="material-symbols-rounded" style="font-size: 24px;">add</span>
+            <!-- PULSANTE NUOVA ANNOTAZIONE (FLOATING) CORRETTO -->
+            <button onclick="mostraFormNuovaAnnotazione()" id="btn-nuova-annotazione" 
+                    style="position: fixed; 
+                           bottom: 100px; 
+                           right: 20px; 
+                           width: 56px; 
+                           height: 56px; 
+                           border-radius: 50%; 
+                           background: #2563eb; 
+                           color: white; 
+                           border: none; 
+                           display: flex; 
+                           align-items: center; 
+                           justify-content: center; 
+                           cursor: pointer; 
+                           box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); 
+                           z-index: 1000;">
+                <span class="material-symbols-rounded" style="font-size: 28px;">add</span>
             </button>
         </main>
 
@@ -215,62 +587,51 @@
                 </div>
             </div>
         </div>
+
+        <!-- ✅ FOOTER CENTRALIZZATO -->
+        <footer class="app-footer">
+            <span class="footer-text" id="footer-text"></span>
+        </footer>
     </div>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // ✅ NOME TECNICO DA authGetUtente()
+        const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+        const display = document.getElementById('tecnico-display');
+        if (utente && utente.nome_completo && display) {
+            display.innerText = "Tecnico: " + utente.nome_completo;
+        }
+        
+        // ✅ FOOTER CENTRALIZZATO
+        const footerEl = document.getElementById('footer-text');
+        if (footerEl && window.FOOTER_CONFIG) {
+            footerEl.innerText = window.FOOTER_CONFIG.testo;
+        } else if (footerEl) {
+            footerEl.innerText = 'EDIT BY KINGFREAK Version 1.0';
+        }
+        
         const configInfo = getDbConfigInfo();
         
         if (!configInfo.configured) {
             console.warn('Database non configurato per ParkApp');
-            mostraIndicatoreDB(false);
+            // Modifica colore indicatore
+            const dot = document.getElementById('db-status-dot');
+            if (dot) {
+                dot.style.background = '#f59e0b';
+                dot.style.boxShadow = '0 0 0 4px rgba(245, 158, 11, 0.2)';
+                dot.style.cursor = 'pointer';
+                dot.onclick = function() {
+                    if (confirm('Database non configurato. Vuoi andare alla configurazione?')) {
+                        window.location.href = 'config.html';
+                    }
+                };
+            }
         } else {
             console.log('DB configurato:', configInfo.urlShort);
-            mostraIndicatoreDB(true);
+            // Già verde di default
         }
     });
-    
-    function mostraIndicatoreDB(isConfigured) {
-        const header = document.querySelector('.app-header') || 
-                      document.querySelector('header') || 
-                      document.querySelector('div[style*="position: sticky"]');
-        
-        if (!header) return;
-        
-        // Crea o aggiorna indicatore
-        let indicator = document.getElementById('db-status-indicator');
-        if (!indicator) {
-            indicator = document.createElement('div');
-            indicator.id = 'db-status-indicator';
-            indicator.style.cssText = `
-                position: absolute;
-                top: 15px;
-                right: 15px;
-                width: 10px;
-                height: 10px;
-                border-radius: 50%;
-                border: 2px solid white;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                cursor: pointer;
-                z-index: 10;
-            `;
-            indicator.onclick = function() {
-                if (confirm('Database non configurato. Vuoi andare alla configurazione?')) {
-                    window.location.href = 'config.html';
-                }
-            };
-            header.style.position = 'relative';
-            header.appendChild(indicator);
-        }
-        
-        if (isConfigured) {
-            indicator.style.background = '#22c55e'; // Verde
-            indicator.title = `DB configurato • ${configInfo.urlShort}`;
-            indicator.onclick = null;
-        } else {
-            indicator.style.background = '#f59e0b'; // Giallo/arancione
-            indicator.title = 'Database non configurato - Clicca per configurare';
-        }
-    }
 </script>
     <script src="annotazioni.js"></script>
 </body>

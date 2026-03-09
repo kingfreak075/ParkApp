@@ -1,12 +1,17 @@
+// ✅ SOSTITUITO CON CLIENT CENTRALIZZATO
+const supabaseClient = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
 
-// === Supabase init ===
-const SUPABASE_URL = 'https://berlfufnmolyrmxeyqfd.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_a3USDfV7gbuauU2Kd6DuQQ_8PFVElpy';
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// ✅ CONTROLLO CLIENT INIZIALE
+if (!supabaseClient) {
+    console.error('Client Supabase non disponibile');
+    alert('Errore di connessione al database');
+}
 
 // === Stato globale / contesto ===
 const impiantoCorrente = JSON.parse(localStorage.getItem('selected_plant')); // {id, impianto, codice, nome, indirizzo, ...}
-const tecnicoLoggato = localStorage.getItem('tecnico_loggato');
+// ✅ SOSTITUITO con authGetUtente()
+const utenteCorrente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+const tecnicoLoggato = utenteCorrente ? utenteCorrente.nome_completo : null;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers: determinazione impianto (UNA SOLA FONTE DI VERITÀ)
@@ -205,6 +210,12 @@ function checkLimiti(input, min, max) {
 // Salvataggio (merge): payload ricco + modalità edit + regole commessa + redirect parco.html
 // ─────────────────────────────────────────────────────────────────────────────
 async function salvaIntervento() {
+  // ✅ AGGIUNTO CONTROLLO CLIENT
+  if (!supabaseClient) {
+    alert('Errore di connessione al database');
+    return;
+  }
+  
   const codice = document.getElementById('select-codice').value;
   if (!codice) { alert('Seleziona un codice!'); return; }
 
@@ -216,17 +227,20 @@ async function salvaIntervento() {
   const mode = new URLSearchParams(window.location.search).get('mode');
   const datiEdit = mode === 'edit' ? JSON.parse(localStorage.getItem('edit_intervento') || '{}') : null;
   
-  if (mode === 'edit' && datiEdit && datiEdit.indirizzo) {
-    // In modifica, mantieni l'indirizzo originale dell'intervento
-    indirizzoFinale = datiEdit.indirizzo;
-  } else {
-    // In nuovo, usa dalla cache o dal display
-    if (impiantoCorrente && impiantoCorrente.indirizzo) {
-      indirizzoFinale = impiantoCorrente.indirizzo;
-    } else if (document.getElementById('display-indirizzo')) {
-      indirizzoFinale = document.getElementById('display-indirizzo').innerText;
+// Dopo il salvataggio riuscito
+if (mode === 'edit') {
+    // Se veniamo dal calendario, torniamo al calendario
+    const urlParams = new URLSearchParams(window.location.search);
+    const from = urlParams.get('from');
+    
+    if (from === 'calendario') {
+        window.location.href = 'calendario.html';
+    } else {
+        window.location.href = 'parco.html';
     }
-  }
+} else {
+    window.location.href = 'parco.html';
+}
 
   // CALCOLO ORE
   let oreOrd = 0, oreStra = 0;

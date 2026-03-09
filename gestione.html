@@ -10,6 +10,17 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="db-config.js"></script>
     <script src="check-db-config.js"></script>
+    <!-- ✅ AGGIUNTO: Auth.js per gestione login -->
+    <script src="auth.js"></script>
+    <!-- ✅ GATEKEEPER: Protezione pagina -->
+    <script>
+        (function() {
+            const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+            if (!utente) {
+                window.location.href = 'index.html';
+            }
+        })();
+    </script>
     <style>
         /* Stili specifici per gestione.html */
         .app-container {
@@ -279,8 +290,8 @@
 </head>
 <body class="bg-app">
     <div class="app-container">
-        <!-- Header CORRETTO -->
-        <header class="app-header" style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+        <!-- Header CORRETTO con indicatore DB e nome tecnico -->
+        <header class="app-header" style="position: relative; display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
             <button onclick="window.location.href='menu.html'" 
                     class="btn-scheda" 
                     style="height: 40px; width: 40px; display: flex; align-items: center; justify-content: center; border: none; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); flex-shrink: 0;">
@@ -289,12 +300,13 @@
             
             <div style="flex-grow: 1;">
                 <h1 style="font-size: 1.25rem; font-weight: 800; color: var(--primary); margin: 0;">Gestione Lavoro</h1>
-                <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">
-                    Tecnico: <span id="tecnico-display">Caricamento...</span>
+                <p id="tecnico-display" style="margin: 0; font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">
+                    Tecnico: Caricamento...
                 </p>
             </div>
             
-            <span class="material-symbols-rounded" style="color: var(--text-muted); flex-shrink: 0;">account_circle</span>
+            <!-- ✅ INDICATORE DB STATICO (verde con glow) -->
+            <div id="db-status-dot" style="position: absolute; top: 15px; right: 15px; width: 14px; height: 14px; background: #22c55e; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2); z-index: 10;"></div>
         </header>
 
         <!-- Main content -->
@@ -349,10 +361,7 @@
                 </div>
                 <div class="accordion-content">
                     <div class="grid-codici" id="grid-assenze"></div>
-                    <div id="box-8h" style="display:none; margin-top:15px;">
-                        <span style="font-size:0.9rem; font-weight:700;">Intera giornata (8h)</span>
-                        <input type="checkbox" id="check-8h" onchange="handle8h(this.checked)">
-                    </div>
+                
                 </div>
             </div>
 
@@ -369,7 +378,13 @@
                         </div>
                         <input type="range" id="slider-ore" min="0.25" max="8" step="0.25" value="1" oninput="updateSlider(this.value)">
                     </div>
-
+<!-- ✅ SPOSTATO QUI: box-8h come div separato -->
+<div id="box-8h" style="display:none; margin:15px 0 0 0; padding:0 10px;">
+    <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-size:0.9rem; font-weight:700;">Intera giornata (8h)</span>
+        <input type="checkbox" id="check-8h" onchange="handle8h(this.checked)">
+    </div>
+</div>
                     <div id="box-orari-dettaglio" style="display:none; margin-top:15px;">
                         <div style="display:flex; gap:10px;">
                             <div style="flex:1;">
@@ -401,7 +416,7 @@
             </div>
         </main>
 
-        <!-- Resume bar -->
+        <!-- Resume bar con footer centralizzato -->
         <div class="resume-bar">
             <div id="box-riepilogo">
                 <span class="material-symbols-rounded" style="flex-shrink: 0;">info</span>
@@ -414,18 +429,26 @@
             </button>
             
             <div style="text-align: right;">
-                <span class="footer-text">EDIT BY KINGFREAK Version 1.0</span>
+                <span class="footer-text" id="footer-text"></span>
             </div>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Mostra nome tecnico
-            const nomeSalvato = localStorage.getItem('tecnico_loggato');
+            // ✅ NOME TECNICO DA authGetUtente()
+            const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
             const display = document.getElementById('tecnico-display');
-            if (nomeSalvato && display) {
-                display.innerText = nomeSalvato;
+            if (utente && utente.nome_completo && display) {
+                display.innerText = "Tecnico: " + utente.nome_completo;
+            }
+            
+            // ✅ FOOTER CENTRALIZZATO
+            const footerEl = document.getElementById('footer-text');
+            if (footerEl && window.FOOTER_CONFIG) {
+                footerEl.innerText = window.FOOTER_CONFIG.testo;
+            } else if (footerEl) {
+                footerEl.innerText = 'EDIT BY KINGFREAK Version 1.0';
             }
             
             // Config DB
@@ -433,10 +456,21 @@
                 const configInfo = getDbConfigInfo();
                 if (!configInfo.configured) {
                     console.warn('Database non configurato');
-                    mostraIndicatoreDB(false);
+                    // Modifica colore indicatore
+                    const dot = document.getElementById('db-status-dot');
+                    if (dot) {
+                        dot.style.background = '#f59e0b';
+                        dot.style.boxShadow = '0 0 0 4px rgba(245, 158, 11, 0.2)';
+                        dot.style.cursor = 'pointer';
+                        dot.onclick = function() {
+                            if (confirm('Database non configurato. Vuoi configurare?')) {
+                                window.location.href = 'config.html';
+                            }
+                        };
+                    }
                 } else {
                     console.log('DB configurato:', configInfo.urlShort);
-                    mostraIndicatoreDB(true, configInfo);
+                    // Già verde di default
                 }
             }
         });

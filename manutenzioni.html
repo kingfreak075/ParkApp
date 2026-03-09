@@ -12,6 +12,17 @@
 <!-- Aggiungi nel <head> (dopo supabase.js) -->
 <script src="db-config.js"></script>
 <script src="check-db-config.js"></script>
+<!-- ✅ AGGIUNTO: Auth.js per gestione login -->
+<script src="auth.js"></script>
+<!-- ✅ GATEKEEPER: Protezione pagina -->
+<script>
+    (function() {
+        const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+        if (!utente) {
+            window.location.href = 'index.html';
+        }
+    })();
+</script>
 
 </head>
 
@@ -121,15 +132,105 @@
     display: flex;
     gap: 8px;
 }
+
+/* ✅ NUOVO STILE PER STATISTICHE MIGLIORATE */
+.stats-container {
+    background: white;
+    border-radius: 16px;
+    padding: 16px;
+    margin: 20px 0;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+}
+
+.stats-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #f1f5f9;
+}
+
+.stats-title span {
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+}
+
+.stat-card {
+    padding: 12px 8px;
+    border-radius: 12px;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+}
+
+.stat-card.totali { background: #f8fafc; }
+.stat-card.nel-mese { background: #f0fdf4; }
+.stat-card.ritardo { background: #fef2f2; }
+.stat-card.regolari { background: #eff6ff; }
+
+.stat-label {
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.stat-value {
+    font-size: 1.4rem;
+    font-weight: 900;
+}
+
+.stat-value.totali { color: #475569; }
+.stat-value.nel-mese { color: #16a34a; }
+.stat-value.ritardo { color: #dc2626; }
+.stat-value.regolari { color: #2563eb; }
+
+.stat-sub {
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: #94a3b8;
+    margin-top: 2px;
+}
+
+/* Badge filtro migliorato */
+#filtro-attivo-badge {
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: white;
+    background: #3b82f6;
+    padding: 4px 10px;
+    border-radius: 20px;
+    margin-left: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
 </style>
 
 </style>
 <body class="bg-app">
     <div class="app-container">
-        <!-- Header principale -->
-        <header class="app-header">
+        <!-- Header principale con indicatore DB e nome tecnico -->
+        <header class="app-header" style="position: relative;">
             <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
-                <button onclick="window.location.href='parco.html'" 
+                <button onclick="window.location.href='menu.html'" 
                         class="btn-scheda" 
                         style="height: 40px; width: 40px; display: flex; align-items: center; justify-content: center; border: none; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <span class="material-symbols-rounded" style="color: var(--primary);">arrow_back</span>
@@ -138,20 +239,16 @@
                 <div style="flex-grow: 1;">
                     <h1 style="font-size: 1.25rem; font-weight: 800; color: var(--primary); margin: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                         Piano Manutenzioni
-                        <span id="report-globale" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-left: 5px;">
-                            (G: 0 | 0)
-                        </span>
-                        <span id="report-manutentore" style="font-size: 0.85rem; font-weight: 600; color: var(--primary); margin-left: 5px;">
-                            (M: 0 | 0)
-                        </span>
-                        <span id="filtro-attivo-badge" style="font-size: 0.75rem; font-weight: 800; color: var(--primary); 
-                              background: var(--primary-light); padding: 2px 8px; border-radius: 12px; margin-left: 5px;">
+                        <span id="filtro-attivo-badge">
+                            <span class="material-symbols-rounded" style="font-size: 14px;">filter_alt</span>
                             TUTTI
                         </span>
                     </h1>
+                    <p id="tecnico-display" style="margin: 0; font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Tecnico: Caricamento...</p>
                 </div>
                 
-                <span class="material-symbols-rounded" style="color: var(--text-muted);">account_circle</span>
+                <!-- ✅ INDICATORE DB STATICO (verde con glow) -->
+                <div id="db-status-dot" style="position: absolute; top: 15px; right: 15px; width: 14px; height: 14px; background: #22c55e; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2); z-index: 10;"></div>
             </div>
 
             <!-- Selettori mese/manutentore -->
@@ -182,6 +279,53 @@
 
         <!-- Main content -->
         <main style="padding: 1rem;">
+            <!-- STATISTICHE MIGLIORATE (in alto, sotto i filtri) -->
+            <!-- Sostituisci la sezione stats-container con questa versione migliorata -->
+
+<!-- STATISTICHE MIGLIORATE CON INTERATTIVITÀ -->
+<div id="stats-container" class="stats-container" style="display: none;">
+    <div class="stats-title">
+        <span class="material-symbols-rounded" style="font-size: 18px; color: #3b82f6;">monitoring</span>
+        <span>STATISTICHE MANUTENZIONI</span>
+    </div>
+    
+    <!-- Badge ordinamento attivo -->
+    <div id="ordinamento-badge" style="display: none; margin-bottom: 12px; padding: 6px 10px; background: #f1f5f9; border-radius: 20px; font-size: 0.75rem; font-weight: 600; color: #475569; align-items: center; gap: 6px;">
+        <span class="material-symbols-rounded" style="font-size: 14px;">swap_vert</span>
+        <span id="ordinamento-testo">Ordinamento: Totali</span>
+    </div>
+    
+    <div class="stats-grid">
+        <div id="stat-totali-card" class="stat-card totali" onclick="ordinaPer('totali')" style="cursor: pointer; position: relative;">
+            <div class="stat-label">TOTALI</div>
+            <div class="stat-value totali" id="stat-totali">0</div>
+            <div class="stat-sub">impianti</div>
+            <span id="freccia-totali" class="material-symbols-rounded" style="position: absolute; top: 8px; right: 8px; font-size: 14px; color: #3b82f6; display: none;">arrow_upward</span>
+        </div>
+        
+        <div id="stat-nel-mese-card" class="stat-card nel-mese" onclick="ordinaPer('nelMese')" style="cursor: pointer; position: relative;">
+            <div class="stat-label">NEL MESE</div>
+            <div class="stat-value nel-mese" id="stat-nel-mese">0</div>
+            <div class="stat-sub">aggiornati</div>
+            <span id="freccia-nelMese" class="material-symbols-rounded" style="position: absolute; top: 8px; right: 8px; font-size: 14px; color: #16a34a; display: none;">arrow_upward</span>
+        </div>
+        
+        <div id="stat-ritardo-card" class="stat-card ritardo" onclick="ordinaPer('ritardo')" style="cursor: pointer; position: relative;">
+            <div class="stat-label">IN RITARDO</div>
+            <div class="stat-value ritardo" id="stat-ritardo">0</div>
+            <div class="stat-sub">>180 giorni</div>
+            <span id="freccia-ritardo" class="material-symbols-rounded" style="position: absolute; top: 8px; right: 8px; font-size: 14px; color: #dc2626; display: none;">arrow_upward</span>
+        </div>
+        
+        <div id="stat-regolari-card" class="stat-card regolari" onclick="ordinaPer('regolari')" style="cursor: pointer; position: relative;">
+            <div class="stat-label">REGOLARI</div>
+            <div class="stat-value regolari" id="stat-regolari">0</div>
+            <div class="stat-sub"><180 giorni</div>
+            <span id="freccia-regolari" class="material-symbols-rounded" style="position: absolute; top: 8px; right: 8px; font-size: 14px; color: #2563eb; display: none;">arrow_upward</span>
+        </div>
+    </div>
+</div>
+
             <!-- Filtri periodicità -->
             <div style="margin-bottom: 20px; background: white; padding: 1rem; border-radius: 1rem; border: 1px solid var(--border);">
                 <div style="display: flex; gap: 8px; padding: 8px; border-radius: 12px;">
@@ -214,63 +358,53 @@
             </div>
         </main>
 
-        
+        <!-- ✅ FOOTER CENTRALIZZATO -->
+        <footer class="app-footer">
+            <span class="footer-text" id="footer-text"></span>
+        </footer>
     </div>
 
-    <!-- Script per indicatore DB -->
+    <!-- Script per indicatore DB e footer -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // ✅ NOME TECNICO DA authGetUtente()
+            const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+            const display = document.getElementById('tecnico-display');
+            if (utente && utente.nome_completo && display) {
+                display.innerText = "Tecnico: " + utente.nome_completo;
+            }
+            
+            // ✅ FOOTER CENTRALIZZATO
+            const footerEl = document.getElementById('footer-text');
+            if (footerEl && window.FOOTER_CONFIG) {
+                footerEl.innerText = window.FOOTER_CONFIG.testo;
+            } else if (footerEl) {
+                footerEl.innerText = 'EDIT BY KINGFREAK Version 1.0';
+            }
+            
+            // Config DB
             if (typeof getDbConfigInfo === 'function') {
                 const configInfo = getDbConfigInfo();
                 if (!configInfo.configured) {
                     console.warn('Database non configurato');
-                    mostraIndicatoreDB(false);
+                    // Modifica colore indicatore
+                    const dot = document.getElementById('db-status-dot');
+                    if (dot) {
+                        dot.style.background = '#f59e0b';
+                        dot.style.boxShadow = '0 0 0 4px rgba(245, 158, 11, 0.2)';
+                        dot.style.cursor = 'pointer';
+                        dot.onclick = function() {
+                            if (confirm('Database non configurato. Vuoi configurare?')) {
+                                window.location.href = 'config.html';
+                            }
+                        };
+                    }
                 } else {
                     console.log('DB configurato:', configInfo.urlShort);
-                    mostraIndicatoreDB(true, configInfo);
+                    // Già verde di default
                 }
             }
         });
-        
-        function mostraIndicatoreDB(isConfigured, configInfo = null) {
-            const header = document.querySelector('.app-header');
-            
-            if (!header) return;
-            
-            let indicator = document.getElementById('db-status-indicator');
-            if (!indicator) {
-                indicator = document.createElement('div');
-                indicator.id = 'db-status-indicator';
-                indicator.style.cssText = `
-                    position: absolute;
-                    top: 15px;
-                    right: 15px;
-                    width: 10px;
-                    height: 10px;
-                    border-radius: 50%;
-                    border: 2px solid white;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                    cursor: pointer;
-                    z-index: 10;
-                `;
-                header.style.position = 'relative';
-                header.appendChild(indicator);
-            }
-            
-            if (isConfigured && configInfo) {
-                indicator.style.background = '#22c55e';
-                indicator.title = `DB configurato • ${configInfo.urlShort}`;
-                indicator.onclick = null;
-            } else {
-                indicator.style.background = '#f59e0b';
-                indicator.title = 'Database non configurato - Clicca per configurare';
-                indicator.onclick = function() {
-                    if (confirm('Database non configurato. Vuoi configurare?')) {
-                        window.location.href = 'config.html';
-                    }
-                };
-            }
-        }
     </script>
     
     <script src="manutenzioni.js"></script>

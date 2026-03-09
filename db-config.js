@@ -139,6 +139,20 @@ function saveAdminConfig(url, anonKey, serviceKey) {
     return true;
 }
 
+
+// Configurazione footer centralizzata
+const FOOTER_CONFIG = {
+    testo: "EDIT BY KINGFREAK Version 1.1",  // Modifichi qui e cambia ovunque
+    version: "1.0",
+    editBy: "KINGFREAK"
+};
+
+// Se vuoi renderlo accessibile globalmente
+window.FOOTER_CONFIG = FOOTER_CONFIG;
+
+
+
+
 window.getAdminClient = getAdminClient;
 window.saveAdminConfig = saveAdminConfig;
 

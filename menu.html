@@ -73,9 +73,18 @@
             </button>
         </main>
 
-        <footer class="app-footer">
-            <span class="footer-text">EDIT BY KINGFREAK Version 2.0</span>
-        </footer>
+       <footer class="app-footer">
+    <span class="footer-text" id="footer-text"></span>
+</footer>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const footerEl = document.getElementById('footer-text');
+        if (footerEl && window.FOOTER_CONFIG) {
+            footerEl.innerText = window.FOOTER_CONFIG.testo;
+        }
+    });
+</script>
     </div>
 
     <script>

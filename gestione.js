@@ -1,22 +1,13 @@
 // ✅ CONFIGURAZIONE CENTRALIZZATA SUPABASE - GESTIONE
 // ===================================================
 
-// 1. CONTROLLO CONFIGURAZIONE DB
-if (typeof hasDbConfig !== 'function' || !hasDbConfig()) {
-    if (typeof showDbConfigOverlay === 'function') {
-        showDbConfigOverlay();
-    }
-    throw new Error('Configurazione database mancante');
-}
+// 1. OTTIENI CLIENT SUPABASE CENTRALIZZATO
+const supabaseClient = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
 
-// 2. OTTIENI CLIENT SUPABASE
-let supabaseClient;
-try {
-    supabaseClient = getSupabaseClient();
-    console.log('✅ Client Supabase creato per gestione');
-} catch (error) {
-    console.error('❌ Errore creazione client:', error);
-    mostraErroreDB(`Errore DB: ${error.message}`);
+// 2. CONTROLLO CLIENT INIZIALE
+if (!supabaseClient) {
+    console.error('Client Supabase non disponibile');
+    mostraErroreDB('Connessione al database non disponibile');
 }
 
 // 3. FUNZIONE ERRORE DB PER GESTIONE
@@ -50,7 +41,10 @@ function mostraErroreDB(messaggio) {
 // CODICE ORIGINALE DELLA GESTIONE
 // ===================================================
 
-const tecnicoLoggato = localStorage.getItem('tecnico_loggato');
+// ✅ SOSTITUITO con authGetUtente()
+const utenteCorrente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+const tecnicoLoggato = utenteCorrente ? utenteCorrente.nome_completo : null;
+
 let tipoCorrente = ''; 
 let codiceSelezionato = '';
 let descSelezionata = '';
@@ -189,6 +183,12 @@ function aggiornaRiepilogo() {
 }
 
 async function salvaGestione() {
+    // ✅ CONTROLLO CLIENT
+    if (!supabaseClient) {
+        alert('Errore di connessione al database');
+        return;
+    }
+    
     if (!codiceSelezionato) return alert("Seleziona attività!");
     const dataObj = new Date(document.getElementById('data-lavoro').value);
     
@@ -228,10 +228,12 @@ async function salvaGestione() {
         "Data/ora creazione": new Date().toLocaleString()
     };
 
-    const { error } = await supabaseClient.from('fogliolavoro').insert([payload]);
-    if (error) alert("Errore DB: " + error.message);
-    else { 
+    try {
+        const { error } = await supabaseClient.from('fogliolavoro').insert([payload]);
+        if (error) throw error;
         alert("Attività salvata con successo!"); 
-        window.location.href = 'menu.html'; 
+        window.location.href = 'menu.html';
+    } catch (err) {
+        alert("Errore DB: " + err.message);
     }
 }

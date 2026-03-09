@@ -1,7 +1,11 @@
-// Configurazione Supabase
-const SUPABASE_URL = 'https://berlfufnmolyrmxeyqfd.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_a3USDfV7gbuauU2Kd6DuQQ_8PFVElpy';
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// ✅ SOSTITUITO CON CLIENT CENTRALIZZATO
+const supabaseClient = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+
+// ✅ CONTROLLO CLIENT INIZIALE
+if (!supabaseClient) {
+    console.error('Client Supabase non disponibile');
+    mostraMessaggio('Connessione al database non disponibile', 'error');
+}
 
 // Mappatura stati (coerente con montaggi.js)
 const MAPPA_STATI = {
@@ -17,13 +21,33 @@ let impiantoId = null;
 
 // Carica dati al caricamento pagina
 document.addEventListener('DOMContentLoaded', async () => {
+    // ✅ CONTROLLO CLIENT
+    if (!supabaseClient) {
+        mostraMessaggio('Errore di connessione al database', 'error');
+        return;
+    }
+    
+    // ✅ MOSTRA PULSANTE MODIFICA SOLO A SUPERVISORI/ADMIN
+    const btnModifica = document.getElementById('btnModificaImpianto');
+    if (btnModifica) {
+        if (isSupervisoreOAdmin()) {
+            btnModifica.style.display = 'flex';
+            console.log('🔓 Utente supervisore/admin - pulsante modifica visibile');
+        } else {
+            btnModifica.style.display = 'none';
+            console.log('🔒 Utente tecnico - pulsante modifica nascosto');
+        }
+    }
+
     // Ottieni ID dall'URL
     const urlParams = new URLSearchParams(window.location.search);
     impiantoId = urlParams.get('id');
     
     if (!impiantoId) {
-        alert('Nessun impianto specificato');
-        window.location.href = 'montaggi.html';
+        mostraMessaggio('Nessun impianto specificato', 'error');
+        setTimeout(() => {
+            window.location.href = 'montaggi.html';
+        }, 2000);
         return;
     }
     
@@ -33,6 +57,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Carica dati
     await caricaDatiImpianto();
 });
+
+// Funzione per verificare se l'utente è supervisore o admin
+
+function isSupervisoreOAdmin() {
+    const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+    return utente && (utente.ruolo === 'supervisore' || utente.ruolo === 'admin');
+}
+
+
+
 
 // Funzione per caricare i dati dell'impianto
 async function caricaDatiImpianto() {
@@ -137,8 +171,14 @@ function aggiornaInterfaccia() {
 
 // FUNZIONE: Cambia stato (rapido, auto-salva)
 async function cambiaStato(nuovoStato) {
+    // ✅ CONTROLLO CLIENT
+    if (!supabaseClient) {
+        mostraMessaggio('Errore di connessione al database', 'error');
+        return;
+    }
+    
     if (!impiantoId || !datiImpianto) {
-        alert('Dati impianto non disponibili');
+        mostraMessaggio('Dati impianto non disponibili', 'error');
         return;
     }
     
@@ -203,6 +243,13 @@ async function cambiaStato(nuovoStato) {
 
 // FUNZIONE: Attiva modalità modifica
 function attivaModifica() {
+
+// Controllo aggiuntivo di sicurezza
+    if (!isSupervisoreOAdmin()) {
+        mostraMessaggio('Non hai i permessi per modificare', 'error');
+        return;
+    }
+
     // Popola form con dati attuali
     document.getElementById('modificaIndirizzo').value = datiImpianto.Indirizzo || '';
     document.getElementById('modificaProvincia').value = datiImpianto.provincia || '';
@@ -227,17 +274,23 @@ function annullaModifica() {
 document.getElementById('modificaForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
+    // ✅ CONTROLLO CLIENT
+    if (!supabaseClient) {
+        mostraMessaggio('Errore di connessione al database', 'error');
+        return;
+    }
+    
     // Validazione
     const provincia = document.getElementById('modificaProvincia').value.toUpperCase();
     const cap = document.getElementById('modificaCap').value;
     
     if (provincia.length !== 2 || !/^[A-Z]{2}$/.test(provincia)) {
-        alert('Provincia non valida. Deve essere 2 lettere (es: BO)');
+        mostraMessaggio('Provincia non valida. Deve essere 2 lettere (es: BO)', 'error');
         return;
     }
     
     if (cap.length !== 5 || !/^\d{5}$/.test(cap)) {
-        alert('CAP non valido. Deve essere 5 numeri (es: 40121)');
+        mostraMessaggio('CAP non valido. Deve essere 5 numeri (es: 40121)', 'error');
         return;
     }
     
@@ -287,21 +340,6 @@ function mostraMessaggio(testo, tipo = 'info') {
     const msgDiv = document.createElement('div');
     msgDiv.className = `messaggio-temporaneo messaggio-${tipo}`;
     msgDiv.textContent = testo;
-    msgDiv.style.cssText = `
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: ${tipo === 'success' ? '#10b981' : '#ef4444'};
-        color: white;
-        padding: 12px 24px;
-        border-radius: 10px;
-        font-weight: 600;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        z-index: 1000;
-        animation: fadeInOut 3s ease;
-    `;
-    
     document.body.appendChild(msgDiv);
     
     // Rimuovi dopo 3 secondi
@@ -318,178 +356,10 @@ function mostraMessaggio(testo, tipo = 'info') {
 // ========================
 window.apriNuovoLavoroMontaggio = function() {
     if (!datiImpianto || !datiImpianto.impianto) {
-        alert('Impianto non disponibile');
+        mostraMessaggio('Impianto non disponibile', 'error');
         return;
     }
     
     // Reindirizza alla pagina nuovo lavoro montaggio
     window.location.href = `nuovo_lavoro_montaggi.html?id=${datiImpianto.impianto}`;
 };
-
-// Inserisci questo CSS nel tuo style.css o come tag style
-const stiliAggiuntivi = document.createElement('style');
-stiliAggiuntivi.textContent = `
-    /* Stili per scheda montaggio */
-    .card-scheda {
-        background: white;
-        border-radius: 16px;
-        padding: 1.5rem;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    }
-    
-    .testo-scheda {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: #1e293b;
-        line-height: 1.4;
-        margin-bottom: 5px;
-    }
-    
-    .testo-secondario {
-        font-size: 0.9rem;
-        color: #64748b;
-        line-height: 1.3;
-    }
-    
-    .btn-stato-rapido {
-        border: 2px solid;
-        border-radius: 10px;
-        padding: 10px 15px;
-        font-weight: 700;
-        font-size: 0.85rem;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        transition: all 0.2s ease;
-        background: white;
-    }
-    
-    .btn-stato-rapido:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    
-    .form-group {
-        margin-bottom: 1.5rem;
-    }
-    
-    .form-label {
-        display: block;
-        font-size: 0.85rem;
-        font-weight: 700;
-        color: #475569;
-        margin-bottom: 6px;
-    }
-    
-    .form-input {
-        width: 100%;
-        padding: 12px 15px;
-        border: 2px solid #e2e8f0;
-        border-radius: 10px;
-        font-size: 1rem;
-        font-weight: 600;
-        color: #1e293b;
-        transition: border-color 0.2s;
-        box-sizing: border-box;
-    }
-    
-    .form-input:focus {
-        outline: none;
-        border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-    }
-    
-    .form-helper {
-        font-size: 0.8rem;
-        color: #94a3b8;
-        margin-top: 5px;
-    }
-    
-    .btn-primario {
-        background: var(--primary);
-        color: white;
-        border: none;
-        border-radius: 10px;
-        padding: 14px;
-        font-weight: 700;
-        font-size: 0.95rem;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s ease;
-    }
-    
-    .btn-primario:hover {
-        background-color: color-mix(in srgb, var(--primary) 85%, black);
-        transform: translateY(-1px);
-    }
-    
-    .btn-secondario {
-        background: white;
-        color: #475569;
-        border: 2px solid #e2e8f0;
-        border-radius: 10px;
-        padding: 14px;
-        font-weight: 600;
-        font-size: 0.95rem;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s ease;
-    }
-    
-    .btn-secondario:hover {
-        background-color: #f8fafc;
-        border-color: var(--primary);
-        color: var(--primary);
-    }
-    
-    .btn-azione {
-        background: white;
-        color: var(--primary);
-        border: 2px solid var(--primary);
-        border-radius: 10px;
-        padding: 14px;
-        font-weight: 700;
-        font-size: 0.95rem;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s ease;
-    }
-    
-    .btn-azione:hover:not(.disabled) {
-        background-color: var(--primary);
-        color: white;
-    }
-    
-    .btn-azione.disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-        border-color: #cbd5e1;
-        color: #64748b;
-    }
-    
-    @keyframes fadeInOut {
-        0% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
-        15% { opacity: 1; transform: translateX(-50%) translateY(0); }
-        85% { opacity: 1; transform: translateX(-50%) translateY(0); }
-        100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
-    }
-    
-    /* Responsive */
-    @media (max-width: 768px) {
-        .card-scheda {
-            padding: 1.25rem;
-        }
-        
-        .btn-stato-rapido {
-            width: 100%;
-            justify-content: center;
-        }
-    }
-`;
-document.head.appendChild(stiliAggiuntivi);

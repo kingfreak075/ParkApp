@@ -1,17 +1,10 @@
-// ✅ SOSTITUIRE CON QUESTO:
-// 1. Controllo configurazione
-if (!hasDbConfig()) {
-    showDbConfigOverlay();
-    throw new Error('Configurazione database mancante');
-}
+// ✅ SOSTITUITO CON CLIENT CENTRALIZZATO
+const supabaseClient = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
 
-// 2. Ottenere client
-let supabaseClient;
-try {
-    supabaseClient = getSupabaseClient();
-} catch (error) {
-    console.error('Errore creazione client:', error);
-    mostraErroreDB(error.message);
+// ✅ CONTROLLO CLIENT INIZIALE
+if (!supabaseClient) {
+    console.error('Client Supabase non disponibile');
+    mostraErroreDB('Connessione al database non disponibile');
 }
 
 // 3. Funzione errore DB
@@ -19,7 +12,7 @@ function mostraErroreDB(messaggio) {
     console.error('Errore DB:', messaggio);
     
     // Mostra messaggio nella pagina
-    const listaDiv = document.getElementById('lista-manutenzioni');
+    const listaDiv = document.getElementById('lista-annotazioni');
     if (listaDiv) {
         listaDiv.innerHTML = `
             <div style="text-align: center; padding: 40px 20px; color: #ef4444;">
@@ -42,15 +35,24 @@ function mostraErroreDB(messaggio) {
     }
 }
 
+// ✅ SOSTITUITO con authGetUtente()
+const utenteCorrente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+const tecnicoLoggato = utenteCorrente ? utenteCorrente.nome_completo : 'Tecnico Non Loggato';
+
 // Variabili globali
 let impiantoCorrente = null;
 let datiImpianto = null;
 let annotazioniCaricate = [];
 let annotazioneDaCancellare = null;
-const tecnicoLoggato = localStorage.getItem('tecnico_loggato') || 'Tecnico Non Loggato';
 let filtroAttivo = 'tutti';
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // ✅ CONTROLLO CLIENT
+    if (!supabaseClient) {
+        mostraErrore('Errore di connessione al database');
+        return;
+    }
+    
     // Recupera codice impianto dall'URL
     const urlParams = new URLSearchParams(window.location.search);
     impiantoCorrente = urlParams.get('impianto');
@@ -60,8 +62,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
     
-    // Aggiorna header con codice impianto
-    document.getElementById('codice-impianto-header').textContent = impiantoCorrente;
+    // ✅ CORREZIONE: usa l'ID corretto
     document.getElementById('codice-impianto').textContent = impiantoCorrente;
     document.getElementById('info-impianto-modal').textContent = impiantoCorrente;
     
@@ -199,27 +200,23 @@ function creaCardAnnotazione(ann, index) {
     const dataFormattata = `${ann.giorno_ann.padStart(2, '0')}/${ann.mese_ann.padStart(2, '0')}/${ann.anno_ann}`;
     
     // Determina tipo
-    let tipoTesto, tipoClasse, tipoBadge;
+    let tipoTesto, tipoClasse;
     switch(ann.tipo) {
         case '0':
             tipoTesto = 'MANUTENZIONE';
             tipoClasse = 'manutenzione';
-            tipoBadge = 'badge-manutenzione';
             break;
         case '1':
             tipoTesto = 'APPUNTAMENTO';
             tipoClasse = 'appuntamento';
-            tipoBadge = 'badge-appuntamento';
             break;
         case '2':
             tipoTesto = 'NOTA';
             tipoClasse = 'nota';
-            tipoBadge = 'badge-nota';
             break;
         default:
             tipoTesto = 'SCONOSCIUTO';
             tipoClasse = 'nota';
-            tipoBadge = 'badge-nota';
     }
     
     card.innerHTML = `
@@ -229,7 +226,6 @@ function creaCardAnnotazione(ann, index) {
                 ${dataFormattata}
             </div>
             <div class="annotazione-tipo-badge ${tipoClasse}">
-                <div class="badge-tipo ${tipoBadge}"></div>
                 ${tipoTesto}
             </div>
         </div>
@@ -375,6 +371,12 @@ function selezionaTipo(tipo) {
 }
 
 async function salvaAnnotazione() {
+    // ✅ CONTROLLO CLIENT
+    if (!supabaseClient) {
+        mostraNotifica('Errore di connessione al database', 'errore');
+        return;
+    }
+    
     const tipo = document.getElementById('tipo-selezionato').value;
     const dataInput = document.getElementById('data-annotazione').value;
     const note = document.getElementById('note-annotazione').value.trim();
@@ -397,15 +399,10 @@ async function salvaAnnotazione() {
         return;
     }
     
-    // Note facoltative per tipo 0 e 1
-    if ((tipo === '0' || tipo === '1') && !note) {
-        console.log('Note facoltative per tipo', tipo, '- procedo con salvataggio');
-    }
-    
     // Disabilita pulsante durante salvataggio
     const btnSalva = document.getElementById('btn-salva-annotazione');
     btnSalva.disabled = true;
-    btnSalva.innerHTML = '<span class="material-symbols-rounded" style="font-size: 20px; animation: pulse 1.5s infinite;">progress_activity</span> Salvataggio...';
+    btnSalva.innerHTML = '<span class="material-symbols-rounded" style="font-size: 20px; animation: spin 1s linear infinite;">progress_activity</span> Salvataggio...';
     
     try {
         // Parse data
@@ -438,72 +435,68 @@ async function salvaAnnotazione() {
         }
         
         // 2. SE TIPO = 0, AGGIORNA PARCO_APP
-      // Sostituisci tutta la sezione dell'update con:
-if (tipo === '0') {
-    console.log('🚀 AGGIORNAMENTO PARCO_APP - Impianto:', impiantoCorrente, 'Data:', dataFormattata);
-    
-    try {
-        // Prima verifichiamo che l'impianto esista
-        const { data: verificaImpianto, error: verificaError } = await supabaseClient
-            .from('Parco_app')
-            .select('impianto')
-            .eq('impianto', impiantoCorrente)
-            .single();
+        if (tipo === '0') {
+            console.log('🚀 AGGIORNAMENTO PARCO_APP - Impianto:', impiantoCorrente, 'Data:', dataFormattata);
             
-        if (verificaError) {
-            console.error('Errore verifica impianto:', verificaError);
-            throw new Error('Impianto non trovato nel database');
-        }
-        
-        console.log('✅ Impianto verificato:', verificaImpianto);
-        
-        // Ora facciamo l'update
-        const { data: updateResult, error: errorUpdate } = await supabaseClient
-            .from('Parco_app')
-            .update({ 
-                ult_sem: dataFormattata
-            })
-            .eq('impianto', impiantoCorrente)
-            .select();
-            
-        if (errorUpdate) {
-            console.error('❌ Errore UPDATE:', errorUpdate);
-            throw errorUpdate;
-        }
-        
-        console.log('✅ Update completato:', updateResult);
-        
-        // Verifica che l'update sia andato a buon fine
-        if (updateResult && updateResult.length > 0) {
-            console.log('✅ Conferma: Record aggiornato:', updateResult[0]);
-            
-            // Aggiorna immediatamente l'UI
-            if (datiImpianto) {
-                datiImpianto.ult_sem = dataFormattata;
-                const ultimaManutenzione = document.getElementById('ultima-manutenzione');
-                ultimaManutenzione.textContent = dataFormattata;
+            try {
+                // Prima verifichiamo che l'impianto esista
+                const { data: verificaImpianto, error: verificaError } = await supabaseClient
+                    .from('Parco_app')
+                    .select('impianto')
+                    .eq('impianto', impiantoCorrente)
+                    .single();
+                    
+                if (verificaError) {
+                    console.error('Errore verifica impianto:', verificaError);
+                    throw new Error('Impianto non trovato nel database');
+                }
                 
-                // Forza anche un aggiornamento nel localStorage per la pagina manutenzioni
-                localStorage.setItem(`ultima_manut_${impiantoCorrente}`, dataFormattata);
+                console.log('✅ Impianto verificato:', verificaImpianto);
                 
-                // Effetto visivo
-                ultimaManutenzione.style.color = '#22c55e';
-                ultimaManutenzione.style.fontWeight = '800';
+                // Ora facciamo l'update
+                const { data: updateResult, error: errorUpdate } = await supabaseClient
+                    .from('Parco_app')
+                    .update({ 
+                        ult_sem: dataFormattata
+                    })
+                    .eq('impianto', impiantoCorrente)
+                    .select();
+                    
+                if (errorUpdate) {
+                    console.error('❌ Errore UPDATE:', errorUpdate);
+                    throw errorUpdate;
+                }
                 
-                setTimeout(() => {
-                    ultimaManutenzione.style.color = '';
-                    ultimaManutenzione.style.fontWeight = '600';
-                }, 1500);
+                console.log('✅ Update completato:', updateResult);
+                
+                // Verifica che l'update sia andato a buon fine
+                if (updateResult && updateResult.length > 0) {
+                    console.log('✅ Conferma: Record aggiornato:', updateResult[0]);
+                    
+                    // Aggiorna immediatamente l'UI
+                    if (datiImpianto) {
+                        datiImpianto.ult_sem = dataFormattata;
+                        const ultimaManutenzione = document.getElementById('ultima-manutenzione');
+                        ultimaManutenzione.textContent = dataFormattata;
+                        
+                        // Effetto visivo
+                        ultimaManutenzione.style.color = '#22c55e';
+                        ultimaManutenzione.style.fontWeight = '800';
+                        
+                        setTimeout(() => {
+                            ultimaManutenzione.style.color = '';
+                            ultimaManutenzione.style.fontWeight = '600';
+                        }, 1500);
+                    }
+                } else {
+                    console.warn('⚠️ Update completato ma nessun record restituito');
+                }
+                
+            } catch (updateErr) {
+                console.error('❌ Errore durante l\'aggiornamento:', updateErr);
+                throw updateErr;
             }
-        } else {
-            console.warn('⚠️ Update completato ma nessun record restituito');
         }
-        
-    } catch (updateErr) {
-        console.error('❌ Errore durante l\'aggiornamento:', updateErr);
-        throw updateErr;
-    }
-}
         
         // Aggiorna lista annotazioni
         annotazioniCaricate.unshift(nuovaAnnotazione);
@@ -554,6 +547,12 @@ function chiudiModalCancellazione() {
 }
 
 async function confermaCancellazione() {
+    // ✅ CONTROLLO CLIENT
+    if (!supabaseClient) {
+        mostraNotifica('Errore di connessione al database', 'errore');
+        return;
+    }
+    
     if (!annotazioneDaCancellare) return;
     
     try {
@@ -586,15 +585,52 @@ async function confermaCancellazione() {
 // ====================
 // UTILITY
 // ====================
+// ====================
+// UTILITY - NOTIFICHE COMPATTE
+// ====================
+
+// ====================
+// UTILITY - NOTIFICHE ULTRASLIM
+// ====================
+
+// ====================
+// UTILITY - NOTIFICHE ULTRA COMPATTE
+// ====================
 
 function mostraNotifica(messaggio, tipo = 'info') {
     // Rimuovi notifica esistente
     const notificaEsistente = document.querySelector('.notifica');
     if (notificaEsistente) notificaEsistente.remove();
     
-    // Crea nuova notifica
+    // Crea nuova notifica - ALTEZZA FISSA
     const notifica = document.createElement('div');
     notifica.className = `notifica ${tipo}`;
+    notifica.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: ${tipo === 'successo' ? '#22c55e' : tipo === 'errore' ? '#ef4444' : '#334155'};
+        color: white;
+        padding: 2px 16px;
+        border-radius: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        z-index: 2000;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.7rem;
+        font-weight: 500;
+        max-width: 90%;
+        width: auto;
+        height: 28px;
+        min-height: 28px;
+        line-height: 1;
+        animation: slideUp 0.2s ease;
+        pointer-events: none;
+    `;
     
     // Icona in base al tipo
     let icona = 'info';
@@ -602,24 +638,24 @@ function mostraNotifica(messaggio, tipo = 'info') {
     if (tipo === 'errore') icona = 'error';
     
     notifica.innerHTML = `
-        <span class="material-symbols-rounded">${icona}</span>
-        <div style="font-weight: 600; font-size: 0.9rem;">${messaggio}</div>
+        <span class="material-symbols-rounded" style="font-size: 14px; line-height: 1; display: flex; align-items: center;">${icona}</span>
+        <span style="font-weight: 600; line-height: 1; display: flex; align-items: center;">${messaggio}</span>
     `;
     
     document.body.appendChild(notifica);
     
-    // Rimuovi automaticamente dopo 3 secondi
+    // Rimuovi automaticamente dopo 1.5 secondi
     setTimeout(() => {
         if (notifica.parentNode) {
             notifica.style.opacity = '0';
-            notifica.style.transform = 'translate(-50%, -20px)';
-            notifica.style.transition = 'all 0.3s ease';
+            notifica.style.transform = 'translateX(-50%) translateY(-5px)';
+            notifica.style.transition = 'all 0.15s ease';
             
             setTimeout(() => {
                 if (notifica.parentNode) notifica.remove();
-            }, 300);
+            }, 150);
         }
-    }, 3000);
+    }, 1500);
 }
 
 function mostraErrore(messaggio) {

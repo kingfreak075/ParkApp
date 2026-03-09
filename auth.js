@@ -191,6 +191,23 @@ async function _cambiaPin(email, vecchioPin, nuovoPin) {
     }
 }
 
+// In auth.js, nella funzione authGetUtente()
+function authGetUtente() {
+    const utente = localStorage.getItem('utente_loggato');
+    if (utente) {
+        return JSON.parse(utente);
+    }
+    return null;
+}
+
+// E quando salvi l'utente dopo il login:
+localStorage.setItem('utente_loggato', JSON.stringify({
+    nome_completo: 'Mirko De Salvo',
+    ruolo: 'tecnico' // o 'supervisore' o 'admin'
+}));
+
+
+
 initAuth();
 
 window.authLoginCompleto = authLoginCompleto;

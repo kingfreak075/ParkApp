@@ -1,6 +1,15 @@
-// ================================
-// FUNZIONI PER LA PAGINA LISTA SPESE
-// ================================
+// ✅ SOSTITUITO CON CLIENT CENTRALIZZATO
+const supabaseClient = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+
+// ✅ CONTROLLO CLIENT INIZIALE
+if (!supabaseClient) {
+    console.error('Client Supabase non disponibile');
+    mostraNotifica('Connessione al database non disponibile', 'errore');
+}
+
+// ✅ SOSTITUITO con authGetUtente()
+const utenteCorrente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+const tecnicoLoggato = utenteCorrente ? utenteCorrente.nome_completo : null;
 
 // NOTA: chartInstance e tutteSpese sono dichiarati nell'HTML
 
@@ -9,21 +18,24 @@ async function caricaDati() {
     try {
         mostraLoading();
         
-        const supabase = getSupabaseClient();
-        if (!supabase) {
-            throw new Error('Database non configurato');
+        // ✅ CONTROLLO CLIENT
+        if (!supabaseClient) {
+            mostraNotifica('Errore di connessione al database', 'errore');
+            nascondiLoading();
+            return;
         }
 
-        const tecnico = localStorage.getItem('tecnico_loggato');
-        if (!tecnico) {
-            throw new Error('Nessun tecnico loggato');
+        if (!tecnicoLoggato) {
+            mostraNotifica('Nessun tecnico loggato', 'errore');
+            nascondiLoading();
+            return;
         }
 
         // ✅ USARE I NOMI CORRETTI DELLE COLONNE DAL DATABASE
-        let query = supabase
+        let query = supabaseClient
             .from('note_spese')
             .select('*')
-            .eq('tecnico', tecnico)
+            .eq('tecnico', tecnicoLoggato)
             .order('data', { ascending: false }); // Usa 'data' non 'data_spesa'
 
         const filtroAnno = document.getElementById('filtro-anno').value;
@@ -53,7 +65,6 @@ async function caricaDati() {
 
         if (filtroLocalita) {
             if (filtroLocalita === 'In Sede') {
-                // Verifica se esiste la colonna 'fuori_sede' o usa 'localita'
                 query = query.eq('localita', 'In Sede');
             } else if (filtroLocalita === 'Fuori Sede') {
                 query = query.neq('localita', 'In Sede');
@@ -75,7 +86,7 @@ async function caricaDati() {
         
     } catch (error) {
         console.error('Errore caricamento spese:', error);
-        mostraNotifica('error', 'Errore nel caricamento delle spese');
+        mostraNotifica('Errore nel caricamento delle spese', 'errore');
         nascondiLoading();
     }
 }
@@ -265,7 +276,7 @@ function renderCardSpese(spese) {
             <div class="spesa-footer">
                 <div class="icona-foto-container">
                     ${hasFoto ? `
-                    <button class="btn-foto" onclick="apriPopupFoto(${JSON.stringify(fotoUrlsArray).replace(/"/g, '&quot;')})">
+                    <button class="btn-foto" onclick='apriPopupFoto(${JSON.stringify(fotoUrlsArray).replace(/'/g, "\\'")})'>
                         <span class="material-symbols-rounded">photo_camera</span>
                         Foto
                         ${fotoUrlsArray.length > 1 ? `<span class="contatore-foto">${fotoUrlsArray.length}</span>` : ''}
@@ -283,7 +294,6 @@ function renderCardSpese(spese) {
         container.appendChild(card);
     });
 }
-
 
 // FUNZIONI PER IL POPUP FOTO (aggiunte nuove)
 function apriPopupFoto(urls) {
@@ -385,7 +395,7 @@ function renderTabellaDesktop(spese) {
             </td>
             <td style="padding: 0.875rem 1rem;">
                 ${hasFoto ? 
-                    `<div class="foto-thumb" onclick="apriPopupFoto(${JSON.stringify(fotoUrls).replace(/"/g, '&quot;')})" style="width: 32px; height: 32px; border-radius: 6px; overflow: hidden; cursor: pointer;">
+                    `<div class="foto-thumb" onclick='apriPopupFoto(${JSON.stringify(fotoUrls).replace(/'/g, "\\'")})' style="width: 32px; height: 32px; border-radius: 6px; overflow: hidden; cursor: pointer;">
                         <img src="${fotoUrls[0]}" alt="Ricevuta" style="width: 100%; height: 100%; object-fit: cover;">
                     </div>` 
                     : 'No foto'}
@@ -539,11 +549,15 @@ async function eliminaSpesa(id) {
     try {
         mostraLoading();
         
-        const supabase = getSupabaseClient();
-        if (!supabase) throw new Error('Database non configurato');
+        // ✅ CONTROLLO CLIENT
+        if (!supabaseClient) {
+            mostraNotifica('Errore di connessione al database', 'errore');
+            nascondiLoading();
+            return;
+        }
         
         // Prima elimina le foto dallo storage (se esiste)
-        const { data: spesa } = await supabase
+        const { data: spesa } = await supabaseClient
             .from('note_spese')
             .select('foto_url')
             .eq('id', id)
@@ -552,8 +566,8 @@ async function eliminaSpesa(id) {
         if (spesa && spesa.foto_url) {
             try {
                 const path = spesa.foto_url.split('/').pop();
-                await supabase.storage
-                    .from('ricevute_spese')
+                await supabaseClient.storage
+                    .from('spese')
                     .remove([path]);
             } catch (storageError) {
                 console.warn('Errore eliminazione foto:', storageError);
@@ -562,7 +576,7 @@ async function eliminaSpesa(id) {
         }
         
         // Poi elimina la spesa dal database
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('note_spese')
             .delete()
             .eq('id', id);
@@ -571,11 +585,11 @@ async function eliminaSpesa(id) {
         
         // Ricarica dati
         await caricaDati();
-        mostraNotifica('success', 'Spesa eliminata con successo');
+        mostraNotifica('Spesa eliminata con successo', 'successo');
         
     } catch (error) {
         console.error('Errore eliminazione spesa:', error);
-        mostraNotifica('error', 'Errore nell\'eliminazione della spesa');
+        mostraNotifica('Errore nell\'eliminazione della spesa', 'errore');
     } finally {
         nascondiLoading();
     }
@@ -587,12 +601,11 @@ async function esportaPDF() {
         mostraLoading();
         
         if (tutteSpese.length === 0) {
-            mostraNotifica('warning', 'Nessuna spesa da esportare');
+            mostraNotifica('Nessuna spesa da esportare', 'errore');
             nascondiLoading();
             return;
         }
         
-        const tecnico = localStorage.getItem('tecnico_loggato') || 'Tecnico';
         const filtroAnno = document.getElementById('filtro-anno').value;
         const filtroMese = document.getElementById('filtro-mese').value;
         
@@ -607,7 +620,7 @@ async function esportaPDF() {
         // Dati tecnico e periodo
         doc.setFontSize(12);
         doc.setTextColor(0, 0, 0);
-        doc.text(`Tecnico: ${tecnico}`, 20, 35);
+        doc.text(`Tecnico: ${tecnicoLoggato}`, 20, 35);
         
         let periodo = 'Tutto il periodo';
         if (filtroAnno) {
@@ -720,15 +733,15 @@ async function esportaPDF() {
         doc.text(`Generato il: ${dataGenerazione}`, 20, 290);
         
         // Salva PDF
-        const nomeFile = `spese_${tecnico.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+        const nomeFile = `spese_${tecnicoLoggato.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
         doc.save(nomeFile);
         
-        mostraNotifica('success', 'PDF esportato con successo');
+        mostraNotifica('PDF esportato con successo', 'successo');
         nascondiLoading();
         
     } catch (error) {
         console.error('Errore esportazione PDF:', error);
-        mostraNotifica('error', 'Errore nell\'esportazione PDF');
+        mostraNotifica('Errore nell\'esportazione PDF', 'errore');
         nascondiLoading();
     }
 }
@@ -739,7 +752,7 @@ async function esportaExcel() {
         mostraLoading();
         
         if (tutteSpese.length === 0) {
-            mostraNotifica('warning', 'Nessuna spesa da esportare');
+            mostraNotifica('Nessuna spesa da esportare', 'errore');
             nascondiLoading();
             return;
         }
@@ -804,16 +817,15 @@ async function esportaExcel() {
         XLSX.utils.book_append_sheet(wb, ws, 'Spese');
         
         // Salva file
-        const tecnico = localStorage.getItem('tecnico_loggato') || 'Tecnico';
-        const nomeFile = `spese_${tecnico.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
+        const nomeFile = `spese_${tecnicoLoggato.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
         XLSX.writeFile(wb, nomeFile);
         
-        mostraNotifica('success', 'Excel esportato con successo');
+        mostraNotifica('Excel esportato con successo', 'successo');
         nascondiLoading();
         
     } catch (error) {
         console.error('Errore esportazione Excel:', error);
-        mostraNotifica('error', 'Errore nell\'esportazione Excel');
+        mostraNotifica('Errore nell\'esportazione Excel', 'errore');
         nascondiLoading();
     }
 }
@@ -851,76 +863,6 @@ function nascondiLoading() {
     if (loading) loading.style.display = 'none';
 }
 
-function mostraNotifica(tipo, messaggio) {
-    let container = document.getElementById('notifiche-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'notifiche-container';
-        container.style.cssText = `
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 10000;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            max-width: 90%;
-            width: 400px;
-        `;
-        document.body.appendChild(container);
-    }
-    
-    const notifica = document.createElement('div');
-    notifica.style.cssText = `
-        background: white;
-        padding: 16px 20px;
-        border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        border-left: 4px solid;
-        animation: slideDown 0.3s ease-out;
-    `;
-    
-    let colore = '#2563eb';
-    let icona = 'info';
-    
-    switch (tipo) {
-        case 'success':
-            colore = '#22c55e';
-            icona = 'check_circle';
-            break;
-        case 'error':
-            colore = '#ef4444';
-            icona = 'error';
-            break;
-        case 'warning':
-            colore = '#f59e0b';
-            icona = 'warning';
-            break;
-    }
-    
-    notifica.style.borderLeftColor = colore;
-    
-    notifica.innerHTML = `
-        <span class="material-symbols-rounded" style="color: ${colore};">${icona}</span>
-        <span style="flex: 1; font-weight: 600; color: #1e293b;">${messaggio}</span>
-        <button onclick="this.parentElement.remove()" style="background: none; border: none; color: #64748b; cursor: pointer;">
-            <span class="material-symbols-rounded">close</span>
-        </button>
-    `;
-    
-    container.insertBefore(notifica, container.firstChild);
-    
-    setTimeout(() => {
-        if (notifica.parentElement) {
-            notifica.remove();
-        }
-    }, 5000);
-}
-
 // RESET FILTRI
 function resetFiltri() {
     document.getElementById('filtro-anno').value = new Date().getFullYear();
@@ -944,11 +886,34 @@ function apriModaleFoto(fotoUrls, titolo) {
     }
 }
 
-// Inizializzazione
-document.addEventListener('DOMContentLoaded', () => {
-    const tecnico = localStorage.getItem('tecnico_loggato');
-    const nomeTecnico = document.getElementById('tecnico-nome');
-    if (nomeTecnico && tecnico) {
-        nomeTecnico.textContent = tecnico;
-    }
-});
+// Render stats mobile
+function renderStatsMobile(stats) {
+    const container = document.getElementById('statsMobile');
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div class="stat-card-mobile totale">
+            <div class="stat-label-mobile">TOTALE SPESE</div>
+            <div class="stat-value-mobile">${formattaEuro(stats.totale)}</div>
+            <div style="font-size: 0.7rem; opacity: 0.8;">${stats.numero_spese} spese</div>
+        </div>
+        
+        <div class="stat-card-mobile">
+            <div class="stat-label-mobile">VITTO/TRASPORTO</div>
+            <div class="stat-value-mobile" style="color: #22c55e;">${formattaEuro(stats.totale_vitto)}</div>
+            <div style="font-size: 0.7rem; color: var(--text-muted);">${stats.numero_vitto} spese</div>
+        </div>
+        
+        <div class="stat-card-mobile">
+            <div class="stat-label-mobile">SPESE AUTO</div>
+            <div class="stat-value-mobile" style="color: #ef4444;">${formattaEuro(stats.totale_auto)}</div>
+            <div style="font-size: 0.7rem; color: var(--text-muted);">${stats.numero_auto} spese</div>
+        </div>
+        
+        <div class="stat-card-mobile">
+            <div class="stat-label-mobile">MEDIA GIORNALIERA</div>
+            <div class="stat-value-mobile">${formattaEuro(stats.media_giornaliera)}</div>
+            <div style="font-size: 0.7rem; color: var(--text-muted);">${stats.giorni_lavorativi} giorni</div>
+        </div>
+    `;
+}

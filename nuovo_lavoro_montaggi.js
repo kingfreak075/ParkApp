@@ -1,34 +1,74 @@
-// === Supabase init ===
-const SUPABASE_URL = 'https://berlfufnmolyrmxeyqfd.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_a3USDfV7gbuauU2Kd6DuQQ_8PFVElpy';
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// ✅ SOSTITUITO CON CLIENT CENTRALIZZATO
+const supabaseClient = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+
+// ✅ CONTROLLO CLIENT INIZIALE
+if (!supabaseClient) {
+    console.error('Client Supabase non disponibile');
+    mostraNotifica('Connessione al database non disponibile', 'errore');
+}
+
+// ✅ SOSTITUITO con authGetUtente()
+const utenteCorrente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+const tecnicoLoggato = utenteCorrente ? utenteCorrente.nome_completo : null;
 
 let datiMontaggio = null;      // Dati del montaggio dalla tabella 'montaggi'
 let codMontaggio = null;       // cod_montaggio (es: "007" o "001")
-const tecnicoLoggato = localStorage.getItem('tecnico_loggato');
 let interventoEditID = null;   // ID per la modalità edit
 
+// Funzione per mostrare notifiche (compatibile con le altre pagine)
+function mostraNotifica(messaggio, tipo = 'info') {
+    // Rimuovi notifica esistente
+    const notificaEsistente = document.querySelector('.notifica');
+    if (notificaEsistente) notificaEsistente.remove();
+    
+    // Crea nuova notifica
+    const notifica = document.createElement('div');
+    notifica.className = `notifica ${tipo}`;
+    
+    let icona = 'info';
+    if (tipo === 'successo') icona = 'check_circle';
+    if (tipo === 'errore') icona = 'error';
+    
+    notifica.innerHTML = `
+        <span class="material-symbols-rounded" style="font-size: 14px;">${icona}</span>
+        <span>${messaggio}</span>
+    `;
+    
+    document.body.appendChild(notifica);
+    
+    setTimeout(() => {
+        if (notifica.parentNode) {
+            notifica.style.opacity = '0';
+            notifica.style.transform = 'translateX(-50%) translateY(-5px)';
+            notifica.style.transition = 'all 0.15s ease';
+            
+            setTimeout(() => {
+                if (notifica.parentNode) notifica.remove();
+            }, 150);
+        }
+    }, 1500);
+}
 
-
-
-
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Caricamento iniziale
-// ─────────────────────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────────────────
 // Caricamento iniziale
 // ─────────────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
     try {
+        // ✅ CONTROLLO CLIENT
+        if (!supabaseClient) {
+            mostraNotifica('Errore di connessione al database', 'errore');
+            return;
+        }
+        
         // Ottieni ID impianto dall'URL (es: ?id=Q2K10001)
         const urlParams = new URLSearchParams(window.location.search);
         const impiantoId = urlParams.get('id');
         
         if (!impiantoId) {
-            alert('Nessun impianto specificato');
-            window.location.href = 'montaggi.html';
+            mostraNotifica('Nessun impianto specificato', 'errore');
+            setTimeout(() => {
+                window.location.href = 'montaggi.html';
+            }, 1500);
             return;
         }
 
@@ -89,8 +129,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     } catch (error) {
         console.error('Errore inizializzazione:', error);
-        alert(`Errore: ${error.message}\nTorno alla lista montaggi.`);
-        window.location.href = 'montaggi.html';
+        mostraNotifica(`Errore: ${error.message}`, 'errore');
+        setTimeout(() => {
+            window.location.href = 'montaggi.html';
+        }, 1500);
     }
 });
 
@@ -152,10 +194,11 @@ function controllaGiornoFestivo() {
     
     const data = new Date(dataInput.value);
     const giornoSettimana = data.getDay();
-const isWeekend = (giornoSettimana === 0 || giornoSettimana === 6);
-const isFestivoFisso = isFestivoNazionale(data);
-const isFestivoMobileCheck = isFestivoMobile(data);
-const isGiornoFestivo = isWeekend || isFestivoFisso || isFestivoMobileCheck;
+    const isWeekend = (giornoSettimana === 0 || giornoSettimana === 6);
+    const isFestivoFisso = isFestivoNazionale(data);
+    const isFestivoMobileCheck = isFestivoMobile(data);
+    const isGiornoFestivo = isWeekend || isFestivoFisso || isFestivoMobileCheck;
+    
     const dataSection = dataInput.closest('.section-card');
     if (!dataSection) return;
     
@@ -307,7 +350,7 @@ function checkLimiti(input, min, max) {
         input.value = min;
     } else if (val > max) {
         input.value = max;
-        alert(`Il valore massimo consentito è ${max}`);
+        mostraNotifica(`Il valore massimo consentito è ${max}`, 'errore');
     }
 }
 
@@ -352,21 +395,24 @@ function calculateTotalDiff(i, f) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Salvataggio intervento montaggio
-// ─────────────────────────────────────────────────────────────────────────────
-// ─────────────────────────────────────────────────────────────────────────────
 // Salvataggio/aggiornamento intervento montaggio
 // ─────────────────────────────────────────────────────────────────────────────
 async function salvaIntervento() {
     try {
+        // ✅ CONTROLLO CLIENT
+        if (!supabaseClient) {
+            mostraNotifica('Errore di connessione al database', 'errore');
+            return;
+        }
+        
         // Validazione dati base
         if (!datiMontaggio || !codMontaggio) {
-            alert('Dati montaggio non disponibili');
+            mostraNotifica('Dati montaggio non disponibili', 'errore');
             return;
         }
 
         if (!tecnicoLoggato) {
-            alert('Tecnico non identificato');
+            mostraNotifica('Tecnico non identificato', 'errore');
             return;
         }
 
@@ -382,7 +428,7 @@ async function salvaIntervento() {
             oreOrd = parseFloat(document.getElementById('ore-ord-manual').value || '0') || 0;
             
             if (oreOrd <= 0) {
-                alert("ERRORE: Inserire almeno un'ora di lavoro.");
+                mostraNotifica("Inserire almeno un'ora di lavoro", 'errore');
                 return;
             }
         } else {
@@ -391,7 +437,7 @@ async function salvaIntervento() {
             const fine = document.getElementById('ora-fine').value;
             
             if (!inizio || !fine) {
-                alert("Inserire orario di inizio e fine");
+                mostraNotifica("Inserire orario di inizio e fine", 'errore');
                 return;
             }
 
@@ -401,7 +447,7 @@ async function salvaIntervento() {
             oraInizioIntervento = inizio;
 
             if (oreOrd <= 0 && oreStra <= 0) {
-                alert("ERRORE: Intervallo orario non valido");
+                mostraNotifica("Intervallo orario non valido", 'errore');
                 return;
             }
         }
@@ -461,7 +507,7 @@ async function salvaIntervento() {
             
             operazione = 'update';
             if (error) throw error;
-            alert('Montaggio aggiornato con successo!');
+            mostraNotifica('Montaggio aggiornato con successo!', 'successo');
         } else {
             // MODALITÀ NUOVO: INSERT
             console.log('Inserimento nuovo montaggio');
@@ -471,22 +517,24 @@ async function salvaIntervento() {
             
             operazione = 'insert';
             if (error) throw error;
-            alert('Montaggio salvato con successo!');
+            mostraNotifica('Montaggio salvato con successo!', 'successo');
         }
 
         // Pulisci localStorage e reindirizza
         localStorage.removeItem('edit_intervento');
         
         // REDIRECT
-        if (operazione === 'update') {
-            window.location.href = 'calendario.html';
-        } else {
-            window.location.href = 'montaggi.html';
-        }
+        setTimeout(() => {
+            if (operazione === 'update') {
+                window.location.href = 'calendario.html';
+            } else {
+                window.location.href = 'montaggi.html';
+            }
+        }, 1500);
 
     } catch (error) {
         console.error('Errore salvataggio:', error);
-        alert('Errore durante il salvataggio: ' + error.message);
+        mostraNotifica('Errore durante il salvataggio: ' + error.message, 'errore');
     }
 }
 
@@ -510,12 +558,6 @@ function formatDataOra(date, hours = null) {
     return `${gg}/${mm}/${aaaa} ${orario}`;
 }
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Controllo giorno festivo e gestione UI
-// ─────────────────────────────────────────────────────────────────────────────
-
-
 // Esegui controllo al cambio data
 document.addEventListener('DOMContentLoaded', () => {
     const dataInput = document.getElementById('data-lavoro');
@@ -526,7 +568,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => controllaGiornoFestivo(), 100);
     }
 });
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Controllo festività nazionali italiane (fisse)

@@ -13,6 +13,17 @@
 <!-- ✅ AGGIUNTO: File di configurazione DB centrale -->
 <script src="db-config.js"></script>
 <script src="check-db-config.js"></script>
+<!-- ✅ AGGIUNTO: Auth.js per gestione login -->
+<script src="auth.js"></script>
+<!-- ✅ GATEKEEPER: Protezione pagina -->
+<script>
+    (function() {
+        const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+        if (!utente) {
+            window.location.href = 'index.html';
+        }
+    })();
+</script>
     <style>
         :root {
             --primary: #2563eb;
@@ -173,19 +184,6 @@
             color: white;
         }
 
-        .header-app {
-            background: white;
-            padding: 15px 20px;
-            display: flex;
-            align-items: center;
-            position: fixed;
-            top: 0;
-            width: 100%;
-            z-index: 100;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            box-sizing: border-box;
-        }
-
         .section-card {
             background: white;
             border-radius: 16px;
@@ -237,116 +235,125 @@
 
     </style>
 </head>
-<body>
+<body class="bg-app">
 
-    <div class="header-app">
-        <button onclick="history.back()" class="btn-scheda" style="height: 40px; width: 40px;">
-  <span class="material-symbols-rounded">arrow_back</span>
-</button>
-        <h2 style="font-size: 1.1rem; font-weight: 800; margin: 0;">Inserimento Intervento</h2>
-    </div>
-
-    <div class="container" style="margin-top: 70px;">
-        
-        <div class="plant-header-card">
-            <label id="label-impianto" class="label-field">Impianto</label>
-            <div id="display-impianto" style="font-size: 1.3rem; font-weight: 900; color: #1e293b;">-</div>
-            <div id="display-indirizzo" style="font-size: 0.85rem; color: #64748b; margin-top: 4px;">-</div>
-            <input type="text" id="input-commessa" class="input-modern" placeholder="Es. 12345678" maxlength="8" style="display:none; margin-top:12px; font-weight: 800; font-size: 1.2rem; letter-spacing: 1px;">
-        </div>
-<!-- DATA LAVORO (SPOSTATA QUI) -->
-<div class="section-card">
-    <label class="label-field">Data Lavoro</label>
-   
-    <input type="date" id="data-lavoro" class="input-modern" onchange="controllaGiornoFestivo()">
-</div>
-        <div class="section-card">
-            <label class="label-field">Seleziona Codice</label>
-            <div class="grid-codici">
-                <div class="card-codice" onclick="selectCodice('21', this)">
-                    <span class="num">21</span><span class="desc">Manut.</span>
-                </div>
-                <div class="card-codice" onclick="selectCodice('22', this)">
-                    <span class="num">22</span><span class="desc">Chiamata</span>
-                </div>
-                <div class="card-codice" onclick="selectCodice('24', this)">
-                    <span class="num">24</span><span class="desc">Enti</span>
-                </div>
-                <div class="card-codice" onclick="selectCodice('13', this)">
-                    <span class="num">13</span><span class="desc">Riparaz.</span>
-                </div>
-                <div class="card-codice" onclick="selectCodice('10', this)">
-                    <span class="num">10</span><span class="desc">Q2SA</span>
-                </div>
-            </div>
-            <input type="hidden" id="select-codice">
-        </div>
-
-        <div id="area-lavoro" class="section-card" style="display:none;">
-            <label class="label-field">Tipologia e Orario</label>
-            <div class="radio-group">
-                <label class="radio-btn"><input type="radio" name="tipo" value="ORDINARIA" checked onchange="updateUI()"> <span>ORDINARIA</span></label>
-                <label id="label-stra" class="radio-btn"><input type="radio" name="tipo" value="STRAORDINARIO" onchange="updateUI()"> <span>STRAORD.</span></label>
-                <label id="label-rep" class="radio-btn"><input type="radio" name="tipo" value="REPERIBILITA" onchange="updateUI()"> <span>REPERIB.</span></label>
-            </div>
-
-           <div id="box-ore-dirette">
-    <label class="label-field">Ore Lavorate (Max 8h)</label>
-    <input type="number" id="ore-ord-manual" class="input-modern" 
-           step="0.25" min="0" max="8" value="0"
-           onblur="checkLimiti(this, 0, 8)">
-</div>
-
-                
-            </div>
-
-            <div id="box-orari" style="display:none;">
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-        <div>
-            <label class="label-field">Ora Inizio</label>
-            <input type="time" id="ora-inizio" class="input-modern" 
-                   onblur="validateTimeAndCalculate(this)">
-        </div>
-        <div>
-            <label class="label-field">Ora Fine</label>
-            <input type="time" id="ora-fine" class="input-modern" 
-                   onblur="validateTimeAndCalculate(this)">
-        </div>
+    <!-- ✅ SOSTITUITO: app-container come nelle altre pagine -->
+    <div class="app-container">
+        <!-- ✅ SOSTITUITO: app-header come nelle altre pagine -->
+      <header class="app-header" style="position: relative; display: flex; align-items: center; gap: 15px; padding: 15px;">
+    <button onclick="history.back()" class="btn-scheda" style="height: 40px; width: 40px; display: flex; align-items: center; justify-content: center; border: none; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <span class="material-symbols-rounded" style="color: var(--primary);">arrow_back</span>
+    </button>
+    
+    <div style="flex-grow: 1;">
+        <h1 style="font-size: 1.25rem; font-weight: 800; color: var(--primary); margin: 0;">Inserimento Intervento</h1>
+        <p id="tecnico-display" style="margin: 0; font-size: 0.85rem; color: var(--text-muted); font-weight: 600;"></p>
     </div>
     
-    <div id="preview-calcolo" class="box-riepilogo-ore" style="display:flex;">
-        <div class="badge-ora badge-ord">ORDINARIE <span id="res-ord">0.00</span></div>
-        <div class="badge-ora badge-stra">STRAORD. <span id="res-stra">0.00</span></div>
-    </div>
-</div>
-        </div>
+    <!-- ✅ INDICATORE DB STATICO (verde con glow) -->
+    <div id="db-status-dot" style="position: absolute; top: 15px; right: 15px; width: 14px; height: 14px; background: #22c55e; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2); z-index: 10;"></div>
+</header>
 
-        <div class="card-viaggio">
-    <span class="material-symbols-rounded" style="color: #22c55e; font-size: 36px;">directions_car</span>
-
-            <div style="flex-grow: 1;">
-                <div style="font-size: 0.75rem; font-weight: 900; color: #15803d; text-transform: uppercase; letter-spacing: 0.5px;">Ore Viaggio</div>
-                <div style="font-size: 0.65rem; color: #166534; font-weight: 600;">Tempo di spostamento</div>
-            </div>
-           <input type="number" id="ore-viaggio" class="input-viaggio" 
-           step="0.5" min="0" max="4" value="0"
-           onblur="checkLimiti(this, 0, 4)">
-        </div>
-
-        <div class="section-card">
-            <label class="label-field">Note Intervento</label>
-            <textarea id="note" class="input-modern" style="height: 80px; padding-top: 10px;" placeholder="Descrivi il lavoro svolto..."></textarea>
+        <!-- ✅ Mantenuto container con padding laterale come nelle altre pagine -->
+        <main style="padding: 1rem;">
             
-           
+            <div class="plant-header-card">
+                <label id="label-impianto" class="label-field">Impianto</label>
+                <div id="display-impianto" style="font-size: 1.3rem; font-weight: 900; color: #1e293b;">-</div>
+                <div id="display-indirizzo" style="font-size: 0.85rem; color: #64748b; margin-top: 4px;">-</div>
+                <input type="text" id="input-commessa" class="input-modern" placeholder="Es. 12345678" maxlength="8" style="display:none; margin-top:12px; font-weight: 800; font-size: 1.2rem; letter-spacing: 1px;">
+            </div>
+            
+            <!-- DATA LAVORO -->
+            <div class="section-card">
+                <label class="label-field">Data Lavoro</label>
+                <input type="date" id="data-lavoro" class="input-modern" onchange="controllaGiornoFestivo()">
+            </div>
+            
+            <div class="section-card">
+                <label class="label-field">Seleziona Codice</label>
+                <div class="grid-codici">
+                    <div class="card-codice" onclick="selectCodice('21', this)">
+                        <span class="num">21</span><span class="desc">Manut.</span>
+                    </div>
+                    <div class="card-codice" onclick="selectCodice('22', this)">
+                        <span class="num">22</span><span class="desc">Chiamata</span>
+                    </div>
+                    <div class="card-codice" onclick="selectCodice('24', this)">
+                        <span class="num">24</span><span class="desc">Enti</span>
+                    </div>
+                    <div class="card-codice" onclick="selectCodice('13', this)">
+                        <span class="num">13</span><span class="desc">Riparaz.</span>
+                    </div>
+                    <div class="card-codice" onclick="selectCodice('10', this)">
+                        <span class="num">10</span><span class="desc">Q2SA</span>
+                    </div>
+                </div>
+                <input type="hidden" id="select-codice">
+            </div>
 
-            <button onclick="salvaIntervento()" class="btn-primary" style="margin-top: 30px; width: 100%; height: 55px; border-radius: 12px; font-weight: 900; font-size: 1rem; cursor: pointer; background: var(--primary); color: white; border: none; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);">
-                CONFERMA E SALVA
-            </button>
-        </div>
+            <div id="area-lavoro" class="section-card" style="display:none;">
+                <label class="label-field">Tipologia e Orario</label>
+                <div class="radio-group">
+                    <label class="radio-btn"><input type="radio" name="tipo" value="ORDINARIA" checked onchange="updateUI()"> <span>ORDINARIA</span></label>
+                    <label id="label-stra" class="radio-btn"><input type="radio" name="tipo" value="STRAORDINARIO" onchange="updateUI()"> <span>STRAORD.</span></label>
+                    <label id="label-rep" class="radio-btn"><input type="radio" name="tipo" value="REPERIBILITA" onchange="updateUI()"> <span>REPERIB.</span></label>
+                </div>
+
+                <div id="box-ore-dirette">
+                    <label class="label-field">Ore Lavorate (Max 8h)</label>
+                    <input type="number" id="ore-ord-manual" class="input-modern" 
+                           step="0.25" min="0" max="8" value="0"
+                           onblur="checkLimiti(this, 0, 8)">
+                </div>
+
+                <div id="box-orari" style="display:none;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div>
+                            <label class="label-field">Ora Inizio</label>
+                            <input type="time" id="ora-inizio" class="input-modern" 
+                                   onblur="validateTimeAndCalculate(this)">
+                        </div>
+                        <div>
+                            <label class="label-field">Ora Fine</label>
+                            <input type="time" id="ora-fine" class="input-modern" 
+                                   onblur="validateTimeAndCalculate(this)">
+                        </div>
+                    </div>
+                    
+                    <div id="preview-calcolo" class="box-riepilogo-ore" style="display:flex;">
+                        <div class="badge-ora badge-ord">ORDINARIE <span id="res-ord">0.00</span></div>
+                        <div class="badge-ora badge-stra">STRAORD. <span id="res-stra">0.00</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-viaggio">
+                <span class="material-symbols-rounded" style="color: #22c55e; font-size: 36px;">directions_car</span>
+                <div style="flex-grow: 1;">
+                    <div style="font-size: 0.75rem; font-weight: 900; color: #15803d; text-transform: uppercase; letter-spacing: 0.5px;">Ore Viaggio</div>
+                    <div style="font-size: 0.65rem; color: #166534; font-weight: 600;">Tempo di spostamento</div>
+                </div>
+                <input type="number" id="ore-viaggio" class="input-viaggio" 
+                       step="0.5" min="0" max="4" value="0"
+                       onblur="checkLimiti(this, 0, 4)">
+            </div>
+
+            <div class="section-card">
+                <label class="label-field">Note Intervento</label>
+                <textarea id="note" class="input-modern" style="height: 80px; padding-top: 10px;" placeholder="Descrivi il lavoro svolto..."></textarea>
+                
+                <button onclick="salvaIntervento()" class="btn-primary" style="margin-top: 30px; width: 100%; height: 55px; border-radius: 12px; font-weight: 900; font-size: 1rem; cursor: pointer; background: var(--primary); color: white; border: none; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);">
+                    CONFERMA E SALVA
+                </button>
+            </div>
+            
+            <!-- ✅ AGGIUNTO FOOTER -->
+            <footer class="app-footer">
+                <span class="footer-text" id="footer-text"></span>
+            </footer>
+        </main>
     </div>
-
-
-
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -354,10 +361,29 @@
         
         if (!configInfo.configured) {
             console.warn('Database non configurato per ParkApp');
-            mostraIndicatoreDB(false);
+            // Modifica colore indicatore se non configurato
+            const dot = document.getElementById('db-status-dot');
+            if (dot) {
+                dot.style.background = '#f59e0b';
+                dot.style.boxShadow = '0 0 0 4px rgba(245, 158, 11, 0.2)';
+                dot.style.cursor = 'pointer';
+                dot.onclick = function() {
+                    if (confirm('Database non configurato. Vuoi andare alla configurazione?')) {
+                        window.location.href = 'config.html';
+                    }
+                };
+            }
         } else {
             console.log('DB configurato:', configInfo.urlShort);
-            mostraIndicatoreDB(true);
+            // Già verde di default
+        }
+        
+        // ✅ AGGIUNTO FOOTER CENTRALIZZATO
+        const footerEl = document.getElementById('footer-text');
+        if (footerEl && window.FOOTER_CONFIG) {
+            footerEl.innerText = window.FOOTER_CONFIG.testo;
+        } else if (footerEl) {
+            footerEl.innerText = 'EDIT BY KINGFREAK Version 1.0';
         }
     });
     
@@ -403,6 +429,21 @@
             indicator.title = 'Database non configurato - Clicca per configurare';
         }
     }
+
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+        const display = document.getElementById('tecnico-display');
+        if (utente && utente.nome_completo && display) {
+            display.innerText = "Tecnico: " + utente.nome_completo;
+        } else if (display) {
+            display.innerText = "Nessun tecnico selezionato";
+        }
+    });
+
+
+
+
 </script>
     <script src="nuovo_lavoro.js"></script>
 </body>

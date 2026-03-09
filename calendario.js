@@ -1,20 +1,13 @@
-// ✅ SOSTITUIRE CON QUESTO:
-// 1. Controllo configurazione
-if (!hasDbConfig()) {
-    showDbConfigOverlay();
-    throw new Error('Configurazione database mancante');
+// ✅ SOSTITUITO CON CLIENT CENTRALIZZATO
+const supabaseClient = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+
+// ✅ CONTROLLO CLIENT INIZIALE
+if (!supabaseClient) {
+    console.error('Client Supabase non disponibile');
+    mostraErroreDB('Connessione al database non disponibile');
 }
 
-// 2. Ottenere client
-let supabaseClient;
-try {
-    supabaseClient = getSupabaseClient();
-} catch (error) {
-    console.error('Errore creazione client:', error);
-    mostraErroreDB(error.message);
-}
-
-// 3. Funzione errore DB
+// 3. Funzione errore DB (INVARIATA)
 function mostraErroreDB(messaggio) {
     console.error('Errore DB:', messaggio);
     
@@ -43,10 +36,18 @@ function mostraErroreDB(messaggio) {
 }
 
 let currentEvents = [];
-const tecnicoLoggato = localStorage.getItem('tecnico_loggato');
+// ✅ SOSTITUITO con authGetUtente()
+const utenteCorrente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+const tecnicoLoggato = utenteCorrente ? utenteCorrente.nome_completo : null;
 const mesiNomi = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
 
 document.addEventListener('DOMContentLoaded', () => {
+    // ✅ CONTROLLO CLIENT
+    if (!supabaseClient) {
+        alert('Errore di connessione al database');
+        return;
+    }
+    
     if (!tecnicoLoggato) {
         window.location.href = 'index.html';
         return;
@@ -86,6 +87,12 @@ async function fetchMese() {
     const loading = document.getElementById('loading-overlay');
     const m = parseInt(document.getElementById('select-mese').value);
     const a = parseInt(document.getElementById('select-anno').value);
+    
+    // ✅ CONTROLLO CLIENT
+    if (!supabaseClient) {
+        alert('Errore di connessione al database');
+        return;
+    }
     
     if (loading) loading.style.display = 'block';
     document.getElementById('day-detail').style.display = 'none';
@@ -466,6 +473,12 @@ function isFestivo(data) {
 }
 
 async function eliminaIntervento(idDaCancellare) {
+    // ✅ CONTROLLO CLIENT
+    if (!supabaseClient) {
+        alert('Errore di connessione al database');
+        return;
+    }
+    
     const intervento = currentEvents.find(e => e.ID === idDaCancellare);
     if (intervento) {
         const meseIntervento = parseInt(intervento.mese);
@@ -526,12 +539,13 @@ function modificaIntervento(intervento) {
     let urlDestinazione = '';
     
     if (intervento.ch_rep === 'MONTAGGIO') {
-        // MONTAGGIO → va a nuovo_lavoro_montaggi.html con parametro edit
         urlDestinazione = `nuovo_lavoro_montaggi.html?id=${intervento.impianto}&mode=edit`;
     } else {
-        // ALTRI TIPI (ORDINARIA, STRAORDINARIO, REPERIBILITÀ) → va a nuovo_lavoro.html
         urlDestinazione = `nuovo_lavoro.html?id=${intervento.impianto}&mode=edit`;
     }
+    
+    // ✅ AGGIUNGI UN PARAMETRO PER SAPERE CHE SIAMO IN MODIFICA DAL CALENDARIO
+    urlDestinazione += '&from=calendario';
     
     // Salva i dati dell'intervento per la modifica
     localStorage.setItem('edit_intervento', JSON.stringify(intervento));
@@ -541,7 +555,6 @@ function modificaIntervento(intervento) {
     // Reindirizza alla pagina corretta
     window.location.href = urlDestinazione;
 }
-
 // ============================================================================
 // FUNZIONI REPORT MENSILE PER TECNICO (COMPLETAMENTE RISCRITTE)
 // ============================================================================

@@ -1,20 +1,13 @@
-// ✅ SOSTITUIRE CON QUESTO:
-// 1. Controllo configurazione
-if (!hasDbConfig()) {
-    showDbConfigOverlay();
-    throw new Error('Configurazione database mancante');
+// ✅ SOSTITUITO CON CLIENT CENTRALIZZATO
+const supabaseClient = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+
+// ✅ CONTROLLO CLIENT INIZIALE
+if (!supabaseClient) {
+    console.error('Client Supabase non disponibile');
+    mostraErroreDB('Connessione al database non disponibile');
 }
 
-// 2. Ottenere client
-let supabaseClient;
-try {
-    supabaseClient = getSupabaseClient();
-} catch (error) {
-    console.error('Errore creazione client:', error);
-    mostraErroreDB(error.message);
-}
-
-// 3. Funzione errore DB
+// 3. Funzione errore DB (INVARIATA)
 function mostraErroreDB(messaggio) {
     console.error('Errore DB:', messaggio);
     
@@ -65,6 +58,12 @@ function parseDataItaliana(str) {
 }
 
 async function caricaScheda() {
+    // ✅ AGGIUNTO CONTROLLO CLIENT
+    if (!supabaseClient) {
+        alert('Errore di connessione al database');
+        return;
+    }
+    
     const params = new URLSearchParams(window.location.search);
     const idImpianto = params.get('id');
     if (!idImpianto) { window.location.href = 'index.html'; return; }
@@ -178,4 +177,5 @@ document.getElementById('btn-nuovo-lavoro').onclick = () => {
     document.getElementById('dettaglio-content').style.display = 'block';
 }
 
+// Avvio
 caricaScheda();

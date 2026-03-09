@@ -12,6 +12,23 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="db-config.js"></script>
     <script src="check-db-config.js"></script>
+    <!-- ✅ AGGIUNTO: Auth.js per gestione login -->
+    <script src="auth.js"></script>
+    <!-- ✅ GATEKEEPER: Protezione pagina -->
+    <script>
+        (function() {
+            const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+            if (!utente) {
+                window.location.href = 'index.html';
+            }
+        })();
+    </script>
+    <!-- ✅ CONFIGURAZIONE FOOTER -->
+    <script>
+        window.FOOTER_CONFIG = {
+            testo: "EDIT BY KINGFREAK Version 1.0"
+        };
+    </script>
     
     <style>
         /* ================================
@@ -210,6 +227,16 @@
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
         
+        .input-field.valid {
+            border-color: #22c55e;
+            background: #f0fdf4;
+        }
+        
+        .input-field.invalid {
+            border-color: #ef4444;
+            background: #fef2f2;
+        }
+        
         .input-with-icon {
             position: relative;
         }
@@ -221,6 +248,15 @@
             transform: translateY(-50%);
             color: var(--text-muted);
             cursor: pointer;
+        }
+        
+        /* Validazione icon */
+        .validation-icon {
+            position: absolute;
+            right: 3rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.2rem;
         }
         
         /* DROP ZONE MOBILE */
@@ -410,6 +446,12 @@
             border-left: 4px solid var(--primary);
         }
         
+        .message-warning {
+            background: #fffbeb;
+            color: #92400e;
+            border-left: 4px solid #f59e0b;
+        }
+        
         /* LOCALSTORAGE INFO */
         .storage-section {
             background: #fffbeb;
@@ -438,6 +480,33 @@
             font-size: 0.8rem;
             color: var(--text-muted);
             word-break: break-all;
+        }
+        
+        /* LOG ERRORI */
+        .error-log {
+            background: #1e293b;
+            color: #f8fafc;
+            border-radius: 8px;
+            padding: 0.75rem;
+            font-family: monospace;
+            font-size: 0.8rem;
+            margin-top: 1rem;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        .error-log-item {
+            padding: 0.25rem 0;
+            border-bottom: 1px solid #334155;
+            color: #f87171;
+        }
+        
+        /* TIMESTAMP */
+        .timestamp-info {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 0.5rem;
+            text-align: right;
         }
         
         /* ANIMAZIONI */
@@ -514,12 +583,47 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Notifiche compatte */
+        .notifica {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 2000;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 500;
+            max-width: 90%;
+            width: auto;
+            height: 28px;
+            min-height: 28px;
+            line-height: 1;
+            animation: slideUp 0.2s ease;
+            pointer-events: none;
+        }
+
+        .notifica.successo { background: #22c55e; }
+        .notifica.errore { background: #ef4444; }
+        .notifica.info { background: #334155; }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translate(-50%, 20px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
     </style>
 </head>
 <body class="bg-app">
     <div class="app-container">
         <!-- HEADER COMPATTO - UNICO HEADER -->
-        <header class="app-header-config">
+        <header class="app-header-config" style="position: relative;">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
                 <!-- Pulsante Indietro - VISIBILE SOLO SE DB CONFIGURATO -->
                 <button id="back-button" onclick="tornaAlMenu()" style="
@@ -541,31 +645,21 @@
                     <h1 style="font-size: 1.25rem; font-weight: 800; color: var(--primary); margin: 0;">
                         Configurazione
                     </h1>
-                    <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">
-                        Gestisci database e impostazioni
-                    </p>
+                    <p id="tecnico-display" style="margin: 0; font-size: 0.85rem; color: var(--text-muted); font-weight: 600;"></p>
                 </div>
                 
-                <!-- Indicatore DB -->
-                <div id="db-status-indicator" style="
-                    width: 10px;
-                    height: 10px;
-                    border-radius: 50%;
-                    border: 2px solid white;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                    background: #f59e0b;
-                    cursor: help;
-                "></div>
+                <!-- ✅ INDICATORE DB STATICO (verde con glow) -->
+                <div id="db-status-dot" style="position: absolute; top: 15px; right: 15px; width: 14px; height: 14px; background: #22c55e; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2); z-index: 10;"></div>
             </div>
         </header>
 
         <!-- TABS MOBILE -->
         <nav class="config-tabs">
-            <button class="config-tab active" onclick="loadSection('profilo')">
+            <button class="config-tab active" onclick="cambiaSezione('profilo')">
                 <span class="material-symbols-rounded" style="font-size: 1.2rem; vertical-align: middle;">person</span>
                 Profilo
             </button>
-            <button class="config-tab" onclick="loadSection('database')">
+            <button class="config-tab" onclick="cambiaSezione('database')">
                 <span class="material-symbols-rounded" style="font-size: 1.2rem; vertical-align: middle;">database</span>
                 Database
             </button>
@@ -573,8 +667,8 @@
 
         <!-- CONTENUTO PRINCIPALE -->
         <main class="config-content-mobile" id="main-content">
-            <!-- SEZIONE PROFILO (predefinita) -->
-            <div id="profilo-section">
+            <!-- SEZIONE PROFILO (visibile) -->
+            <div id="profilo-section" style="display: block;">
                 <!-- Stato Database -->
                 <div class="config-section">
                     <div class="section-header">
@@ -628,23 +722,169 @@
                     </button>
                 </div>
             </div>
+
+            <!-- SEZIONE DATABASE (nascosta) -->
+            <div id="database-section" style="display: none;">
+                <!-- Configurazione Database -->
+                <div class="config-section">
+                    <div class="section-header">
+                        <span class="material-symbols-rounded">database</span>
+                        <h2 class="section-title">Configura Database</h2>
+                    </div>
+                    
+                    <div id="messaggio-stato-mobile" class="message-mobile"></div>
+                    
+                    <!-- Configurazione attuale -->
+                    <div id="current-config" style="margin-bottom: 1.5rem;"></div>
+                    
+                    <!-- Inserimento manuale -->
+                    <div class="input-group">
+                        <label class="input-label">Supabase URL</label>
+                        <div class="input-with-icon">
+                            <input type="url" id="supabase-url" class="input-field" 
+                                   placeholder="https://tuo-progetto.supabase.co">
+                            <span class="material-symbols-rounded" style="right: 0.5rem;">link</span>
+                            <span id="url-validation-icon" class="validation-icon material-symbols-rounded" style="display: none;"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Anon Key</label>
+                        <div class="input-with-icon">
+                            <input type="password" id="supabase-key" class="input-field" 
+                                   placeholder="eyJhbGciOiJIUzI1NiIs...">
+                            <span class="material-symbols-rounded" id="toggle-key-icon" 
+                                  onclick="togglePassword()" style="cursor: pointer;">visibility</span>
+                            <span id="key-validation-icon" class="validation-icon material-symbols-rounded" style="display: none;"></span>
+                        </div>
+                        <div id="key-strength-indicator" style="margin-top: 0.5rem; font-size: 0.7rem; display: none;"></div>
+                    </div>
+                    
+                    <!-- Bottoni azione -->
+                    <div class="action-buttons">
+                        <button class="btn-action btn-primary" onclick="testConnessione()" id="btn-test">
+                            <span class="material-symbols-rounded" id="icon-test">wifi</span>
+                            <span id="text-test">Test Connessione</span>
+                        </button>
+                        <button class="btn-action btn-secondary" onclick="esportaConfigurazione()">
+                            <span class="material-symbols-rounded">download</span>
+                            Esporta
+                        </button>
+                    </div>
+                    
+                    <div class="separator">
+                        <span>OPPURE</span>
+                    </div>
+                    
+                    <!-- Drag & Drop per file .kf -->
+                    <div id="drop-zone-mobile" class="drop-zone-mobile" onclick="document.getElementById('file-kf').click()">
+                        <span class="material-symbols-rounded">upload_file</span>
+                        <div class="drop-zone-title">Carica file .kf</div>
+                        <div class="drop-zone-subtitle">Trascina qui o clicca per selezionare</div>
+                        <span class="file-format-badge">Formato: .kf</span>
+                        <input type="file" id="file-kf" accept=".kf,.txt,.json" style="display: none;">
+                    </div>
+                    
+                    <!-- File info -->
+                    <div id="file-info-mobile" class="file-info-mobile" style="display: none;">
+                        <div class="file-info-content">
+                            <h4>File caricato</h4>
+                            <p id="file-name-mobile">nomefile.kf</p>
+                        </div>
+                        <span class="material-symbols-rounded" onclick="rimuoviFile()" 
+                              style="cursor: pointer; color: #15803d;">close</span>
+                    </div>
+                    
+                    <!-- Ultimo test info -->
+                    <div id="ultimo-test-info" class="timestamp-info" style="display: none;"></div>
+                    
+                    <!-- Log errori -->
+                    <div id="error-log-container" style="display: none;">
+                        <div class="section-header" style="margin-bottom: 0.5rem;">
+                            <span class="material-symbols-rounded" style="color: #ef4444;">bug_report</span>
+                            <h3 style="font-size: 0.9rem;">Log Errori Connessione</h3>
+                        </div>
+                        <div id="error-log" class="error-log"></div>
+                        <button class="btn-action btn-secondary" onclick="cancellaLogErrori()" style="margin-top: 0.5rem; padding: 0.5rem; font-size: 0.8rem;">
+                            Cancella Log
+                        </button>
+                    </div>
+                    
+                    <!-- Reset configurazione -->
+                    <div style="margin-top: 2rem;">
+                        <button class="btn-action btn-danger btn-full" onclick="resetConfigurazione()">
+                            <span class="material-symbols-rounded">settings_backup_restore</span>
+                            Reset Configurazione Database
+                        </button>
+                    </div>
+                </div>
+            </div>
         </main>
 
-        <!-- FOOTER -->
+        <!-- FOOTER CENTRALIZZATO -->
         <footer class="app-footer">
-            <span class="footer-text">EDIT BY KINGFREAK Version 1.0</span>
+            <span class="footer-text" id="footer-text"></span>
         </footer>
     </div>
 
     <script>
-        // VARIABILI GLOBALI PER DB
+        // ============================================
+        // VARIABILI GLOBALI
+        // ============================================
         let supabaseClient = null;
         let fileCaricato = null;
+        let modificheNonSalvate = false;
+        let timeoutTestAuto = null;
+        let errorLog = [];
+
+        // Carica log errori da localStorage
+        try {
+            const savedLog = localStorage.getItem('config_error_log');
+            if (savedLog) {
+                errorLog = JSON.parse(savedLog);
+            }
+        } catch (e) {
+            console.warn('Errore caricamento log:', e);
+        }
 
         // ============================================
-        // FUNZIONE PER TORNARE AL MENU (definita PRIMA)
+        // FUNZIONI DI BASE
         // ============================================
+        function mostraNotifica(messaggio, tipo = 'info') {
+            const notifica = document.createElement('div');
+            notifica.className = `notifica ${tipo}`;
+            
+            let icona = 'info';
+            if (tipo === 'successo') icona = 'check_circle';
+            if (tipo === 'errore') icona = 'error';
+            
+            notifica.innerHTML = `
+                <span class="material-symbols-rounded" style="font-size: 14px;">${icona}</span>
+                <span>${messaggio}</span>
+            `;
+            
+            document.body.appendChild(notifica);
+            
+            setTimeout(() => {
+                if (notifica.parentNode) {
+                    notifica.style.opacity = '0';
+                    notifica.style.transform = 'translateX(-50%) translateY(-5px)';
+                    notifica.style.transition = 'all 0.15s ease';
+                    
+                    setTimeout(() => {
+                        if (notifica.parentNode) notifica.remove();
+                    }, 150);
+                }
+            }, 1500);
+        }
+
         function tornaAlMenu() {
+            if (modificheNonSalvate) {
+                if (!confirm('Hai modifiche non salvate. Vuoi continuare?')) {
+                    return;
+                }
+            }
+            
             const dbInfo = getDbConfigInfo();
             if (dbInfo.configured) {
                 window.location.href = 'menu.html';
@@ -656,8 +896,13 @@
         // ============================================
         // GESTIONE SEZIONI
         // ============================================
-        function loadSection(section) {
-            const mainContent = document.getElementById('main-content');
+        function cambiaSezione(section) {
+            if (modificheNonSalvate && section !== 'profilo') {
+                if (!confirm('Hai modifiche non salvate nella configurazione. Vuoi continuare?')) {
+                    return;
+                }
+                modificheNonSalvate = false;
+            }
             
             // Aggiorna tab attivo
             document.querySelectorAll('.config-tab').forEach(tab => {
@@ -665,147 +910,11 @@
             });
             event.target.classList.add('active');
             
-            if (section === 'profilo') {
-                mainContent.innerHTML = `
-                    <!-- SEZIONE PROFILO -->
-                    <div id="profilo-section">
-                        <!-- Stato Database -->
-                        <div class="config-section">
-                            <div class="section-header">
-                                <span class="material-symbols-rounded">database</span>
-                                <h2 class="section-title">Stato Database</h2>
-                            </div>
-                            
-                            <div id="db-status-cards">
-                                <!-- Popolato dinamicamente da JS -->
-                            </div>
-                        </div>
-
-                        <!-- Info App -->
-                        <div class="config-section">
-                            <div class="section-header">
-                                <span class="material-symbols-rounded">info</span>
-                                <h2 class="section-title">Info Applicazione</h2>
-                            </div>
-                            
-                            <div id="app-info">
-                                <!-- Popolato dinamicamente da JS -->
-                            </div>
-                        </div>
-
-                        <!-- localStorage -->
-                        <div class="storage-section" id="localstorage-section">
-                            <div class="section-header">
-                                <span class="material-symbols-rounded">storage</span>
-                                <h2 class="section-title" style="color: #92400e;">LocalStorage</h2>
-                            </div>
-                            
-                            <div id="storage-items">
-                                <!-- Popolato dinamicamente da JS -->
-                            </div>
-                        </div>
-
-                        <!-- Reset -->
-                        <div class="config-section">
-                            <div class="section-header">
-                                <span class="material-symbols-rounded" style="color: #dc2626;">warning</span>
-                                <h2 class="section-title" style="color: #dc2626;">Reset Dati</h2>
-                            </div>
-                            
-                            <p style="margin-bottom: 1.5rem; color: var(--text-muted); font-size: 0.9rem;">
-                                Attenzione: questa operazione cancellerà tutti i dati locali dell'applicazione, inclusa la configurazione del database.
-                            </p>
-                            
-                            <button class="btn-action btn-danger btn-full" onclick="resetAppData()">
-                                <span class="material-symbols-rounded">delete_forever</span>
-                                Reset Completo Dati App
-                            </button>
-                        </div>
-                    </div>
-                `;
-                setTimeout(loadProfileInfoMobile, 100);
-            } 
-            else if (section === 'database') {
-                mainContent.innerHTML = `
-                    <!-- SEZIONE DATABASE -->
-                    <div id="database-section">
-                        <!-- Configurazione Database -->
-                        <div class="config-section">
-                            <div class="section-header">
-                                <span class="material-symbols-rounded">database</span>
-                                <h2 class="section-title">Configura Database</h2>
-                            </div>
-                            
-                            <div id="messaggio-stato-mobile" class="message-mobile"></div>
-                            
-                            <!-- Configurazione attuale -->
-                            <div id="current-config" style="margin-bottom: 1.5rem;"></div>
-                            
-                            <!-- Inserimento manuale -->
-                            <div class="input-group">
-                                <label class="input-label">Supabase URL</label>
-                                <div class="input-with-icon">
-                                    <input type="url" id="supabase-url" class="input-field" 
-                                           placeholder="https://tuo-progetto.supabase.co">
-                                    <span class="material-symbols-rounded" style="right: 0.5rem;">link</span>
-                                </div>
-                            </div>
-                            
-                            <div class="input-group">
-                                <label class="input-label">Anon Key</label>
-                                <div class="input-with-icon">
-                                    <input type="password" id="supabase-key" class="input-field" 
-                                           placeholder="eyJhbGciOiJIUzI1NiIs...">
-                                    <span class="material-symbols-rounded" id="toggle-key-icon" 
-                                          onclick="togglePassword()" style="cursor: pointer;">visibility</span>
-                                </div>
-                            </div>
-                            
-                            <!-- Bottoni azione -->
-                            <div class="action-buttons" style="grid-template-columns: 1fr 1fr;">
-                                <button class="btn-action btn-primary" onclick="testConnessione()" id="btn-test">
-                                    <span class="material-symbols-rounded" id="icon-test">wifi</span>
-                                    <span id="text-test">Test Connessione</span>
-                                </button>
-                                <button class="btn-action btn-secondary" onclick="esportaConfigurazione()">
-                                    <span class="material-symbols-rounded">download</span>
-                                    Esporta
-                                </button>
-                            </div>
-                            
-                            <div class="separator">
-                                <span>OPPURE</span>
-                            </div>
-                            
-                            <!-- Drag & Drop per file .kf -->
-                            <div id="drop-zone-mobile" class="drop-zone-mobile" onclick="document.getElementById('file-kf').click()">
-                                <span class="material-symbols-rounded">upload_file</span>
-                                <div class="drop-zone-title">Carica file .kf</div>
-                                <div class="drop-zone-subtitle">Trascina qui o clicca per selezionare</div>
-                                <span class="file-format-badge">Formato: .kf</span>
-                                <input type="file" id="file-kf" accept=".kf,.txt,.json" style="display: none;">
-                            </div>
-                            
-                            <!-- File info -->
-                            <div id="file-info-mobile" class="file-info-mobile" style="display: none;">
-                                <div class="file-info-content">
-                                    <h4>File caricato</h4>
-                                    <p id="file-name-mobile">nomefile.kf</p>
-                                </div>
-                                <span class="material-symbols-rounded" onclick="rimuoviFile()" 
-                                      style="cursor: pointer; color: #15803d;">close</span>
-                            </div>
-                            
-                            <!-- Reset configurazione -->
-                            <div style="margin-top: 2rem;">
-                                <button class="btn-action btn-danger btn-full" onclick="resetConfigurazione()">
-                                    <span class="material-symbols-rounded">settings_backup_restore</span>
-                                    Reset Configurazione Database
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
+            // Mostra/nascondi sezioni
+            document.getElementById('profilo-section').style.display = section === 'profilo' ? 'block' : 'none';
+            document.getElementById('database-section').style.display = section === 'database' ? 'block' : 'none';
+            
+            if (section === 'database') {
                 setTimeout(initDBSection, 10);
             }
         }
@@ -813,135 +922,111 @@
         // ============================================
         // CARICA INFORMAZIONI PROFILO
         // ============================================
-        function loadProfileInfoMobile() {
-            try {
-                const dbInfo = getDbConfigInfo();
-                
-                const indicator = document.getElementById('db-status-indicator');
-                const backButton = document.getElementById('back-button');
-                
-                if (dbInfo.configured) {
-                    indicator.style.background = '#22c55e';
-                    indicator.title = `DB configurato • ${dbInfo.urlShort || 'N/A'}`;
-                    if (backButton) backButton.style.display = 'flex';
-                } else {
-                    indicator.style.background = '#f59e0b';
-                    indicator.title = 'Database non configurato';
-                    if (backButton) backButton.style.display = 'none';
-                }
-                
-                const dbStatusCards = document.getElementById('db-status-cards');
-                if (dbStatusCards) {
-                    dbStatusCards.innerHTML = `
-                        <div class="db-status-card">
-                            <div class="db-status-info">
-                                <h3>Configurato</h3>
-                                <div class="db-status-value">${dbInfo.configured ? 'Sì' : 'No'}</div>
-                            </div>
-                            <div class="db-status-badge ${dbInfo.configured ? 'success' : 'error'}">
-                                ${dbInfo.configured ? 'CONFIGURATO' : 'NON CONFIG'}
-                            </div>
-                        </div>
-                        
-                        <div class="db-status-card">
-                            <div class="db-status-info">
-                                <h3>Ultima Configurazione</h3>
-                                <div class="db-status-value">${dbInfo.timestamp || 'Mai configurato'}</div>
-                            </div>
-                        </div>
-                        
-                        <div class="db-status-card">
-                            <div class="db-status-info">
-                                <h3>URL Database</h3>
-                                <div class="db-status-value">${dbInfo.urlShort || 'Non configurato'}</div>
-                            </div>
-                        </div>
-                        
-                        <div class="db-status-card">
-                            <div class="db-status-info">
-                                <h3>Chiave Presente</h3>
-                                <div class="db-status-value">${dbInfo.keyPresent ? 'Sì' : 'No'}</div>
-                            </div>
-                            <div class="db-status-badge ${dbInfo.keyPresent ? 'success' : 'warning'}">
-                                ${dbInfo.keyPresent ? 'PRESENTE' : 'ASSENTE'}
-                            </div>
-                        </div>
-                    `;
-                }
-                
-                const appInfo = document.getElementById('app-info');
-                if (appInfo) {
-                    appInfo.innerHTML = `
-                        <div class="db-status-card">
-                            <div class="db-status-info">
-                                <h3>Nome App</h3>
-                                <div class="db-status-value">ParkApp</div>
-                            </div>
-                        </div>
-                        
-                        <div class="db-status-card">
-                            <div class="db-status-info">
-                                <h3>Versione</h3>
-                                <div class="db-status-value">1.0</div>
-                            </div>
-                        </div>
-                        
-                        <div class="db-status-card">
-                            <div class="db-status-info">
-                                <h3>Tecnico Loggato</h3>
-                                <div class="db-status-value">${localStorage.getItem('tecnico_loggato') || 'Nessuno'}</div>
-                            </div>
-                        </div>
-                    `;
-                }
-                
-                const storageItemsDiv = document.getElementById('storage-items');
-                if (storageItemsDiv) {
-                    const items = [];
-                    for (let i = 0; i < localStorage.length; i++) {
-                        const key = localStorage.key(i);
-                        let value = localStorage.getItem(key);
-                        
-                        let displayValue = value;
-                        if (key.includes('key') || key.includes('token') || key.includes('password')) {
-                            displayValue = '••••••••••••••••';
-                        } else if (value && value.length > 30) {
-                            displayValue = value.substring(0, 30) + '...';
-                        }
-                        
-                        items.push(`
-                            <div class="storage-item">
-                                <div class="storage-key">${key}</div>
-                                <div class="storage-value">${displayValue}</div>
-                                <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 5px;">
-                                    Lunghezza: ${value.length} caratteri
-                                </div>
-                            </div>
-                        `);
-                    }
-                    
-                    storageItemsDiv.innerHTML = items.length ? items.join('') : 
-                        '<p style="color: #64748b; font-style: italic;">Nessun dato salvato nel localStorage</p>';
-                }
-            } catch (error) {
-                console.error('Errore caricamento info:', error);
-            }
-        }
+       const appInfo = document.getElementById('app-info');
+if (appInfo) {
+    // Ottieni utente corrente e ruolo
+    const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+    const nomeTecnico = utente ? utente.nome_completo : 'Nessuno';
+    const ruolo = utente ? (utente.ruolo || 'tecnico') : 'ospite';
+    
+    // Determina colore badge in base al ruolo
+    let badgeColore = '#64748b'; // grigio per ospite
+    let badgeTesto = 'OSPITE';
+    
+    if (ruolo === 'admin') {
+        badgeColore = '#ef4444'; // rosso
+        badgeTesto = 'ADMIN';
+    } else if (ruolo === 'supervisore') {
+        badgeColore = '#f59e0b'; // arancione
+        badgeTesto = 'SUPERVISORE';
+    } else if (ruolo === 'tecnico') {
+        badgeColore = '#22c55e'; // verde
+        badgeTesto = 'TECNICO';
+    }
+    
+    appInfo.innerHTML = `
+        <div class="db-status-card">
+            <div class="db-status-info">
+                <h3>Nome App</h3>
+                <div class="db-status-value">ParkApp</div>
+            </div>
+        </div>
+        
+        <div class="db-status-card">
+            <div class="db-status-info">
+                <h3>Versione</h3>
+                <div class="db-status-value">1.0</div>
+            </div>
+        </div>
+        
+        <div class="db-status-card">
+            <div class="db-status-info">
+                <h3>Tecnico Loggato</h3>
+                <div class="db-status-value" style="display: flex; align-items: center; gap: 10px;">
+                    ${nomeTecnico}
+                    <span style="
+                        background-color: ${badgeColore}20;
+                        color: ${badgeColore};
+                        padding: 4px 8px;
+                        border-radius: 20px;
+                        font-size: 0.7rem;
+                        font-weight: 800;
+                        border: 1px solid ${badgeColore}40;
+                    ">${badgeTesto}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="db-status-card">
+            <div class="db-status-info">
+                <h3>Ultimo Test DB</h3>
+                <div class="db-status-value">${localStorage.getItem('ultimo_test_db') || 'Mai testato'}</div>
+            </div>
+        </div>
+        
+        <div class="db-status-card">
+            <div class="db-status-info">
+                <h3>Footer Config</h3>
+                <div class="db-status-value">${window.FOOTER_CONFIG?.testo || 'EDIT BY KINGFREAK Version 1.0'}</div>
+            </div>
+        </div>
+    `;
+}
 
         // ============================================
         // RESET TUTTI I DATI APP
         // ============================================
         function resetAppData() {
-            if (!confirm('⚠️ ATTENZIONE!\n\nStai per cancellare TUTTI i dati locali dell\'applicazione, inclusi:\n• Configurazione database\n• Credenziali\n• Dati utente\n• Impostazioni\n\nSei sicuro di voler procedere?')) {
+            if (!confirm('⚠️ ATTENZIONE!\n\nStai per cancellare TUTTI i dati locali dell\'applicazione, inclusi:\n• Configurazione database\n• Credenziali\n• Dati utente\n• Impostazioni\n• Log errori\n\nSei sicuro di voler procedere?')) {
                 return;
             }
             
             try {
                 localStorage.clear();
-                alert('✅ Tutti i dati locali sono stati cancellati.\nL\'applicazione verrà ricaricata.');
+                errorLog = [];
+                mostraNotifica('✅ Tutti i dati locali sono stati cancellati', 'successo');
                 setTimeout(() => location.reload(), 1000);
             } catch (error) {
-                alert('❌ Errore durante il reset: ' + error.message);
+                mostraNotifica('❌ Errore durante il reset: ' + error.message, 'errore');
+            }
+        }
+
+        // ============================================
+        // RESET SELETTIVO
+        // ============================================
+        function resetSelettivo() {
+            const scelta = confirm(
+                'Scegli cosa resettare:\n' +
+                '• OK = Reset solo configurazione DB\n' +
+                '• Annulla = Reset TUTTI i dati'
+            );
+            
+            if (scelta) {
+                // Reset solo DB
+                resetConfigurazione();
+            } else {
+                // Reset completo
+                resetAppData();
             }
         }
 
@@ -951,11 +1036,17 @@
         function initDBSection() {
             mostraInfoConfigurazione();
             setupDragAndDrop();
+            setupValidazioneTempoReale();
+            mostraUltimoTest();
+            mostraLogErrori();
             
             const fileInput = document.getElementById('file-kf');
             if (fileInput) {
                 fileInput.addEventListener('change', handleFileSelect);
             }
+            
+            // Resetta flag modifiche
+            modificheNonSalvate = false;
         }
 
         function mostraInfoConfigurazione() {
@@ -1010,6 +1101,139 @@
             }
         }
 
+        function mostraUltimoTest() {
+            const ultimoTest = localStorage.getItem('ultimo_test_db');
+            const infoDiv = document.getElementById('ultimo-test-info');
+            
+            if (ultimoTest && infoDiv) {
+                infoDiv.textContent = `Ultimo test riuscito: ${ultimoTest}`;
+                infoDiv.style.display = 'block';
+            }
+        }
+
+        function mostraLogErrori() {
+            const container = document.getElementById('error-log-container');
+            const logDiv = document.getElementById('error-log');
+            
+            if (errorLog.length > 0 && container && logDiv) {
+                container.style.display = 'block';
+                logDiv.innerHTML = errorLog.map(err => 
+                    `<div class="error-log-item">${err.timestamp} - ${err.message}</div>`
+                ).join('');
+            }
+        }
+
+        function aggiungiErroreLog(messaggio) {
+            errorLog.push({
+                timestamp: new Date().toLocaleString(),
+                message: messaggio
+            });
+            
+            if (errorLog.length > 10) {
+                errorLog = errorLog.slice(-10);
+            }
+            
+            localStorage.setItem('config_error_log', JSON.stringify(errorLog));
+            mostraLogErrori();
+        }
+
+        function cancellaLogErrori() {
+            errorLog = [];
+            localStorage.removeItem('config_error_log');
+            const container = document.getElementById('error-log-container');
+            if (container) container.style.display = 'none';
+            mostraNotifica('Log errori cancellato', 'successo');
+        }
+
+        function setupValidazioneTempoReale() {
+            const urlInput = document.getElementById('supabase-url');
+            const keyInput = document.getElementById('supabase-key');
+            const urlIcon = document.getElementById('url-validation-icon');
+            const keyIcon = document.getElementById('key-validation-icon');
+            
+            if (urlInput) {
+                urlInput.addEventListener('input', function() {
+                    modificheNonSalvate = true;
+                    
+                    const isValid = this.value.startsWith('https://') && 
+                                   this.value.includes('.supabase.co');
+                    
+                    this.classList.remove('valid', 'invalid');
+                    if (this.value.length > 0) {
+                        this.classList.add(isValid ? 'valid' : 'invalid');
+                    }
+                    
+                    if (urlIcon) {
+                        urlIcon.style.display = this.value.length > 0 ? 'block' : 'none';
+                        urlIcon.textContent = isValid ? 'check_circle' : 'error';
+                        urlIcon.style.color = isValid ? '#22c55e' : '#ef4444';
+                    }
+                    
+                    // Test automatico dopo 2 secondi di inattività
+                    if (timeoutTestAuto) clearTimeout(timeoutTestAuto);
+                    if (isValid && keyInput && keyInput.value.length > 10) {
+                        timeoutTestAuto = setTimeout(() => {
+                            if (confirm('Rilevati URL e Key validi. Avviare test connessione automatico?')) {
+                                testConnessione();
+                            }
+                        }, 2000);
+                    }
+                });
+            }
+            
+            if (keyInput) {
+                keyInput.addEventListener('input', function() {
+                    modificheNonSalvate = true;
+                    
+                    const isValid = this.value.length > 20;
+                    
+                    this.classList.remove('valid', 'invalid');
+                    if (this.value.length > 0) {
+                        this.classList.add(isValid ? 'valid' : 'invalid');
+                    }
+                    
+                    if (keyIcon) {
+                        keyIcon.style.display = this.value.length > 0 ? 'block' : 'none';
+                        keyIcon.textContent = isValid ? 'check_circle' : 'error';
+                        keyIcon.style.color = isValid ? '#22c55e' : '#ef4444';
+                    }
+                    
+                    // Indicatore forza key
+                    const strengthDiv = document.getElementById('key-strength-indicator');
+                    if (strengthDiv) {
+                        if (this.value.length > 0) {
+                            strengthDiv.style.display = 'block';
+                            let strength = 'Debole';
+                            let color = '#ef4444';
+                            
+                            if (this.value.length > 50) {
+                                strength = 'Forte';
+                                color = '#22c55e';
+                            } else if (this.value.length > 30) {
+                                strength = 'Media';
+                                color = '#f59e0b';
+                            }
+                            
+                            strengthDiv.innerHTML = `Forza chiave: <span style="color: ${color}; font-weight: 800;">${strength}</span> (${this.value.length} caratteri)`;
+                        } else {
+                            strengthDiv.style.display = 'none';
+                        }
+                    }
+                    
+                    // Test automatico dopo 2 secondi di inattività
+                    if (timeoutTestAuto) clearTimeout(timeoutTestAuto);
+                    if (urlInput && urlInput.value.startsWith('https://') && 
+                        urlInput.value.includes('.supabase.co') && this.value.length > 20) {
+                        timeoutTestAuto = setTimeout(() => {
+                            if (confirm('Rilevati URL e Key validi. Avviare test connessione automatico?')) {
+                                testConnessione();
+                            }
+                        }, 2000);
+                    }
+                });
+            }
+        }
+
         function setupDragAndDrop() {
             const dropZone = document.getElementById('drop-zone-mobile');
             if (!dropZone) return;
@@ -1045,12 +1269,12 @@
 
         function handleFile(file) {
             if (!file.name.match(/\.(kf|txt|json)$/i)) {
-                mostraMessaggio('Formato file non supportato. Usa .kf, .txt o .json', 'error');
+                mostraNotifica('Formato file non supportato. Usa .kf, .txt o .json', 'errore');
                 return;
             }
             
             if (file.size > 1024 * 10) {
-                mostraMessaggio('File troppo grande (max 10KB)', 'error');
+                mostraNotifica('File troppo grande (max 10KB)', 'errore');
                 return;
             }
             
@@ -1067,7 +1291,7 @@
                 try {
                     const success = importDbConfig(e.target.result);
                     if (success) {
-                        mostraMessaggio(`✅ Configurazione caricata da ${file.name}`, 'success');
+                        mostraNotifica(`✅ Configurazione caricata da ${file.name}`, 'successo');
                         const info = getDbConfigInfo();
                         const urlInput = document.getElementById('supabase-url');
                         const keyInput = document.getElementById('supabase-key');
@@ -1076,13 +1300,18 @@
                         if (keyInput) keyInput.value = '••••••••••••••••';
                         
                         mostraInfoConfigurazione();
+                        modificheNonSalvate = false;
                         
                         // Aggiorna back button dopo configurazione
                         const backButton = document.getElementById('back-button');
                         if (backButton) backButton.style.display = 'flex';
+                        
+                        // Aggiorna indicatore DB
+                        const dot = document.getElementById('db-status-dot');
+                        if (dot) dot.style.background = '#22c55e';
                     }
                 } catch (error) {
-                    mostraMessaggio(`Errore: ${error.message}`, 'error');
+                    mostraNotifica(`Errore: ${error.message}`, 'errore');
                     rimuoviFile();
                 }
             };
@@ -1128,7 +1357,7 @@
             if (key === '••••••••••••••••') {
                 key = getSupabaseKey();
                 if (!key) {
-                    mostraMessaggio('Inserisci la chiave Supabase', 'error');
+                    mostraNotifica('Inserisci la chiave Supabase', 'errore');
                     return;
                 }
             } else {
@@ -1136,12 +1365,12 @@
             }
             
             if (!url || !key) {
-                mostraMessaggio('Inserisci URL e Anon Key', 'error');
+                mostraNotifica('Inserisci URL e Anon Key', 'errore');
                 return;
             }
             
             if (!url.startsWith('https://')) {
-                mostraMessaggio('URL deve iniziare con https://', 'error');
+                mostraNotifica('URL deve iniziare con https://', 'errore');
                 return;
             }
             
@@ -1160,14 +1389,27 @@
                 const testResult = await testDbConnection();
                 
                 if (testResult.success) {
-                    mostraMessaggio(`✅ ${testResult.message}`, 'success');
+                    // Salva timestamp ultimo test
+                    const now = new Date().toLocaleString();
+                    localStorage.setItem('ultimo_test_db', now);
+                    
+                    // Aggiorna info
+                    mostraUltimoTest();
+                    
+                    mostraNotifica(`✅ ${testResult.message}`, 'successo');
                     mostraInfoConfigurazione();
                     loadProfileInfoMobile();
+                    modificheNonSalvate = false;
                     
                     // Mostra back button dopo configurazione riuscita
                     const backButton = document.getElementById('back-button');
                     if (backButton) backButton.style.display = 'flex';
                     
+                    // Aggiorna indicatore DB
+                    const dot = document.getElementById('db-status-dot');
+                    if (dot) dot.style.background = '#22c55e';
+                    
+                    // Mostra statistiche tabelle
                     setTimeout(() => {
                         if (confirm('✅ Database configurato con successo! Vuoi tornare al menu principale?')) {
                             window.location.href = 'menu.html';
@@ -1178,6 +1420,7 @@
                 }
             } catch (error) {
                 console.error('Errore connessione:', error);
+                
                 let messaggio = 'Errore di connessione';
                 if (error.message.includes('JWT') || error.message.includes('token')) {
                     messaggio = 'Anon Key non valida o scaduta';
@@ -1188,7 +1431,9 @@
                 } else {
                     messaggio = error.message.substring(0, 100);
                 }
-                mostraMessaggio(`❌ ${messaggio}`, 'error');
+                
+                mostraNotifica(`❌ ${messaggio}`, 'errore');
+                aggiungiErroreLog(messaggio);
             } finally {
                 btnTest.disabled = false;
                 btnTest.style.opacity = '1';
@@ -1200,7 +1445,7 @@
 
         function esportaConfigurazione() {
             if (!hasDbConfig()) {
-                mostraMessaggio('Configura prima URL e Key', 'error');
+                mostraNotifica('Configura prima URL e Key', 'errore');
                 return;
             }
             
@@ -1224,9 +1469,9 @@
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(urlBlob);
-                mostraMessaggio('✅ Configurazione esportata come ParkApp_DB_Config.kf', 'success');
+                mostraNotifica('✅ Configurazione esportata come ParkApp_DB_Config.kf', 'successo');
             } catch (error) {
-                mostraMessaggio(`Errore esportazione: ${error.message}`, 'error');
+                mostraNotifica(`Errore esportazione: ${error.message}`, 'errore');
             }
         }
 
@@ -1242,82 +1487,100 @@
                     localStorage.removeItem('supabase_url');
                     localStorage.removeItem('supabase_key');
                     localStorage.removeItem('config_timestamp');
+                    localStorage.removeItem('ultimo_test_db');
                     _supabaseClientInstance = null;
                 }
                 
                 supabaseClient = null;
                 fileCaricato = null;
                 
-                mostraMessaggio('✅ Configurazione database resettata', 'success');
+                mostraNotifica('✅ Configurazione database resettata', 'successo');
                 mostraInfoConfigurazione();
                 loadProfileInfoMobile();
                 
                 const urlInput = document.getElementById('supabase-url');
                 const keyInput = document.getElementById('supabase-key');
+                const urlIcon = document.getElementById('url-validation-icon');
+                const keyIcon = document.getElementById('key-validation-icon');
                 
-                if (urlInput) urlInput.value = '';
+                if (urlInput) {
+                    urlInput.value = '';
+                    urlInput.classList.remove('valid', 'invalid');
+                }
                 if (keyInput) {
                     keyInput.value = '';
+                    keyInput.classList.remove('valid', 'invalid');
                     keyInput.type = 'password';
                     const toggleIcon = document.getElementById('toggle-key-icon');
                     if (toggleIcon) toggleIcon.textContent = 'visibility';
                 }
+                if (urlIcon) urlIcon.style.display = 'none';
+                if (keyIcon) keyIcon.style.display = 'none';
                 
                 // Nascondi back button dopo reset
                 const backButton = document.getElementById('back-button');
                 if (backButton) backButton.style.display = 'none';
                 
+                // Aggiorna indicatore DB
+                const dot = document.getElementById('db-status-dot');
+                if (dot) dot.style.background = '#f59e0b';
+                
                 rimuoviFile();
+                modificheNonSalvate = false;
+                
+                // Nascondi info ultimo test
+                const testInfo = document.getElementById('ultimo-test-info');
+                if (testInfo) testInfo.style.display = 'none';
+                
             } catch (error) {
-                mostraMessaggio(`Errore reset: ${error.message}`, 'error');
+                mostraNotifica(`Errore reset: ${error.message}`, 'errore');
             }
-        }
-
-        function mostraMessaggio(testo, tipo = 'info') {
-            const messaggioDiv = document.getElementById('messaggio-stato-mobile');
-            if (!messaggioDiv) return;
-            
-            messaggioDiv.textContent = testo;
-            messaggioDiv.className = 'message-mobile';
-            
-            switch(tipo) {
-                case 'success':
-                    messaggioDiv.classList.add('message-success');
-                    break;
-                case 'error':
-                    messaggioDiv.classList.add('message-error');
-                    break;
-                default:
-                    messaggioDiv.classList.add('message-info');
-            }
-            
-            messaggioDiv.style.display = 'block';
-            setTimeout(() => messaggioDiv.style.display = 'none', 5000);
         }
 
         // ============================================
         // INIZIALIZZAZIONE PAGINA
         // ============================================
         document.addEventListener('DOMContentLoaded', function() {
+            // ✅ NOME TECNICO DA authGetUtente()
+            const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+            const display = document.getElementById('tecnico-display');
+            if (utente && utente.nome_completo && display) {
+                display.innerText = "Tecnico: " + utente.nome_completo;
+            }
+            
+            // ✅ FOOTER CENTRALIZZATO
+            const footerEl = document.getElementById('footer-text');
+            if (footerEl && window.FOOTER_CONFIG) {
+                footerEl.innerText = window.FOOTER_CONFIG.testo;
+            } else if (footerEl) {
+                footerEl.innerText = 'EDIT BY KINGFREAK Version 1.0';
+            }
+            
             const dbInfo = getDbConfigInfo();
-            const indicator = document.getElementById('db-status-indicator');
+            const dot = document.getElementById('db-status-dot');
             const backButton = document.getElementById('back-button');
             
             if (dbInfo.configured) {
-                indicator.style.background = '#22c55e';
-                indicator.title = `DB configurato • ${dbInfo.urlShort || 'N/A'}`;
+                if (dot) dot.style.background = '#22c55e';
                 if (backButton) backButton.style.display = 'flex';
             } else {
-                indicator.style.background = '#f59e0b';
-                indicator.title = 'Database non configurato';
+                if (dot) dot.style.background = '#f59e0b';
                 if (backButton) backButton.style.display = 'none';
                 
                 setTimeout(() => {
-                    mostraMessaggio('⚠️ Configura il database per iniziare', 'warning');
+                    mostraNotifica('⚠️ Configura il database per iniziare', 'info');
                 }, 500);
             }
             
             loadProfileInfoMobile();
+            
+            // Aggiungi conferma uscita se ci sono modifiche
+            window.addEventListener('beforeunload', function(e) {
+                if (modificheNonSalvate) {
+                    e.preventDefault();
+                    e.returnValue = 'Hai modifiche non salvate. Sei sicuro di voler uscire?';
+                }
+            });
         });
     </script>
 </body>

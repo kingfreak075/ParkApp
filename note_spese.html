@@ -2,12 +2,100 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Note Spese - ParkApp</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <!-- CON QUESTO: -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- ✅ AGGIUNTO: File di configurazione DB centrale -->
+    <script src="db-config.js"></script>
+    <script src="check-db-config.js"></script>
+    <!-- ✅ AGGIUNTO: Auth.js per gestione login -->
+    <script src="auth.js"></script>
+    <!-- ✅ GATEKEEPER: Protezione pagina -->
+    <script>
+        (function() {
+            const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+            if (!utente) {
+                window.location.href = 'index.html';
+            }
+        })();
+    </script>
+    <!-- ✅ CONFIGURAZIONE FOOTER -->
+    <script>
+        window.FOOTER_CONFIG = {
+            testo: "EDIT BY KINGFREAK Version 1.0"
+        };
+    </script>
     <style>
+
+
+.btn-primario {
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
+.btn-primario:hover {
+    background: color-mix(in srgb, var(--primary) 85%, black);
+    transform: translateY(-1px);
+}
+
+.btn-secondario {
+    background: white;
+    color: var(--primary);
+    border: 2px solid var(--primary);
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-secondario:hover {
+    background: var(--primary-light);
+    transform: translateY(-1px);
+}
+
+.btn-outline {
+    background: white;
+    color: var(--primary);
+    border: 2px solid var(--primary);
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.btn-outline:hover {
+    background: var(--primary-light);
+    transform: translateY(-1px);
+}
         /* ================================
            STILI SPECIFICI PER NOTE SPESE
            (solo override necessari)
@@ -263,64 +351,68 @@
             }
         }
         
-        /* Header modificato per uniformità */
-        .app-header-note-spese {
-            background-color: var(--white);
-            border-bottom: 1px solid var(--border);
-            padding: 1rem;
-            position: sticky;
-            top: 0;
-            z-index: 50;
-        }
-        
-        /* Bottoni azione in linea con lo stile globale */
-        .btn-primary-large {
-            width: 100%;
-            background: var(--primary);
-            color: var(--white);
-            border: none;
-            padding: 1rem;
-            border-radius: 12px;
-            font-weight: 800;
+        /* Notifiche compatte */
+        .notifica {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 40px;
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 1rem;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-            transition: all 0.2s ease;
+            gap: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 2000;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 500;
+            max-width: 90%;
+            width: auto;
+            height: 28px;
+            min-height: 28px;
+            line-height: 1;
+            animation: slideUp 0.2s ease;
+            pointer-events: none;
         }
-        
-        .btn-primary-large:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
-            background: color-mix(in srgb, var(--primary) 90%, black);
+
+        .notifica.successo { background: #22c55e; }
+        .notifica.errore { background: #ef4444; }
+        .notifica.info { background: #334155; }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translate(-50%, 20px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
         }
     </style>
 </head>
 <body class="bg-app">
     <div class="app-container">
-        <!-- Header uniformato -->
-        <header class="app-header-note-spese">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
-                <button onclick="window.location.href='menu.html'" class="btn-secondary" 
-                        style="background: var(--primary-light); color: var(--primary); border: 2px solid var(--primary); padding: 8px 12px; border-radius: 10px;">
-                    <span class="material-symbols-rounded">arrow_back</span>
+        <!-- Header uniformato con indicatore DB e nome tecnico -->
+        <header class="app-header" style="position: relative;">
+            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                <button onclick="window.location.href='menu.html'" class="btn-scheda" style="height: 40px; width: 40px; display: flex; align-items: center; justify-content: center; border: none; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <span class="material-symbols-rounded" style="color: var(--primary);">arrow_back</span>
                 </button>
-                <h1 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: var(--text-main);">Note Spese</h1>
-                <div style="width: 44px;"></div>
+                
+                <div style="flex-grow: 1;">
+                    <h1 style="font-size: 1.25rem; font-weight: 800; color: var(--primary); margin: 0;">Note Spese</h1>
+                    <p id="tecnico-display" style="margin: 0; font-size: 0.85rem; color: var(--text-muted); font-weight: 600;"></p>
+                </div>
+                
+                <!-- ✅ INDICATORE DB STATICO (verde con glow) -->
+                <div id="db-status-dot" style="position: absolute; top: 15px; right: 15px; width: 14px; height: 14px; background: #22c55e; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2); z-index: 10;"></div>
             </div>
             
-            <div style="text-align: center;">
-                <div id="tecnico-nome" style="font-size: 1rem; font-weight: 700; color: var(--text-main);"></div>
-                <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+            <div style="text-align: center; margin-top: 5px;">
+                <div style="font-size: 0.85rem; color: var(--text-muted);">
                     <span id="data-corrente"></span>
                 </div>
             </div>
         </header>
         
-        <main>
+        <main style="padding: 1rem;">
             <!-- Messaggi di stato -->
             <div id="error-message" class="error-message">
                 <span class="material-symbols-rounded">error</span>
@@ -559,27 +651,25 @@
                 </div>
             </div>
             
-            <!-- Bottoni azione -->
-            <div class="section-card">
-                <div style="display: flex; gap: 12px;">
-                    <button class="btn-secondary" onclick="resetForm()" style="flex: 1; padding: 12px; background: var(--primary-light); color: var(--primary); border: 2px solid var(--primary);">
-                        <span class="material-symbols-rounded">delete</span>
-                        Cancella
-                    </button>
-                    <button class="btn-primary-large" onclick="salvaSpesa()">
-                        <span class="material-symbols-rounded">save</span>
-                        Salva Spesa
-                    </button>
-                </div>
-                
-                <div style="text-align: center; margin-top: 20px;">
-                    <button class="btn-secondary" onclick="window.location.href='lista_spese.html'" 
-                            style="background: white; color: var(--text-muted); border: 2px solid var(--border); padding: 10px 20px;">
-                        <span class="material-symbols-rounded">list</span>
-                        Vedi le mie spese
-                    </button>
-                </div>
-            </div>
+            <!-- Bottoni azione UNIFORMATI -->
+            <!-- Bottoni azione UNIFORMATI alle altre pagine -->
+<div class="section-card">
+    <div style="display: flex; gap: 12px; margin-bottom: 15px;">
+        <button onclick="resetForm()" class="btn-secondario" style="flex: 1;">
+            <span class="material-symbols-rounded" style="font-size: 18px;">delete</span>
+            Cancella
+        </button>
+        <button onclick="salvaSpesa()" class="btn-primario" style="flex: 2;">
+            <span class="material-symbols-rounded" style="font-size: 18px;">save</span>
+            Salva Spesa
+        </button>
+    </div>
+    
+    <button onclick="window.location.href='lista_spese.html'" class="btn-secondario" style="width: 100%;">
+        <span class="material-symbols-rounded" style="font-size: 18px; margin-right: 6px;">list</span>
+        Vedi le mie spese
+    </button>
+</div>
         </main>
         
         <!-- Loading overlay -->
@@ -587,18 +677,98 @@
             <div class="loading-spinner"></div>
             <div style="font-weight: 800; color: var(--primary);">Salvataggio in corso...</div>
         </div>
+        
+        <!-- ✅ FOOTER CENTRALIZZATO -->
+        <footer class="app-footer">
+            <span class="footer-text" id="footer-text"></span>
+        </footer>
     </div>
     
-    <!-- Scripts (stesso ordine) -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="db-config.js"></script>
-    <script src="check-db-config.js"></script>
+    <!-- Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // ✅ NOME TECNICO DA authGetUtente()
+            const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+            const display = document.getElementById('tecnico-display');
+            if (utente && utente.nome_completo && display) {
+                display.innerText = "Tecnico: " + utente.nome_completo;
+            }
+            
+            // ✅ FOOTER CENTRALIZZATO
+            const footerEl = document.getElementById('footer-text');
+            if (footerEl && window.FOOTER_CONFIG) {
+                footerEl.innerText = window.FOOTER_CONFIG.testo;
+            } else if (footerEl) {
+                footerEl.innerText = 'EDIT BY KINGFREAK Version 1.0';
+            }
+            
+            // Imposta data odierna
+            const oggi = new Date();
+            document.getElementById('data-spesa').value = oggi.toISOString().split('T')[0];
+            document.getElementById('data-corrente').textContent = oggi.toLocaleDateString('it-IT', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+            });
+            
+            const configInfo = getDbConfigInfo();
+            
+            if (!configInfo.configured) {
+                console.warn('Database non configurato per ParkApp');
+                // Modifica colore indicatore
+                const dot = document.getElementById('db-status-dot');
+                if (dot) {
+                    dot.style.background = '#f59e0b';
+                    dot.style.boxShadow = '0 0 0 4px rgba(245, 158, 11, 0.2)';
+                    dot.style.cursor = 'pointer';
+                    dot.onclick = function() {
+                        if (confirm('Database non configurato. Vuoi andare alla configurazione?')) {
+                            window.location.href = 'config.html';
+                        }
+                    };
+                }
+            } else {
+                console.log('DB configurato:', configInfo.urlShort);
+                // Già verde di default
+            }
+            
+            // Gestione toggle fuori sede
+            document.querySelectorAll('input[name="fuori-sede"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    document.getElementById('localita-group').style.display = 
+                        e.target.value === 'true' ? 'block' : 'none';
+                });
+            });
+        });
+        
+        // Funzione notifica
+        function mostraNotifica(messaggio, tipo = 'info') {
+            const notifica = document.createElement('div');
+            notifica.className = `notifica ${tipo}`;
+            
+            let icona = 'info';
+            if (tipo === 'successo') icona = 'check_circle';
+            if (tipo === 'errore') icona = 'error';
+            
+            notifica.innerHTML = `
+                <span class="material-symbols-rounded" style="font-size: 14px;">${icona}</span>
+                <span>${messaggio}</span>
+            `;
+            
+            document.body.appendChild(notifica);
+            
+            setTimeout(() => {
+                if (notifica.parentNode) {
+                    notifica.style.opacity = '0';
+                    notifica.style.transform = 'translateX(-50%) translateY(-5px)';
+                    notifica.style.transition = 'all 0.15s ease';
+                    
+                    setTimeout(() => {
+                        if (notifica.parentNode) notifica.remove();
+                    }, 150);
+                }
+            }, 1500);
+        }
+    </script>
+    
     <script src="note_spese.js"></script>
-
-<footer class="app-footer">
-    <span class="footer-text">EDIT BY KINGFREAK Version 1.0</span>
-</footer>
-
-
 </body>
 </html>

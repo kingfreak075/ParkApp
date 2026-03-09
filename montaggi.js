@@ -1,25 +1,22 @@
-// ✅ SOSTITUIRE CON QUESTO:
-// 1. Controllo configurazione
-if (!hasDbConfig()) {
-    showDbConfigOverlay();
-    throw new Error('Configurazione database mancante');
+// ✅ SOSTITUITO CON CLIENT CENTRALIZZATO
+const supabaseClient = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+
+// ✅ CONTROLLO CLIENT INIZIALE
+if (!supabaseClient) {
+    console.error('Client Supabase non disponibile');
+    mostraErroreDB('Connessione al database non disponibile');
 }
 
-// 2. Ottenere client
-let supabaseClient;
-try {
-    supabaseClient = getSupabaseClient();
-} catch (error) {
-    console.error('Errore creazione client:', error);
-    mostraErroreDB(error.message);
-}
+// ✅ SOSTITUITO con authGetUtente()
+const utenteCorrente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+const tecnicoLoggato = utenteCorrente ? utenteCorrente.nome_completo : null;
 
 // 3. Funzione errore DB
 function mostraErroreDB(messaggio) {
     console.error('Errore DB:', messaggio);
     
     // Mostra messaggio nella pagina
-    const listaDiv = document.getElementById('lista-manutenzioni');
+    const listaDiv = document.getElementById('listaMontaggi');
     if (listaDiv) {
         listaDiv.innerHTML = `
             <div style="text-align: center; padding: 40px 20px; color: #ef4444;">
@@ -35,12 +32,13 @@ function mostraErroreDB(messaggio) {
     }
     
     // Disabilita filtro periodicità se presente
-    const filtroDiv = document.querySelector('.filtro-btn');
+    const filtroDiv = document.querySelector('.filtro-stato');
     if (filtroDiv) {
         filtroDiv.style.opacity = '0.5';
         filtroDiv.style.pointerEvents = 'none';
     }
 }
+
 // Elementi DOM
 const listaDiv = document.getElementById('listaMontaggi');
 const searchMain = document.getElementById('searchMain');
@@ -56,6 +54,12 @@ const MAPPA_STATI = {
 
 // Funzione principale per caricare i montaggi
 async function caricaMontaggi() {
+    // ✅ CONTROLLO CLIENT
+    if (!supabaseClient) {
+        listaDiv.innerHTML = `<p style="color: #ef4444; text-align: center; padding: 2rem; font-weight: 600;">Errore di connessione al database</p>`;
+        return;
+    }
+    
     const searchVal = searchMain.value.trim();
     
     // Query base
@@ -84,8 +88,6 @@ async function caricaMontaggi() {
 }
 
 // Funzione per renderizzare la lista
-// SOSTITUISCI la funzione renderizzaLista in montaggi.js con questa versione migliorata:
-
 function renderizzaLista(montaggi) {
     if (montaggi.length === 0) {
         listaDiv.innerHTML = `
@@ -110,10 +112,9 @@ function renderizzaLista(montaggi) {
                     <!-- Lato sinistro: Codice e tipo -->
                     <div style="flex: 1; min-width: 0;">
                         <!-- Codice impianto prominente -->
-                      
-             <div class="codice-impianto" style="color: white; background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%); padding: 6px 12px; border-radius: 8px; display: inline-block; margin-bottom: 5px;">
-                ${mont.impianto || 'N/D'}
-                  </div>
+                        <div class="codice-impianto" style="color: white; background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%); padding: 6px 12px; border-radius: 8px; display: inline-block; margin-bottom: 5px;">
+                            ${mont.impianto || 'N/D'}
+                        </div>
                         
                         <!-- Tipo sotto il codice -->
                         <div style="margin-top: 6px;">
@@ -148,7 +149,7 @@ function renderizzaLista(montaggi) {
                     </div>
                 </div>
                 
-                <!-- CONTENUTO ESPANDIBILE (Cliente + Pulsante) - NASCOSTO DI DEFAULT -->
+                <!-- CONTENUTO ESPANDIBILE - NASCOSTO DI DEFAULT -->
                 <div id="contenuto-espanso-${index}" class="contenuto-espanso" style="display: none;">
                     <div class="sezione-cliente">
                         <div style="display: flex; align-items: center; gap: 8px;">
@@ -160,36 +161,32 @@ function renderizzaLista(montaggi) {
                         </div>
                     </div>
                     
+                    <!-- Info date creazione/modifica -->
+                    <div style="margin-top: 15px; padding: 12px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #e2e8f0;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #64748b;">
+                            <div>
+                                <div style="font-weight: 600; margin-bottom: 2px;">Creato il</div>
+                                <div>${mont.created_at ? new Date(mont.created_at).toLocaleDateString('it-IT') : 'Non disponibile'}</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-weight: 600; margin-bottom: 2px;">Modificato il</div>
+                                <div>${mont.updated_at ? new Date(mont.updated_at).toLocaleDateString('it-IT') : 'Non disponibile'}</div>
+                            </div>
+                        </div>
+                        
+                        <div style="font-size: 0.75rem; color: #94a3b8; text-align: center; margin-top: 5px;">
+                            ${mont.updated_at ? `Ultima modifica: ${new Date(mont.updated_at).toLocaleTimeString('it-IT', {hour: '2-digit', minute:'2-digit'})}` : ''}
+                        </div>
+                    </div>
+                    
                     <!-- Pulsante Scheda -->
-                    <!-- Aggiungi questa sezione DOPO il cliente e PRIMA del pulsante Scheda -->
-<div style="margin-top: 15px; padding: 12px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #e2e8f0;">
-    <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #64748b;">
-        <div>
-            <div style="font-weight: 600; margin-bottom: 2px;">Creato il</div>
-            <div>${mont.created_at ? new Date(mont.created_at).toLocaleDateString('it-IT') : 'Non disponibile'}</div>
-        </div>
-        <div style="text-align: right;">
-            <div style="font-weight: 600; margin-bottom: 2px;">Modificato il</div>
-            <div>${mont.updated_at ? new Date(mont.updated_at).toLocaleDateString('it-IT') : 'Non disponibile'}</div>
-        </div>
-    </div>
-    
-    <!-- Opzionale: Mostra anche l'ora -->
-    <div style="font-size: 0.75rem; color: #94a3b8; text-align: center; margin-top: 5px;">
-        ${mont.updated_at ? `Ultima modifica: ${new Date(mont.updated_at).toLocaleTimeString('it-IT', {hour: '2-digit', minute:'2-digit'})}` : ''}
-    </div>
-</div>
-           <!-- Pulsante Scheda -->
                     <div style="text-align: right; margin-top: 15px;">
                         <button onclick="event.stopPropagation(); apriSchedaMontaggio('${mont.impianto}')" class="btn-scheda" style="width: 100%; justify-content: center;">
                             <span class="material-symbols-rounded" style="margin-right: 6px;">description</span>
                             Scheda
                         </button>
                     </div>
-                    
-                </div> <!-- CHIUSURA contenuto-espanso -->
-                
-                <!-- Indicatore espansione (freccetta) -->
+                </div>
                 
                 <!-- Indicatore espansione (freccetta) -->
                 <div style="text-align: center; margin-top: 10px;">
@@ -211,14 +208,14 @@ window.toggleEspandiCard = function(index) {
     // Controlla se è già espanso
     const isEspanso = contenuto.style.display === 'block';
     
-    // Chiudi tutti gli altri contenuti espansi (opzionale)
+    // Chiudi tutti gli altri contenuti espansi
     document.querySelectorAll('.contenuto-espanso').forEach(el => {
         if (el.id !== `contenuto-espanso-${index}`) {
             el.style.display = 'none';
         }
     });
     
-    // Resetta tutte le frecce (opzionale)
+    // Resetta tutte le frecce
     document.querySelectorAll('[id^="freccia-"]').forEach(el => {
         if (el.id !== `freccia-${index}`) {
             el.style.transform = 'rotate(0deg)';
@@ -235,19 +232,17 @@ window.toggleEspandiCard = function(index) {
         freccia.style.transform = 'rotate(180deg)';
         card.classList.add('card-espansa');
         
-        // Scroll automatico per mostrare il contenuto (opzionale)
+        // Scroll automatico per mostrare il contenuto
         setTimeout(() => {
             contenuto.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }, 100);
     }
 };
 
-// Funzione placeholder per aprire la scheda
+// Funzione per aprire la scheda montaggio
 window.apriSchedaMontaggio = function(codice) {
     window.location.href = `scheda_montaggio.html?id=${codice}`;
     console.log('Apri scheda per:', codice);
-   
-    // window.location.href = `scheda_montaggio.html?id=${codice}`;
 };
 
 // Inizializza i filtri per stato
@@ -283,14 +278,6 @@ searchMain.addEventListener('input', () => {
     clearTimeout(timeout);
     timeout = setTimeout(caricaMontaggi, 300);
 });
-
-// Funzione placeholder per aprire i dettagli
-window.apriDettagliMontaggio = function(codice) {
-    // Puoi personalizzare questa funzione per aprire una pagina di dettaglio specifica
-    console.log('Apri dettagli per:', codice);
-    alert(`Dettagli per ${codice} - Funzione da implementare`);
-    // window.location.href = `dettaglio_montaggio.html?id=${codice}`;
-};
 
 // Inizializzazione al caricamento della pagina
 document.addEventListener('DOMContentLoaded', () => {

@@ -1,21 +1,10 @@
-// ✅ SOSTITUIRE L'INIZIO DEL FILE (righe 1-30) CON QUESTO:
+// ✅ SOSTITUITO CON CLIENT CENTRALIZZATO
+const supabaseClient = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
 
-// 1. Controllo configurazione
-if (typeof hasDbConfig !== 'function' || !hasDbConfig()) {
-    if (typeof showDbConfigOverlay === 'function') {
-        showDbConfigOverlay();
-    }
-    throw new Error('Configurazione database mancante');
-}
-
-// 2. Ottenere client
-let supabaseClient;
-try {
-    supabaseClient = getSupabaseClient();
-    console.log('✅ Client Supabase creato per manutenzioni');
-} catch (error) {
-    console.error('❌ Errore client:', error);
-    mostraErroreDB(`Errore DB: ${error.message}`);
+// ✅ CONTROLLO CLIENT INIZIALE
+if (!supabaseClient) {
+    console.error('Client Supabase non disponibile');
+    mostraErroreDB('Connessione al database non disponibile');
 }
 
 // 3. Funzione errore DB (MANTIENI quella esistente, è OK)
@@ -45,6 +34,10 @@ function mostraErroreDB(messaggio) {
     }
 }
 
+// ✅ SOSTITUITO con authGetUtente()
+const utenteCorrente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+const tecnicoLoggato = utenteCorrente ? utenteCorrente.nome_completo : null;
+
 // Mappa periodicità -> etichette
 const PERIODICITA_MAP = {
     30: "MENSILE",
@@ -64,6 +57,12 @@ let statistiche = {
 let manutentoriCache = {};
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // ✅ CONTROLLO CLIENT
+    if (!supabaseClient) {
+        alert('Errore di connessione al database');
+        return;
+    }
+    
     // Imposta mese corrente (da 1 a 12)
     const meseCorrente = new Date().getMonth() + 1;
     const selMese = document.getElementById('select-mese');
@@ -76,6 +75,155 @@ document.addEventListener('DOMContentLoaded', async () => {
     await caricaManutentori();
     caricaManutenzioni();
 });
+
+// Dopo le altre variabili globali, aggiungi:
+let ordinamentoAttivo = 'totali'; // totali, nelMese, ritardo, regolari
+
+// Funzione per ordinare gli impianti
+function ordinaImpianti(impianti, tipoOrdinamento, meseSelezionato) {
+    const impiantiCopy = [...impianti];
+    const oggi = new Date();
+    const meseCorrente = oggi.getMonth() + 1;
+    
+    switch(tipoOrdinamento) {
+        case 'totali':
+            // Ordina per indirizzo alfabetico
+            return impiantiCopy.sort((a, b) => {
+                const indA = a.Indirizzo || '';
+                const indB = b.Indirizzo || '';
+                return indA.localeCompare(indB);
+            });
+            
+        case 'nelMese':
+            // Prima quelli con ult_sem nel mese corrente, poi indirizzo
+            return impiantiCopy.sort((a, b) => {
+                const aInMese = isNelMeseCorrente(a.ult_sem, meseCorrente);
+                const bInMese = isNelMeseCorrente(b.ult_sem, meseCorrente);
+                
+                if (aInMese && !bInMese) return -1;
+                if (!aInMese && bInMese) return 1;
+                
+                // Se entrambi nello stesso gruppo, ordina per indirizzo
+                const indA = a.Indirizzo || '';
+                const indB = b.Indirizzo || '';
+                return indA.localeCompare(indB);
+            });
+            
+        case 'ritardo':
+            // Ordina per data più vecchia (più in ritardo)
+            return impiantiCopy.sort((a, b) => {
+                const dataA = parseDataItaliana(a.ult_sem) || new Date(0);
+                const dataB = parseDataItaliana(b.ult_sem) || new Date(0);
+                return dataA - dataB; // Ascendente = più vecchi prima
+            });
+            
+        case 'regolari':
+            // Ordina per data meno recente (dalla più vecchia alla più nuova)
+            return impiantiCopy.sort((a, b) => {
+                const dataA = parseDataItaliana(a.ult_sem) || new Date(0);
+                const dataB = parseDataItaliana(b.ult_sem) || new Date(0);
+                return dataA - dataB;
+            });
+            
+        default:
+            return impiantiCopy;
+    }
+}
+
+// Helper per verificare se una data è nel mese corrente
+function isNelMeseCorrente(dataStr, meseCorrente) {
+    if (!dataStr) return false;
+    
+    try {
+        const parti = dataStr.includes('/') ? dataStr.split('/') : dataStr.split('-');
+        const meseData = parseInt(dataStr.includes('/') ? parti[1] : parti[1]);
+        return meseData === meseCorrente;
+    } catch (e) {
+        return false;
+    }
+}
+
+// Helper per parsare data italiana
+function parseDataItaliana(str) {
+    if (!str) return null;
+    try {
+        const parti = str.includes('/') ? str.split('/') : str.split('-');
+        if (parti.length !== 3) return null;
+        
+        // Formato GG/MM/AAAA o AAAA-MM-GG
+        if (str.includes('/')) {
+            return new Date(parti[2], parti[1] - 1, parti[0]);
+        } else {
+            return new Date(parti[0], parti[1] - 1, parti[2]);
+        }
+    } catch (e) {
+        return null;
+    }
+}
+
+// Funzione per gestire il click sulle statistiche
+function ordinaPer(tipo) {
+    // Se clicco sulla stessa card, resetta a totali
+    if (ordinamentoAttivo === tipo) {
+        tipo = 'totali';
+    }
+    
+    ordinamentoAttivo = tipo;
+    
+    // Aggiorna UI delle card statistiche
+    aggiornaStatoCardStatistiche();
+    
+    // Aggiorna badge
+    aggiornaBadgeOrdinamento();
+    
+    // Ricarica la lista con il nuovo ordinamento
+    caricaManutenzioni();
+}
+
+// Aggiorna lo stato visivo delle card statistiche
+function aggiornaStatoCardStatistiche() {
+    const cards = ['totali', 'nelMese', 'ritardo', 'regolari'];
+    
+    cards.forEach(tipo => {
+        const card = document.getElementById(`stat-${tipo}-card`);
+        const freccia = document.getElementById(`freccia-${tipo}`);
+        
+        if (card) {
+            if (ordinamentoAttivo === tipo) {
+                card.style.transform = 'translateY(-2px)';
+                card.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)';
+                card.style.border = '2px solid #3b82f6';
+                if (freccia) freccia.style.display = 'block';
+            } else {
+                card.style.transform = '';
+                card.style.boxShadow = '';
+                card.style.border = '';
+                if (freccia) freccia.style.display = 'none';
+            }
+        }
+    });
+}
+
+// Aggiorna il badge dell'ordinamento
+function aggiornaBadgeOrdinamento() {
+    const badge = document.getElementById('ordinamento-badge');
+    const testo = document.getElementById('ordinamento-testo');
+    
+    if (!badge || !testo) return;
+    
+    const mappaTesti = {
+        'totali': 'Ordinamento: Totali (per indirizzo)',
+        'nelMese': 'Ordinamento: Nel mese (in cima)',
+        'ritardo': 'Ordinamento: In ritardo (dal più vecchio)',
+        'regolari': 'Ordinamento: Regolari (dal meno recente)'
+    };
+    
+    testo.innerText = mappaTesti[ordinamentoAttivo] || 'Ordinamento: Totali';
+    badge.style.display = 'flex';
+}
+
+
+
 
 // Carica statistiche globali: totale impianti e senza mese_sem
 async function caricaStatisticheGenerali() {
@@ -117,31 +265,31 @@ async function caricaStatisticheGenerali() {
 
 
 // Carica manutentori dalla tabella manutentori
+// Carica manutentori dalla tabella manutentori
 async function caricaManutentori() {
-    const select = document.getElementById('select-manutentore'); // <-- QUI CAMBIA!
+    const select = document.getElementById('select-manutentore');
     if (!select) {
         console.error("Elemento select-manutentore non trovato!");
         return;
     }
     
     try {
-        // Carica dalla tabella manutentori
+        // Carica dalla tabella manutentori ORDINATI PER GIRO (dal più basso al più alto)
         const { data, error } = await supabaseClient
             .from('manutentori')
-            .select('"Manutentore", "Giro"');  // Note: virgolette per CASE misto
+            .select('"Manutentore", "Giro"')
+            .order('Giro', { ascending: true, nullsFirst: false });
 
         if (error) throw error;
 
-        // Salva in cache per non dover rifare query
-        data.forEach(m => {
-            manutentoriCache[m.Manutentore] = m.Giro;
-        });
+        console.log("Manutentori caricati:", data.length);
 
-        // Ordina alfabeticamente
-        const manutentoriUnici = data
-            .map(item => item.Manutentore)
-            .filter(Boolean)
-            .sort();
+        // Salva in cache
+        data.forEach(m => {
+            if (m.Manutentore) {
+                manutentoriCache[m.Manutentore] = m.Giro;
+            }
+        });
 
         select.innerHTML = ""; 
         
@@ -151,17 +299,33 @@ async function caricaManutentori() {
         optVuota.innerText = "Seleziona manutentore";
         select.appendChild(optVuota);
         
-        manutentoriUnici.forEach(m => {
-            const opt = document.createElement('option');
-            opt.value = m;
-            opt.innerText = m;
-            select.appendChild(opt);
+        // Aggiungi tutti i manutentori
+        data.forEach(m => {
+            if (m.Manutentore) {
+                const opt = document.createElement('option');
+                opt.value = m.Manutentore;
+                
+                if (m.Giro) {
+                    opt.innerText = `${m.Manutentore} (Giro ${m.Giro})`;
+                } else {
+                    opt.innerText = m.Manutentore;
+                }
+                
+                select.appendChild(opt);
+            }
         });
 
-        // Se c'è un manutentore in localStorage, selezionalo
-        const manutentoreSalvato = localStorage.getItem('manutentore_loggato');
-        if (manutentoreSalvato && manutentoriUnici.includes(manutentoreSalvato)) {
-            select.value = manutentoreSalvato;
+        // ✅ RIPRISTINA MANUTENTORE SALVATO
+        const manutentoreSalvato = localStorage.getItem('manutentore_selezionato');
+        if (manutentoreSalvato) {
+            // Verifica che il manutentore esista ancora nella lista
+            const options = Array.from(select.options).map(opt => opt.value);
+            if (options.includes(manutentoreSalvato)) {
+                select.value = manutentoreSalvato;
+                console.log('Manutentore ripristinato:', manutentoreSalvato);
+            } else {
+                localStorage.removeItem('manutentore_selezionato');
+            }
         }
 
     } catch (err) {
@@ -352,10 +516,32 @@ async function caricaAnnotazioniPerImpianto() {
     }
 }
 
+// ✅ NUOVA FUNZIONE PER AGGIORNARE LE STATISTICHE IN ALTO
+function aggiornaStatisticheUI(statistiche) {
+    const statsContainer = document.getElementById('stats-container');
+    if (!statsContainer) return;
+    
+    // Mostra il container
+    statsContainer.style.display = 'block';
+    
+    // Aggiorna i valori
+    document.getElementById('stat-totali').innerText = statistiche.totali;
+    document.getElementById('stat-nel-mese').innerText = statistiche.nelMese;
+    document.getElementById('stat-ritardo').innerText = statistiche.inRitardo;
+    document.getElementById('stat-regolari').innerText = statistiche.regolari;
+}
+
 async function caricaManutenzioni() {
     const meseSelezionato = parseInt(document.getElementById('select-mese').value);
     const manutentoreScelto = document.getElementById('select-manutentore').value;
     const lista = document.getElementById('lista-manutenzioni');
+    
+    // ✅ SALVA IL MANUTENTORE SELEZIONATO
+    if (manutentoreScelto) {
+        localStorage.setItem('manutentore_selezionato', manutentoreScelto);
+    } else {
+        localStorage.removeItem('manutentore_selezionato');
+    }
     
     lista.innerHTML = "<div style='text-align:center; padding:20px;'>Caricamento...</div>";
 
@@ -414,21 +600,10 @@ if (meseSelezionato === 0) {
 // 4.5 APPLICA FILTRO PERIODICITÀ (NUOVO!)
 filtrati = applicaFiltroPeriodicita(filtrati);
 
-        // 5. ORDINAMENTO: per periodicità (crescente) e poi per indirizzo
-        filtrati.sort((a, b) => {
-            // Prima per periodicità
-            const periodA = parseInt(a.periodicit) || 999;
-            const periodB = parseInt(b.periodicit) || 999;
-            
-            if (periodA !== periodB) {
-                return periodA - periodB;
-            }
-            
-            // Poi per indirizzo alfabetico
-            const indirizzoA = a.Indirizzo || '';
-            const indirizzoB = b.Indirizzo || '';
-            return indirizzoA.localeCompare(indirizzoB);
-        });
+     // 5. APPLICA ORDINAMENTO BASATO SULLA STATISTICA SELEZIONATA
+        const meseSelezionatoInt = meseSelezionato; // già definito
+        filtrati = ordinaImpianti(filtrati, ordinamentoAttivo, meseSelezionatoInt);
+
 
         // 6. Variabili per statistiche
         let statistiche = {
@@ -465,45 +640,52 @@ filtrati = applicaFiltroPeriodicita(filtrati);
             if (hasTipo2) iconeAnnotazioni += '<span style="display:inline-block; width:12px; height:12px; background:#f59e0b; border-radius:50%; margin-left:4px;" title="Tipo 2"></span>';
 
             // --- LOGICA DATA E COLORE (INVARIATA) ---
-            let coloreData = "#475569";
-            let showGreenDot = false;
-            let linguettaVerde = false;
+            // --- LOGICA DATA E COLORE (CORRETTA CON ANNO CORRENTE) ---
+let coloreData = "#475569";
+let showGreenDot = false;
+let linguettaVerde = false;
 
-            if (imp.ult_sem) {
-                const parti = imp.ult_sem.includes('/') ? imp.ult_sem.split('/') : imp.ult_sem.split('-');
-                const dataVisita = imp.ult_sem.includes('/') ? 
-                    new Date(parti[2], parti[1] - 1, parti[0]) : new Date(parti[0], parti[1] - 1, parti[2]);
-                
-                const oggi = new Date();
-                const diffGiorni = (oggi - dataVisita) / (1000 * 60 * 60 * 24);
-                
-                const meseUltManutenzione = dataVisita.getMonth() + 1;
-                const meseVisualizzato = meseSelezionato;
-                const meseCorrente = new Date().getMonth() + 1;
+if (imp.ult_sem) {
+    const parti = imp.ult_sem.includes('/') ? imp.ult_sem.split('/') : imp.ult_sem.split('-');
+    const dataVisita = imp.ult_sem.includes('/') ? 
+        new Date(parti[2], parti[1] - 1, parti[0]) : new Date(parti[0], parti[1] - 1, parti[2]);
+    
+    const oggi = new Date();
+    const diffGiorni = (oggi - dataVisita) / (1000 * 60 * 60 * 24);
+    
+    const meseUltManutenzione = dataVisita.getMonth() + 1;
+    const annoUltManutenzione = dataVisita.getFullYear();
+    const meseCorrente = oggi.getMonth() + 1;
+    const annoCorrente = oggi.getFullYear();
 
-                // Linguetta verde
-                if (meseUltManutenzione === meseVisualizzato && meseVisualizzato === meseCorrente) {
-                    linguettaVerde = true;
-                }
+    // Linguetta verde (solo se è nel mese corrente E anno corrente)
+    if (meseUltManutenzione === meseCorrente && annoUltManutenzione === annoCorrente) {
+        linguettaVerde = true;
+    }
 
-                // Logica colore font e statistiche
-                if (meseUltManutenzione === meseVisualizzato) {
-                    coloreData = "#22c55e";
-                    showGreenDot = true;
-                    statistiche.nelMese++;
-                } else if (diffGiorni <= 180) {
-                    coloreData = "#000000";
-                    showGreenDot = false;
-                    statistiche.regolari++;
-                } else {
-                    coloreData = "#ef4444";
-                    showGreenDot = false;
-                    statistiche.inRitardo++;
-                }
-            } else {
-                coloreData = "#ef4444";
-                statistiche.inRitardo++;
-            }
+    // PRIORITÀ 1: Controlla se è in ritardo (> 180 giorni)
+    if (diffGiorni > 180) {
+        coloreData = "#ef4444"; // ROSSO
+        showGreenDot = false;
+        statistiche.inRitardo++;
+    }
+    // PRIORITÀ 2: Controlla se è nel mese corrente (mese e anno correnti)
+    else if (meseUltManutenzione === meseCorrente && annoUltManutenzione === annoCorrente) {
+        coloreData = "#22c55e"; // VERDE
+        showGreenDot = true;
+        statistiche.nelMese++;
+    }
+    // PRIORITÀ 3: È regolare (<= 180 giorni)
+    else {
+        coloreData = "#000000"; // NERO
+        showGreenDot = false;
+        statistiche.regolari++;
+    }
+} else {
+    // Nessuna data inserita
+    coloreData = "#ef4444"; // ROSSO
+    statistiche.inRitardo++;
+}
 
             // --- FILIGRANA SEMESTRALE ---
             const mP = parseInt(imp.mese_sem);
@@ -556,19 +738,18 @@ filtrati = applicaFiltroPeriodicita(filtrati);
                             style="width: 36px; height: 36px; border-radius: 50%; border: none; background: #22c55e; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer;">
                             <span class="material-symbols-rounded" style="font-size: 18px;">note_add</span>
                         </button>
-                        <button style="width: 36px; height: 36px; border-radius: 50%; border: none; background: #ef4444; color: white; display: flex; align-items: center; justify-content: center; opacity: 0.8;">
-                            <span class="material-symbols-rounded" style="font-size: 18px;">play_arrow</span>
-                        </button>
+                       <button onclick="vaiADettaglio('${imp.impianto}')" 
+    style="width: 36px; height: 36px; border-radius: 50%; border: none; background: #f97316; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+    <span class="material-symbols-rounded" style="font-size: 18px;">info</span>
+</button>
                     </div>
                 </div>
             `;
             lista.appendChild(card);
         });
 
-        // 8. AGGIUNGI FOOTER CON STATISTICHE
-        const footer = document.createElement('div');
-        footer.innerHTML = creaFooter(statistiche);
-        lista.appendChild(footer);
+        // 8. AGGIUNGI STATISTICHE IN ALTO (NUOVE)
+        aggiornaStatisticheUI(statistiche);
 
     } catch (err) {
         console.error("Errore:", err);
@@ -584,6 +765,11 @@ function vaiAEsegui(codice, indirizzo) {
 function apriAnnotazioni(codiceImpianto) {
     window.location.href = `annotazioni.html?impianto=${codiceImpianto}`;
 }
+
+function vaiADettaglio(codice) {
+    window.location.href = `dettaglio.html?id=${codice}`;
+}
+
 
 
 // Aggiungi all'inizio del file, dopo le altre variabili
@@ -673,7 +859,7 @@ function aggiornaBadgeFiltro() {
     };
     
     const testo = mappaTesti[filtroPeriodicitaAttivo] || 'TUTTI';
-    badge.textContent = testo;
+    badge.innerHTML = `<span class="material-symbols-rounded" style="font-size: 14px;">filter_alt</span> ${testo}`;
 }
 
 
@@ -697,7 +883,7 @@ function resetFiltroPeriodicita() {
     // Aggiorna badge se esiste
     const badge = document.getElementById('filtro-attivo-badge');
     if (badge) {
-        badge.textContent = 'TUTTI';
+        badge.innerHTML = `<span class="material-symbols-rounded" style="font-size: 14px;">filter_alt</span> TUTTI`;
     }
     
     console.log('Filtro periodicità resettato a TUTTI');

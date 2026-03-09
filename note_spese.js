@@ -1,51 +1,53 @@
-// ✅ SOSTITUIRE CON QUESTO:
-// 1. Controllo configurazione
-if (!hasDbConfig()) {
-    showDbConfigOverlay();
-    throw new Error('Configurazione database mancante');
+// ✅ SOSTITUITO CON CLIENT CENTRALIZZATO
+const supabaseClient = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+
+// ✅ CONTROLLO CLIENT INIZIALE
+if (!supabaseClient) {
+    console.error('Client Supabase non disponibile');
+    mostraNotifica('Connessione al database non disponibile', 'errore');
 }
 
-// 2. Ottenere client
-let supabaseClient;
-try {
-    supabaseClient = getSupabaseClient();
-} catch (error) {
-    console.error('Errore creazione client:', error);
-    mostraErroreDB(error.message);
-}
-
-// 3. Funzione errore DB
-function mostraErroreDB(messaggio) {
-    console.error('Errore DB:', messaggio);
-    
-    // Mostra messaggio nella pagina
-    const listaDiv = document.getElementById('lista-manutenzioni');
-    if (listaDiv) {
-        listaDiv.innerHTML = `
-            <div style="text-align: center; padding: 40px 20px; color: #ef4444;">
-                <span class="material-symbols-rounded" style="font-size: 3rem; margin-bottom: 20px;">error</span>
-                <h3 style="margin-bottom: 10px;">Errore Database</h3>
-                <p>${messaggio}</p>
-                <button onclick="window.location.href='config.html'" 
-                        style="margin-top: 20px; padding: 10px 20px; background: #ef4444; color: white; border: none; border-radius: 8px; font-weight: 600;">
-                    Configura Database
-                </button>
-            </div>
-        `;
-    }
-    
-    // Disabilita filtro periodicità se presente
-    const filtroDiv = document.querySelector('.filtro-btn');
-    if (filtroDiv) {
-        filtroDiv.style.opacity = '0.5';
-        filtroDiv.style.pointerEvents = 'none';
-    }
-}
+// ✅ SOSTITUITO con authGetUtente()
+const utenteCorrente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+const tecnicoLoggato = utenteCorrente ? utenteCorrente.nome_completo : null;
 
 let fotoRicevute = {
     vitto: [],
     auto: []
 };
+
+// Funzione notifica
+function mostraNotifica(messaggio, tipo = 'info') {
+    // Rimuovi notifica esistente
+    const notificaEsistente = document.querySelector('.notifica');
+    if (notificaEsistente) notificaEsistente.remove();
+    
+    const notifica = document.createElement('div');
+    notifica.className = `notifica ${tipo}`;
+    
+    let icona = 'info';
+    if (tipo === 'successo') icona = 'check_circle';
+    if (tipo === 'errore') icona = 'error';
+    
+    notifica.innerHTML = `
+        <span class="material-symbols-rounded" style="font-size: 14px;">${icona}</span>
+        <span>${messaggio}</span>
+    `;
+    
+    document.body.appendChild(notifica);
+    
+    setTimeout(() => {
+        if (notifica.parentNode) {
+            notifica.style.opacity = '0';
+            notifica.style.transform = 'translateX(-50%) translateY(-5px)';
+            notifica.style.transition = 'all 0.15s ease';
+            
+            setTimeout(() => {
+                if (notifica.parentNode) notifica.remove();
+            }, 150);
+        }
+    }, 1500);
+}
 
 // ============ CALCOLO TOTALI (SEMPLICE SOMMA) ============
 function calcolaTotali(ritornaValori = false) {
@@ -142,15 +144,20 @@ function validazioneInput(inputId) {
 async function salvaSpesa() {
     console.log('Avvio salvataggio...');
     
-    // 1. Validazioni
-    const dataSpesa = document.getElementById('data-spesa').value;
-    if (!dataSpesa) {
-        showError('Seleziona una data');
+    // ✅ CONTROLLO CLIENT
+    if (!supabaseClient) {
+        mostraNotifica('Errore di connessione al database', 'errore');
         return;
     }
     
-    const tecnico = localStorage.getItem('tecnico_loggato');
-    if (!tecnico) {
+    // 1. Validazioni
+    const dataSpesa = document.getElementById('data-spesa').value;
+    if (!dataSpesa) {
+        mostraNotifica('Seleziona una data', 'errore');
+        return;
+    }
+    
+    if (!tecnicoLoggato) {
         window.location.href = 'index.html';
         return;
     }
@@ -167,7 +174,7 @@ async function salvaSpesa() {
     });
     
     if (errori) {
-        showError('Correggi i campi in rosso');
+        mostraNotifica('Correggi i campi in rosso', 'errore');
         return;
     }
     
@@ -201,7 +208,7 @@ async function salvaSpesa() {
         // 6. Prepara dati
         const data = new Date(dataSpesa);
         const spesaData = {
-            tecnico: tecnico,
+            tecnico: tecnicoLoggato,
             data: dataSpesa,
             giorno: data.getDate(),
             mese: data.getMonth() + 1,
@@ -237,7 +244,7 @@ async function salvaSpesa() {
         console.log('Spesa salvata!');
         
         // 8. Successo e reset
-        showSuccess();
+        mostraNotifica('Spesa salvata con successo!', 'successo');
         
         setTimeout(() => {
             resetForm();
@@ -246,7 +253,7 @@ async function salvaSpesa() {
         
     } catch (error) {
         console.error('Errore:', error);
-        showError('Errore salvataggio: ' + error.message);
+        mostraNotifica('Errore salvataggio: ' + error.message, 'errore');
     } finally {
         hideLoading();
     }
@@ -414,27 +421,6 @@ function selezionaTipo(tipo) {
 // ============ INIZIALIZZAZIONE PAGINA ============
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Pagina note spese pronta');
-    
-    // Imposta data odierna
-    const oggi = new Date();
-    document.getElementById('data-spesa').value = oggi.toISOString().split('T')[0];
-    
-    // Formatta e mostra data corrente
-    document.getElementById('data-corrente').textContent = oggi.toLocaleDateString('it-IT', {
-        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-    });
-    
-    // Recupera nome tecnico
-    const tecnico = localStorage.getItem('tecnico_loggato');
-    document.getElementById('tecnico-nome').textContent = tecnico || 'Tecnico';
-    
-    // Gestione toggle fuori sede
-    document.querySelectorAll('input[name="fuori-sede"]').forEach(radio => {
-        radio.addEventListener('change', (e) => {
-            document.getElementById('localita-group').style.display = 
-                e.target.value === 'true' ? 'block' : 'none';
-        });
-    });
     
     // Event listener per input numerici (calcolo in tempo reale)
     document.querySelectorAll('input[type="number"]').forEach(input => {
