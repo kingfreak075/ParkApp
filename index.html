@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ParkApp - Accesso</title>
+    <title>ParkApp - Login</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
@@ -11,39 +11,34 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="db-config.js"></script>
     <script src="auth.js"></script>
+    
     <style>
-        /* Stili specifici per la pagina di login */
         .app-container {
             max-width: 450px;
             margin: 0 auto;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            justify-content: center;
             padding: 1rem;
+            position: relative;
         }
         
-        .header-login {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-        }
-        
-        .logo h1 {
-            font-size: 1.8rem;
-            font-weight: 900;
-            color: var(--primary);
-            margin: 0;
-            line-height: 1;
-        }
-        
-        .logo span {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            font-weight: 600;
+        .login-container {
+            background: white;
+            border-radius: 24px;
+            padding: 2rem;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+            max-width: 400px;
+            margin: 0 auto;
+            text-align: center;
+            position: relative;
         }
         
         .config-icon {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
             width: 44px;
             height: 44px;
             border-radius: 12px;
@@ -54,6 +49,7 @@
             cursor: pointer;
             transition: all 0.2s ease;
             border: 2px solid transparent;
+            z-index: 10;
         }
         
         .config-icon.configurato {
@@ -72,161 +68,47 @@
             transform: scale(1.05);
         }
         
-        .config-icon .material-symbols-rounded {
-            font-size: 24px;
-        }
-        
-        .card-accesso {
-            background: white;
-            border-radius: 24px;
-            padding: 1.5rem;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            margin-bottom: 1.5rem;
-        }
-        
-        .section-title {
-            font-size: 0.8rem;
-            font-weight: 800;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 1rem;
+        .input-group {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .tecnici-list {
-            max-height: 250px;
-            overflow-y: auto;
-            margin-bottom: 1rem;
+            background: #f8fafc;
             border-radius: 12px;
-            border: 1px solid var(--border);
+            padding: 0 15px;
+            margin-bottom: 15px;
+            border: 2px solid #e2e8f0;
+            transition: border-color 0.2s;
         }
         
-        .tecnico-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 1rem;
-            border-bottom: 1px solid var(--border);
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .tecnico-item:last-child {
-            border-bottom: none;
-        }
-        
-        .tecnico-item:hover {
-            background: var(--primary-light);
-        }
-        
-        .tecnico-item.selezionato {
-            background: var(--primary-light);
-            border-left: 4px solid var(--primary);
-        }
-        
-        .tecnico-info {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-        
-        .tecnico-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: var(--primary-light);
-            color: var(--primary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 800;
-            font-size: 1.1rem;
-        }
-        
-        .tecnico-nome {
-            font-weight: 700;
-            color: var(--text-main);
-        }
-        
-        .tecnico-azioni {
-            display: flex;
-            gap: 0.5rem;
-        }
-        
-        .btn-icona {
-            background: none;
+        .form-input {
+            flex: 1;
+            padding: 15px;
             border: none;
-            color: var(--text-muted);
-            cursor: pointer;
-            padding: 0.5rem;
-            border-radius: 8px;
-            transition: all 0.2s;
+            background: transparent;
+            font-size: 1rem;
+            outline: none;
         }
         
-        .btn-icona:hover {
-            background: #fee2e2;
-            color: #ef4444;
-        }
-        
-        .btn-icona.elimina:hover {
-            background: #fee2e2;
-            color: #ef4444;
-        }
-        
-        .btn-outline {
-            width: 100%;
-            padding: 1rem;
-            border: 2px dashed var(--border);
-            border-radius: 12px;
-            background: white;
-            color: var(--text-muted);
-            font-weight: 700;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-bottom: 1rem;
-        }
-        
-        .btn-outline:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-            background: var(--primary-light);
-        }
-        
-        .btn-clear-all {
-            width: 100%;
-            padding: 0.75rem;
-            background: #fee2e2;
+        .btn-primary {
+            background: var(--primary);
+            color: white;
             border: none;
+            padding: 15px;
             border-radius: 12px;
-            color: #991b1b;
             font-weight: 700;
-            font-size: 0.8rem;
+            width: 100%;
+            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.5rem;
-            cursor: pointer;
-            transition: all 0.2s;
+            gap: 10px;
         }
         
-        .btn-clear-all:hover {
-            background: #fecaca;
+        .btn-primary:disabled {
+            opacity: 0.5;
+            pointer-events: none;
         }
         
-        .pin-section {
-            margin-top: 1.5rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid var(--border);
-        }
-        
+        /* PIN PAD */
         .pin-display {
             background: #f8fafc;
             border: 2px solid var(--border);
@@ -236,7 +118,7 @@
             font-size: 2.5rem;
             font-weight: 800;
             letter-spacing: 10px;
-            margin-bottom: 1.5rem;
+            margin: 1.5rem 0;
             color: var(--text-main);
         }
         
@@ -250,7 +132,7 @@
         .pin-btn {
             aspect-ratio: 1;
             background: white;
-            border: 2px solid var(--border);
+            border: 2px solid #e2e8f0;
             border-radius: 16px;
             font-size: 1.8rem;
             font-weight: 800;
@@ -269,10 +151,6 @@
             transform: scale(0.95);
         }
         
-        .pin-btn.zero {
-            grid-column: span 1;
-        }
-        
         .pin-btn.clear {
             background: #fee2e2;
             border-color: #fecaca;
@@ -285,87 +163,157 @@
             color: white;
         }
         
-        .btn-accedi {
-            width: 100%;
-            background: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 16px;
-            padding: 1.2rem;
-            font-size: 1.1rem;
-            font-weight: 800;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-        }
-        
-        .btn-accedi:disabled {
-            opacity: 0.5;
-            pointer-events: none;
-        }
-        
-        .btn-accedi:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
+        .pin-btn.zero {
+            grid-column: span 1;
         }
         
         /* MODALE CONFIGURAZIONE */
-        .modale-overlay {
+        .modal-overlay {
             position: fixed;
             top: 0;
             left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
             display: none;
             align-items: center;
             justify-content: center;
-            padding: 1rem;
+            z-index: 1000;
+            padding: 20px;
         }
         
-        .modale-content {
+        .modal-content {
             background: white;
             border-radius: 24px;
-            padding: 1.5rem;
-            max-width: 450px;
+            padding: 2rem;
+            max-width: 400px;
             width: 100%;
             max-height: 90vh;
             overflow-y: auto;
-            animation: slideUp 0.3s ease;
+            animation: modalPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         
-        .modale-header {
+        @keyframes modalPop {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        
+        .modal-btn {
+            padding: 18px;
+            border-radius: 15px;
+            border: 2px solid #e2e8f0;
+            margin-bottom: 12px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 1.5rem;
-        }
-        
-        .modale-title {
-            font-size: 1.2rem;
-            font-weight: 800;
-            color: var(--text-main);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .modale-close {
-            background: none;
-            border: none;
-            color: var(--text-muted);
+            gap: 15px;
+            width: 100%;
             cursor: pointer;
-            padding: 0.5rem;
-            border-radius: 8px;
+            transition: all 0.2s;
+            background: white;
+            text-align: left;
         }
         
-        .modale-body {
-            margin-bottom: 1.5rem;
+        .modal-btn:hover {
+            border-color: var(--primary);
+            background: #f0f9ff;
+        }
+        
+        .modal-btn b {
+            display: block;
+            font-size: 1.1rem;
+            color: #1e293b;
+        }
+        
+        .modal-btn span.desc {
+            font-size: 0.85rem;
+            color: #64748b;
+            font-weight: 400;
+        }
+        
+        .modal-btn i {
+            font-size: 2.5rem;
+            color: var(--primary);
+        }
+        
+        /* Input per modale config */
+        .input-group-config {
+            margin-bottom: 1.25rem;
+        }
+        
+        .input-label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: #64748b;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+        }
+        
+        .input-field {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #1e293b;
+            outline: none;
+            box-sizing: border-box;
+        }
+        
+        .input-field:focus {
+            border-color: var(--primary);
+            background: white;
+        }
+        
+        .input-with-icon {
+            position: relative;
+        }
+        
+        .input-with-icon .material-symbols-rounded {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #64748b;
+            cursor: pointer;
+        }
+        
+        .separator {
+            display: flex;
+            align-items: center;
+            margin: 1.5rem 0;
+            color: #64748b;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+        
+        .separator::before,
+        .separator::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #e2e8f0;
+        }
+        
+        .separator span {
+            padding: 0 1rem;
+        }
+        
+        .drop-zone {
+            border: 2px dashed #e2e8f0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            margin-bottom: 1rem;
+        }
+        
+        .drop-zone:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
         }
         
         .db-status {
@@ -380,7 +328,7 @@
         
         .db-status-label {
             font-weight: 700;
-            color: var(--text-main);
+            color: #1e293b;
         }
         
         .db-status-badge {
@@ -400,86 +348,6 @@
             color: #ef4444;
         }
         
-        .input-group {
-            margin-bottom: 1rem;
-        }
-        
-        .input-label {
-            display: block;
-            font-size: 0.8rem;
-            font-weight: 800;
-            color: var(--text-muted);
-            margin-bottom: 0.5rem;
-            text-transform: uppercase;
-        }
-        
-        .input-field {
-            width: 100%;
-            padding: 0.875rem 1rem;
-            background: #f8fafc;
-            border: 2px solid var(--border);
-            border-radius: 12px;
-            font-family: 'Inter', sans-serif;
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: var(--text-main);
-            outline: none;
-            box-sizing: border-box;
-        }
-        
-        .input-field:focus {
-            border-color: var(--primary);
-            background: white;
-        }
-        
-        .input-with-icon {
-            position: relative;
-        }
-        
-        .input-with-icon .material-symbols-rounded {
-            position: absolute;
-            right: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-muted);
-            cursor: pointer;
-        }
-        
-        .separator {
-            display: flex;
-            align-items: center;
-            margin: 1.5rem 0;
-            color: var(--text-muted);
-            font-size: 0.8rem;
-            font-weight: 700;
-        }
-        
-        .separator::before,
-        .separator::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: var(--border);
-        }
-        
-        .separator span {
-            padding: 0 1rem;
-        }
-        
-        .drop-zone {
-            border: 2px dashed var(--border);
-            border-radius: 12px;
-            padding: 1.5rem;
-            text-align: center;
-            cursor: pointer;
-            margin-bottom: 1rem;
-        }
-        
-        .drop-zone:hover {
-            border-color: var(--primary);
-            background: var(--primary-light);
-        }
-        
         .file-info {
             display: none;
             background: #f0fdf4;
@@ -489,12 +357,30 @@
             border-left: 4px solid #22c55e;
         }
         
-        .modale-footer {
+        .btn-outline {
+            width: 100%;
+            padding: 1rem;
+            border: 2px dashed #e2e8f0;
+            border-radius: 12px;
+            background: white;
+            color: #64748b;
+            font-weight: 700;
+            font-size: 0.9rem;
             display: flex;
-            gap: 0.75rem;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 1rem;
         }
         
-        /* Notifiche */
+        .btn-outline:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: var(--primary-light);
+        }
+        
         .notifica {
             position: fixed;
             bottom: 20px;
@@ -540,53 +426,45 @@
 </head>
 <body class="bg-app">
     <div class="app-container">
-        <!-- HEADER LOGIN -->
-        <div class="header-login">
-            <div class="logo">
-                <h1>ParkApp</h1>
-                <span>Gestione tecnica</span>
-            </div>
+        
+        <div class="login-container">
+            <!-- ICONA CONFIGURAZIONE (INGRANAGGIO) -->
             <div class="config-icon non-configurato" id="config-icon" onclick="apriModaleConfig()">
                 <span class="material-symbols-rounded">settings</span>
             </div>
-        </div>
+            
+            <div id="message-container"></div>
+            
+            <div id="vista-login-completo">
+                <div style="margin-bottom: 2rem;">
+                    <span class="material-symbols-rounded" style="font-size: 4rem; color: var(--primary);">shield_person</span>
+                    <h1 style="font-size: 1.8rem; font-weight: 800; margin: 0; color: var(--primary);">ParkApp</h1>
+                    <p style="color: #64748b;">Accedi al sistema</p>
+                </div>
 
-        <!-- CARD ACCESSO PRINCIPALE -->
-        <div class="card-accesso">
-            <!-- SEZIONE TECNICI MEMORIZZATI -->
-            <div>
-                <div class="section-title">
-                    <span class="material-symbols-rounded">group</span>
-                    TECNICI MEMORIZZATI
-                </div>
-                
-                <div id="tecnici-container" class="tecnici-list">
-                    <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
-                        <span class="material-symbols-rounded" style="font-size: 2rem;">person_off</span>
-                        <p style="margin-top: 0.5rem;">Nessun tecnico memorizzato</p>
+                <form onsubmit="event.preventDefault(); gestisciLogin();">
+                    <div class="input-group">
+                        <span class="material-symbols-rounded">mail</span>
+                        <input type="email" id="email" placeholder="Email" class="form-input" required>
                     </div>
-                </div>
-                
-                <button class="btn-outline" id="btn-nuovo-tecnico">
-                    <span class="material-symbols-rounded">person_add</span>
-                    Aggiungi nuovo tecnico
-                </button>
-                
-                <button class="btn-clear-all" id="btn-clear-all">
-                    <span class="material-symbols-rounded">delete_sweep</span>
-                    Cancella tutti i tecnici
-                </button>
+                    <div class="input-group">
+                        <span class="material-symbols-rounded">lock</span>
+                        <input type="password" id="password" placeholder="Password" class="form-input" required>
+                    </div>
+                    <button type="submit" class="btn-primary" id="btn-login">ACCEDI</button>
+                </form>
             </div>
 
-            <!-- SEZIONE PIN (visibile solo quando un tecnico è selezionato) -->
-            <div id="pin-section" class="pin-section" style="display: none;">
-                <div class="section-title">
-                    <span class="material-symbols-rounded">pin</span>
-                    INSERISCI PIN PER <span id="tecnico-selezionato-nome"></span>
+            <div id="vista-login-pin" style="display: none;">
+                <div style="margin-bottom: 1rem;">
+                    <h1 style="font-size: 1.5rem;">Bentornato!</h1>
+                    <p id="nome-bentornato" style="font-weight: 600; color: var(--primary);"></p>
                 </div>
                 
+                <!-- PIN DISPLAY -->
                 <div class="pin-display" id="pin-display">____</div>
                 
+                <!-- PIN PAD -->
                 <div class="pin-grid">
                     <button class="pin-btn" data-digit="1">1</button>
                     <button class="pin-btn" data-digit="2">2</button>
@@ -603,86 +481,109 @@
                     </button>
                 </div>
                 
-                <button class="btn-accedi" id="btn-accedi" disabled>
-                    <span class="material-symbols-rounded">login</span>
-                    ACCEDI
+                <button class="btn-primary" id="btn-pin" disabled>
+                    <span class="material-symbols-rounded">lock_open</span>
+                    SBLOCCA
                 </button>
+                
+                <a onclick="resetDispositivo()" style="font-size: 0.8rem; color: #64748b; cursor: pointer; text-decoration: underline; display: block; margin-top: 1rem;">
+                    Usa un altro account
+                </a>
             </div>
         </div>
-
-        <!-- FOOTER -->
+        
         <div class="footer-text">
             EDIT BY KINGFREAK Version 1.0
         </div>
     </div>
 
+    <!-- MODALE SUPERVISORE (originale) -->
+    <div id="modal-supervisore" class="modal-overlay">
+        <div class="modal-content">
+            <h2 style="margin-top: 0; color: #1e293b;">Benvenuto Supervisore</h2>
+            <p style="color: #64748b; margin-bottom: 2rem;">Scegli come vuoi operare oggi:</p>
+            
+            <button class="modal-btn" onclick="window.location.href='menu.html'">
+                <i class="material-symbols-rounded">smartphone</i>
+                <div>
+                    <b>App Mobile</b>
+                    <span class="desc">Per l'uso sul campo e veicoli</span>
+                </div>
+            </button>
+
+            <button class="modal-btn" onclick="window.location.href='admin_database.html'">
+                <i class="material-symbols-rounded">desktop_windows</i>
+                <div>
+                    <b>Console PC</b>
+                    <span class="desc">Gestione dati e reportistica</span>
+                </div>
+            </button>
+        </div>
+    </div>
+
     <!-- MODALE CONFIGURAZIONE DATABASE -->
-    <div class="modale-overlay" id="modale-config">
-        <div class="modale-content">
-            <div class="modale-header">
-                <h3 class="modale-title">
+    <div id="modal-config" class="modal-overlay">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="margin: 0; color: #1e293b; display: flex; align-items: center; gap: 0.5rem;">
                     <span class="material-symbols-rounded">database</span>
                     Configura Database
-                </h3>
-                <button class="modale-close" onclick="chiudiModaleConfig()">
-                    <span class="material-symbols-rounded">close</span>
-                </button>
+                </h2>
+                <span class="material-symbols-rounded" onclick="chiudiModaleConfig()" style="cursor: pointer; color: #64748b;">close</span>
             </div>
             
-            <div class="modale-body">
-                <div id="db-status-modale" class="db-status">
-                    <span class="db-status-label">Stato database</span>
-                    <span id="db-status-badge" class="db-status-badge non-configurato">NON CONFIGURATO</span>
-                </div>
-                
-                <div class="input-group">
-                    <label class="input-label">Supabase URL</label>
-                    <div class="input-with-icon">
-                        <input type="url" id="supabase-url" class="input-field" placeholder="https://tuo-progetto.supabase.co">
-                        <span class="material-symbols-rounded">link</span>
-                    </div>
-                </div>
-                
-                <div class="input-group">
-                    <label class="input-label">Anon Key</label>
-                    <div class="input-with-icon">
-                        <input type="password" id="supabase-key" class="input-field" placeholder="eyJhbGciOiJIUzI1NiIs...">
-                        <span class="material-symbols-rounded" id="toggle-key-icon" onclick="togglePassword()" style="cursor: pointer;">visibility</span>
-                    </div>
-                </div>
-                
-                <button class="btn-outline" onclick="testConnessione()" style="margin-bottom: 1rem;">
-                    <span class="material-symbols-rounded">wifi</span>
-                    Test Connessione
-                </button>
-                
-                <div class="separator">
-                    <span>OPPURE</span>
-                </div>
-                
-                <div class="drop-zone" onclick="document.getElementById('file-kf').click()">
-                    <input type="file" id="file-kf" accept=".kf,.txt,.json" style="display: none;">
-                    <span class="material-symbols-rounded" style="font-size: 2rem; color: var(--primary); margin-bottom: 0.5rem;">upload_file</span>
-                    <p style="font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">Carica file .kf</p>
-                    <p style="font-size: 0.8rem; color: var(--text-muted);">Trascina qui o clicca per selezionare</p>
-                </div>
-                
-                <div id="file-info" class="file-info">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <p style="font-weight: 800; color: #166534; margin-bottom: 0.25rem;" id="file-name"></p>
-                            <p style="font-size: 0.8rem; color: #15803d;" id="file-size"></p>
-                        </div>
-                        <span class="material-symbols-rounded" onclick="rimuoviFile()" style="cursor: pointer; color: #15803d;">close</span>
-                    </div>
+            <div id="db-status-modale" class="db-status">
+                <span class="db-status-label">Stato database</span>
+                <span id="db-status-badge" class="db-status-badge non-configurato">NON CONFIGURATO</span>
+            </div>
+            
+            <div class="input-group-config">
+                <label class="input-label">Supabase URL</label>
+                <div class="input-with-icon">
+                    <input type="url" id="supabase-url" class="input-field" placeholder="https://tuo-progetto.supabase.co">
+                    <span class="material-symbols-rounded">link</span>
                 </div>
             </div>
             
-            <div class="modale-footer">
+            <div class="input-group-config">
+                <label class="input-label">Anon Key</label>
+                <div class="input-with-icon">
+                    <input type="password" id="supabase-key" class="input-field" placeholder="eyJhbGciOiJIUzI1NiIs...">
+                    <span class="material-symbols-rounded" id="toggle-key-icon" onclick="togglePassword()" style="cursor: pointer;">visibility</span>
+                </div>
+            </div>
+            
+            <button class="btn-outline" onclick="testConnessione()" style="margin-bottom: 1rem;">
+                <span class="material-symbols-rounded">wifi</span>
+                Test Connessione
+            </button>
+            
+            <div class="separator">
+                <span>OPPURE</span>
+            </div>
+            
+            <div class="drop-zone" onclick="document.getElementById('file-kf').click()">
+                <input type="file" id="file-kf" accept=".kf,.txt,.json" style="display: none;">
+                <span class="material-symbols-rounded" style="font-size: 2rem; color: var(--primary); margin-bottom: 0.5rem;">upload_file</span>
+                <p style="font-weight: 700; color: #1e293b; margin-bottom: 0.25rem;">Carica file .kf</p>
+                <p style="font-size: 0.8rem; color: #64748b;">Trascina qui o clicca per selezionare</p>
+            </div>
+            
+            <div id="file-info" class="file-info">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <p style="font-weight: 800; color: #166534; margin-bottom: 0.25rem;" id="file-name"></p>
+                        <p style="font-size: 0.8rem; color: #15803d;" id="file-size"></p>
+                    </div>
+                    <span class="material-symbols-rounded" onclick="rimuoviFile()" style="cursor: pointer; color: #15803d;">close</span>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
                 <button class="btn-outline" onclick="chiudiModaleConfig()" style="margin-bottom: 0; flex: 1;">
                     Annulla
                 </button>
-                <button class="btn-accedi" onclick="salvaConfigurazione()" style="margin-bottom: 0; flex: 2;">
+                <button class="btn-primary" onclick="salvaConfigurazione()" style="margin-bottom: 0; flex: 2;">
                     <span class="material-symbols-rounded">save</span>
                     Salva Configurazione
                 </button>
@@ -694,15 +595,21 @@
         // ============================================
         // VARIABILI GLOBALI
         // ============================================
-        let tecnicoSelezionato = null;
         let pinInput = '';
         let fileCaricato = null;
+        let tecnicoAttuale = null;
 
         // ============================================
-        // INIZIALIZZAZIONE PAGINA
+        // INIZIALIZZAZIONE
         // ============================================
-        document.addEventListener('DOMContentLoaded', function() {
-            caricaTecniciMemorizzati();
+        document.addEventListener('DOMContentLoaded', () => {
+            const emailSalvata = localStorage.getItem('dispositivo_email');
+            if (emailSalvata) {
+                document.getElementById('vista-login-completo').style.display = 'none';
+                document.getElementById('vista-login-pin').style.display = 'block';
+                document.getElementById('nome-bentornato').textContent = localStorage.getItem(`nome_${emailSalvata}`);
+            }
+            
             aggiornaIconaConfig();
             setupPinListeners();
             
@@ -711,119 +618,7 @@
         });
 
         // ============================================
-        // GESTIONE TECNICI MEMORIZZATI
-        // ============================================
-        function caricaTecniciMemorizzati() {
-            const tecnici = JSON.parse(localStorage.getItem('tecnici_memorizzati') || '[]');
-            const container = document.getElementById('tecnici-container');
-            
-            if (tecnici.length === 0) {
-                container.innerHTML = `
-                    <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
-                        <span class="material-symbols-rounded" style="font-size: 2rem;">person_off</span>
-                        <p style="margin-top: 0.5rem;">Nessun tecnico memorizzato</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            let html = '';
-            tecnici.forEach(tecnico => {
-                const iniziali = tecnico.nome.split(' ').map(n => n[0]).join('').toUpperCase();
-                const isSelezionato = tecnicoSelezionato && tecnicoSelezionato.nome === tecnico.nome;
-                
-                html += `
-                    <div class="tecnico-item ${isSelezionato ? 'selezionato' : ''}" data-nome="${tecnico.nome}" data-id="${tecnico.id || ''}">
-                        <div class="tecnico-info">
-                            <div class="tecnico-avatar">${iniziali}</div>
-                            <span class="tecnico-nome">${tecnico.nome}</span>
-                        </div>
-                        <div class="tecnico-azioni">
-                            <button class="btn-icona elimina" onclick="event.stopPropagation(); rimuoviTecnico('${tecnico.nome}')">
-                                <span class="material-symbols-rounded">delete</span>
-                            </button>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            container.innerHTML = html;
-            
-            // Aggiungi event listener per selezione tecnico
-            document.querySelectorAll('.tecnico-item').forEach(item => {
-                item.addEventListener('click', function() {
-                    const nome = this.dataset.nome;
-                    const id = this.dataset.id;
-                    selezionaTecnico({ nome, id });
-                });
-            });
-        }
-        
-        function selezionaTecnico(tecnico) {
-            tecnicoSelezionato = tecnico;
-            document.getElementById('tecnico-selezionato-nome').textContent = tecnico.nome;
-            document.getElementById('pin-section').style.display = 'block';
-            
-            // Resetta PIN
-            pinInput = '';
-            aggiornaPinDisplay();
-            
-            // Rimuovi selezione da tutti e aggiungi al selezionato
-            document.querySelectorAll('.tecnico-item').forEach(item => {
-                item.classList.remove('selezionato');
-                if (item.dataset.nome === tecnico.nome) {
-                    item.classList.add('selezionato');
-                }
-            });
-            
-            // Abilita pulsante accedi solo se PIN completo
-            document.getElementById('btn-accedi').disabled = true;
-        }
-        
-        function rimuoviTecnico(nome) {
-            if (!confirm(`Rimuovere ${nome} dalla lista dei tecnici memorizzati?`)) return;
-            
-            let tecnici = JSON.parse(localStorage.getItem('tecnici_memorizzati') || '[]');
-            tecnici = tecnici.filter(t => t.nome !== nome);
-            localStorage.setItem('tecnici_memorizzati', JSON.stringify(tecnici));
-            
-            // Se il tecnico rimosso era quello selezionato, deseleziona
-            if (tecnicoSelezionato && tecnicoSelezionato.nome === nome) {
-                tecnicoSelezionato = null;
-                document.getElementById('pin-section').style.display = 'none';
-            }
-            
-            caricaTecniciMemorizzati();
-        }
-        
-        document.getElementById('btn-clear-all').addEventListener('click', function() {
-            if (!confirm('Cancellare TUTTI i tecnici memorizzati?')) return;
-            localStorage.removeItem('tecnici_memorizzati');
-            tecnicoSelezionato = null;
-            document.getElementById('pin-section').style.display = 'none';
-            caricaTecniciMemorizzati();
-        });
-        
-        document.getElementById('btn-nuovo-tecnico').addEventListener('click', function() {
-            const nome = prompt('Inserisci il nome completo del tecnico:');
-            if (!nome) return;
-            
-            let tecnici = JSON.parse(localStorage.getItem('tecnici_memorizzati') || '[]');
-            
-            // Controlla se esiste già
-            if (tecnici.some(t => t.nome === nome)) {
-                alert('Questo tecnico è già presente nella lista');
-                selezionaTecnico({ nome, id: tecnici.find(t => t.nome === nome).id });
-                return;
-            }
-            
-            tecnici.push({ nome, id: 'temp_' + Date.now() });
-            localStorage.setItem('tecnici_memorizzati', JSON.stringify(tecnici));
-            caricaTecniciMemorizzati();
-        });
-
-        // ============================================
-        // GESTIONE PIN
+        // GESTIONE PIN PAD
         // ============================================
         function setupPinListeners() {
             document.querySelectorAll('.pin-btn[data-digit]').forEach(btn => {
@@ -844,89 +639,83 @@
         function aggiornaPinDisplay() {
             const display = pinInput.padEnd(4, '_');
             document.getElementById('pin-display').textContent = display.split('').join(' ');
-            document.getElementById('btn-accedi').disabled = pinInput.length !== 4;
+            document.getElementById('btn-pin').disabled = pinInput.length !== 4;
         }
 
         // ============================================
-        // LOGIN CON SUPABASE
+        // FUNZIONI DI LOGIN (ORIGINALI)
         // ============================================
-        document.getElementById('btn-accedi').addEventListener('click', async function() {
-            if (!tecnicoSelezionato) {
-                mostraNotifica('Seleziona un tecnico', 'errore');
-                return;
-            }
+        async function gestisciLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('btn-login');
             
-            if (pinInput.length !== 4) {
-                mostraNotifica('Inserisci un PIN di 4 cifre', 'errore');
-                return;
-            }
-            
-            const btn = this;
-            const testoOriginale = btn.innerHTML;
-            btn.innerHTML = '<span class="material-symbols-rounded">progress_activity</span> VERIFICA...';
             btn.disabled = true;
+            btn.textContent = "VERIFICA...";
+
+            const res = await authLoginCompleto(email, password);
             
-            try {
-                const configInfo = getDbConfigInfo();
-                if (!configInfo.configured) {
-                    mostraNotifica('Database non configurato', 'errore');
-                    btn.innerHTML = testoOriginale;
-                    btn.disabled = false;
-                    return;
-                }
-                
-                const SUPABASE_FUNCTION_URL = `${configInfo.url}/functions/v1/bright-function`;
-                
-                const response = await fetch(SUPABASE_FUNCTION_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        tecnico_nome: tecnicoSelezionato.nome,
-                        pin: pinInput
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    // Login riuscito
-                    localStorage.setItem('tecnico_loggato', data.nome || tecnicoSelezionato.nome);
-                    localStorage.setItem('tecnico_id', data.tecnico_id);
-                    
-                    // Salva ruolo
-                    if (data.ruolo) {
-                        localStorage.setItem('ruolo', data.ruolo);
-                    }
-                    
-                    // Aggiorna lista tecnici con ID reale se era temporaneo
-                    if (tecnicoSelezionato.id && tecnicoSelezionato.id.startsWith('temp_')) {
-                        let tecnici = JSON.parse(localStorage.getItem('tecnici_memorizzati') || '[]');
-                        tecnici = tecnici.map(t => 
-                            t.nome === tecnicoSelezionato.nome ? { ...t, id: data.tecnico_id } : t
-                        );
-                        localStorage.setItem('tecnici_memorizzati', JSON.stringify(tecnici));
-                    }
-                    
-                    mostraNotifica('Accesso effettuato!', 'successo');
-                    setTimeout(() => {
-                        window.location.href = 'menu.html';
-                    }, 1000);
-                } else {
-                    mostraNotifica(data.message || 'PIN errato', 'errore');
-                    pinInput = '';
-                    aggiornaPinDisplay();
-                }
-                
-            } catch (error) {
-                console.error('Errore login:', error);
-                mostraNotifica('Errore di connessione', 'errore');
+            if (res.success) {
+                const utente = authGetUtente();
+                smistaUtente(utente);
+            } else {
+                mostraNotifica("Errore: " + res.error, 'errore');
+                btn.disabled = false;
+                btn.textContent = "ACCEDI";
+            }
+        }
+
+        async function gestisciLoginPin() {
+            const pin = pinInput;
+            if (pin.length !== 4) return;
+            
+            const btn = document.getElementById('btn-pin');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="material-symbols-rounded">progress_activity</span> VERIFICA...';
+            
+            const res = await authLoginPin(pin);
+            if (res.success) {
+                const utente = authGetUtente();
+                smistaUtente(utente);
+            } else {
+                mostraNotifica("PIN Errato", 'errore');
                 pinInput = '';
                 aggiornaPinDisplay();
-            } finally {
-                btn.innerHTML = testoOriginale;
                 btn.disabled = false;
+                btn.innerHTML = '<span class="material-symbols-rounded">lock_open</span> SBLOCCA';
             }
-        });
+        }
+
+        document.getElementById('btn-pin').addEventListener('click', gestisciLoginPin);
+
+        // LA LOGICA DI SMISTAMENTO INTELLIGENTE (originale)
+        function smistaUtente(utente) {
+            const ruolo = (utente.ruolo || 'tecnico').toLowerCase();
+            
+            if (ruolo === 'admin') {
+                // Admin: Diretto alla console
+                window.location.href = 'admin_database.html';
+            } 
+            else if (ruolo === 'supervisore') {
+                // Supervisore: Mostra il modale di scelta
+                document.getElementById('modal-supervisore').style.display = 'flex';
+            } 
+            else {
+                // Tecnico: Logica standard (Profilo se primo accesso, altrimenti Menu)
+                // Se password è quella temporanea, forza il profilo
+                const passInserita = document.getElementById('password')?.value || '';
+                if (utente.pin === '1234' || passInserita === 'Esa123!') {
+                    window.location.href = 'profilo.html?primo_access=true';
+                } else {
+                    window.location.href = 'menu.html';
+                }
+            }
+        }
+
+        function resetDispositivo() {
+            authScollegaDispositivo();
+            window.location.reload();
+        }
 
         // ============================================
         // GESTIONE CONFIGURAZIONE DATABASE
@@ -945,7 +734,7 @@
         }
         
         function apriModaleConfig() {
-            document.getElementById('modale-config').style.display = 'flex';
+            document.getElementById('modal-config').style.display = 'flex';
             
             const configInfo = getDbConfigInfo();
             const urlInput = document.getElementById('supabase-url');
@@ -966,7 +755,7 @@
         }
         
         function chiudiModaleConfig() {
-            document.getElementById('modale-config').style.display = 'none';
+            document.getElementById('modal-config').style.display = 'none';
         }
         
         function togglePassword() {

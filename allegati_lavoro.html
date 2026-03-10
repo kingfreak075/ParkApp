@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ParkApp - Allegati Lavoro</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db-config.js"></script>
+    <script src="check-db-config.js"></script>
+    <script src="auth.js"></script>
+    
+    <script>
+        (function() {
+            const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+            if (!utente) {
+                window.location.href = 'index.html';
+            }
+        })();
+    </script>
+    
+    <script>
+        window.FOOTER_CONFIG = {
+            testo: "EDIT BY KINGFREAK Version 1.0"
+        };
+    </script>
+    
+    <style>
+        .app-container { max-width: 450px; margin: 0 auto; min-height: 100vh; padding-bottom: 5rem; }
+        
+        .allegati-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .btn-upload {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 0.75rem;
+            font-weight: 800;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+        
+        .allegato-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: all 0.2s;
+        }
+        
+        .allegato-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        
+        .allegato-icona {
+            width: 48px;
+            height: 48px;
+            background: #fee2e2;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ef4444;
+        }
+        
+        .allegato-info {
+            flex: 1;
+        }
+        
+        .allegato-nome {
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 0.25rem;
+        }
+        
+        .allegato-meta {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .allegato-azioni {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .btn-icona {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            border: none;
+            background: var(--primary-light);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-icona:hover {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-icona.elimina:hover {
+            background: #ef4444;
+        }
+        
+        .vuoto-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-muted);
+        }
+        
+        .vuoto-state .material-symbols-rounded {
+            font-size: 3rem;
+            opacity: 0.3;
+            margin-bottom: 1rem;
+        }
+        
+        /* VISUALIZZATORE PDF */
+        .pdf-viewer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 2000;
+            display: none;
+            flex-direction: column;
+            padding: 1rem;
+        }
+        
+        .pdf-viewer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+            margin-bottom: 1rem;
+        }
+        
+        .pdf-viewer-title {
+            font-size: 1rem;
+            font-weight: 800;
+        }
+        
+        .btn-chiudi-viewer {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+        
+        .pdf-viewer {
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .pdf-viewer iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        .notifica {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 2001;
+            font-size: 0.7rem;
+            font-weight: 500;
+            height: 28px;
+            animation: slideUp 0.2s ease;
+        }
+        
+        .notifica.successo { background: #22c55e; }
+        .notifica.errore { background: #ef4444; }
+        .notifica.info { background: #334155; }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translate(-50%, 20px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
+        
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.9);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--primary-light);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .app-footer {
+            background: var(--white);
+            padding: 1rem;
+            text-align: center;
+            border-top: 1px solid var(--border);
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            max-width: 450px;
+            margin: 0 auto;
+        }
+        
+        /* Stili per debug log */
+        .debug-log {
+            background: #1e293b;
+            color: #f8fafc;
+            border-radius: 8px;
+            padding: 0.75rem;
+            font-family: monospace;
+            font-size: 0.8rem;
+            margin-top: 1rem;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+        
+        .debug-log .log-entry {
+            padding: 0.25rem 0;
+            border-bottom: 1px solid #334155;
+            color: #94a3b8;
+        }
+        
+        .debug-log .log-success { color: #4ade80; }
+        .debug-log .log-error { color: #f87171; }
+        .debug-log .log-info { color: #60a5fa; }
+    </style>
+</head>
+<body class="bg-app">
+    <div class="app-container">
+        <header class="app-header" style="position: relative;">
+            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                <button onclick="window.history.back()" class="btn-scheda">
+                    <span class="material-symbols-rounded" style="color: var(--primary);">arrow_back</span>
+                </button>
+                <div style="flex-grow: 1;">
+                    <h1 style="font-size: 1.25rem; font-weight: 800; color: var(--primary); margin: 0;">Allegati</h1>
+                    <p id="tecnico-display" style="margin: 0; font-size: 0.85rem; color: var(--text-muted); font-weight: 600;"></p>
+                </div>
+                <div id="db-status-dot" style="position: absolute; top: 15px; right: 15px; width: 14px; height: 14px; background: #22c55e; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2); z-index: 10;"></div>
+            </div>
+        </header>
+        
+        <main style="padding: 1rem;">
+            <div class="allegati-header">
+                <h2 style="font-size: 1rem; margin: 0;" id="lavoro-info">Lavoro: <span id="lavoro-id"></span></h2>
+                <button class="btn-upload" id="btn-upload" onclick="uploadAllegato()">
+                    <span class="material-symbols-rounded">upload</span>
+                    Carica
+                </button>
+            </div>
+            
+            <div id="lista-allegati"></div>
+            
+            <!-- Pulsante per mostrare/nascondere log di debug 
+            <button onclick="toggleDebugLog()" style="margin-top: 1rem; background: none; border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem; width: 100%; font-size: 0.8rem; color: var(--text-muted);">
+                <span class="material-symbols-rounded" style="font-size: 1rem; vertical-align: middle;">bug_report</span>
+                Mostra log debug 
+            </button> -->
+            
+            <div id="debug-log" class="debug-log"></div>
+        </main>
+        
+        <footer class="app-footer">
+            <span class="footer-text" id="footer-text"></span>
+        </footer>
+        
+        <div id="loading-overlay">
+            <div class="loading-spinner"></div>
+            <div style="font-weight: 800; color: var(--primary);">Caricamento...</div>
+        </div>
+    </div>
+
+    <!-- VISUALIZZATORE PDF -->
+    <div class="pdf-viewer-overlay" id="pdf-viewer">
+        <div class="pdf-viewer-header">
+            <span class="pdf-viewer-title" id="pdf-title">Visualizza PDF</span>
+            <button class="btn-chiudi-viewer" onclick="chiudiPDF()">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+        </div>
+        <div class="pdf-viewer">
+            <iframe id="pdf-frame" src=""></iframe>
+        </div>
+    </div>
+
+    <input type="file" id="file-upload" accept=".pdf" style="display: none;">
+
+    <script>
+        let lavoroId = null;
+        let allegatiList = [];
+        const supabaseClient = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+        let debugLogs = [];
+
+        // Funzione per aggiungere log
+        function addLog(message, type = 'info') {
+            const logEntry = {
+                timestamp: new Date().toLocaleTimeString(),
+                message: message,
+                type: type
+            };
+            debugLogs.unshift(logEntry);
+            console.log(`[${type.toUpperCase()}] ${message}`);
+            
+            // Mantieni solo gli ultimi 20 log
+            if (debugLogs.length > 20) debugLogs.pop();
+            
+            updateDebugLog();
+        }
+
+        function updateDebugLog() {
+            const logContainer = document.getElementById('debug-log');
+            if (!logContainer) return;
+            
+            let html = '';
+            debugLogs.forEach(log => {
+                html += `<div class="log-entry log-${log.type}">[${log.timestamp}] ${log.message}</div>`;
+            });
+            
+            logContainer.innerHTML = html;
+        }
+
+        function toggleDebugLog() {
+            const logContainer = document.getElementById('debug-log');
+            const btn = event.target;
+            if (logContainer.style.display === 'none' || logContainer.style.display === '') {
+                logContainer.style.display = 'block';
+                btn.innerHTML = '<span class="material-symbols-rounded" style="font-size: 1rem; vertical-align: middle;">bug_report</span> Nascondi log debug';
+            } else {
+                logContainer.style.display = 'none';
+                btn.innerHTML = '<span class="material-symbols-rounded" style="font-size: 1rem; vertical-align: middle;">bug_report</span> Mostra log debug';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+            const display = document.getElementById('tecnico-display');
+            if (utente && utente.nome_completo && display) {
+                display.innerText = `Tecnico: ${utente.nome_completo}`;
+                addLog(`Utente loggato: ${utente.nome_completo} (${utente.ruolo || 'tecnico'})`, 'info');
+            }
+            
+            const footerEl = document.getElementById('footer-text');
+            if (footerEl && window.FOOTER_CONFIG) {
+                footerEl.innerText = window.FOOTER_CONFIG.testo;
+            }
+            
+            const configInfo = getDbConfigInfo();
+            const dot = document.getElementById('db-status-dot');
+            if (dot) {
+                if (configInfo.configured) {
+                    dot.style.background = '#22c55e';
+                    addLog('Database configurato', 'success');
+                } else {
+                    dot.style.background = '#f59e0b';
+                    addLog('Database non configurato', 'error');
+                }
+            }
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            lavoroId = urlParams.get('id');
+            
+            if (lavoroId) {
+                document.getElementById('lavoro-id').textContent = lavoroId;
+                addLog(`Caricamento allegati per lavoro ID: ${lavoroId}`, 'info');
+                caricaAllegati();
+            } else {
+                addLog('ID lavoro non specificato', 'error');
+                mostraNotifica('ID lavoro non specificato', 'errore');
+                setTimeout(() => window.history.back(), 2000);
+            }
+            
+            document.getElementById('file-upload').addEventListener('change', handleFileSelect);
+        });
+
+        async function caricaAllegati() {
+            try {
+                addLog('📥 Caricamento allegati...', 'info');
+                
+                const { data, error } = await supabaseClient
+                    .from('allegati')
+                    .select('*')
+                    .eq('lavoro_id', lavoroId)
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                allegatiList = data || [];
+                addLog(`✅ Trovati ${allegatiList.length} allegati`, 'success');
+                
+                if (allegatiList.length > 0) {
+                    allegatiList.forEach((a, i) => {
+                        addLog(`   Allegato ${i+1}: ${a.nome_file} (ID: ${a.id}) - Caricato da: ${a.caricato_da}`, 'info');
+                    });
+                }
+                
+                renderListaAllegati();
+                
+            } catch (error) {
+                addLog(`❌ Errore caricamento: ${error.message}`, 'error');
+                console.error('❌ Errore caricamento allegati:', error);
+                mostraNotifica('Errore nel caricamento', 'errore');
+            }
+        }
+
+        function renderListaAllegati() {
+            const container = document.getElementById('lista-allegati');
+            
+            if (allegatiList.length === 0) {
+                container.innerHTML = `
+                    <div class="vuoto-state">
+                        <span class="material-symbols-rounded">attach_file</span>
+                        <h3>Nessun allegato</h3>
+                        <p>Carica il primo documento PDF</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            allegatiList.forEach(allegato => {
+                const puoEliminare = puoEliminareAllegato(allegato);
+                
+                html += `
+                    <div class="allegato-card" data-id="${allegato.id}">
+                        <div class="allegato-icona">
+                            <span class="material-symbols-rounded">picture_as_pdf</span>
+                        </div>
+                        <div class="allegato-info">
+                            <div class="allegato-nome">${allegato.nome_file}</div>
+                            <div class="allegato-meta">
+                                <span>${new Date(allegato.created_at).toLocaleDateString('it-IT')}</span>
+                                <span>${allegato.caricato_da}</span>
+                            </div>
+                        </div>
+                        <div class="allegato-azioni">
+                            <button class="btn-icona" onclick="visualizzaPDF('${allegato.url_file}', '${allegato.nome_file}')" title="Visualizza">
+                                <span class="material-symbols-rounded">visibility</span>
+                            </button>
+                            ${puoEliminare ? `
+                            <button class="btn-icona elimina" onclick="eliminaAllegato('${allegato.id}')" title="Elimina">
+                                <span class="material-symbols-rounded">delete</span>
+                            </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function puoEliminareAllegato(allegato) {
+            const utente = authGetUtente();
+            if (!utente) return false;
+            
+            // Admin e supervisori possono sempre eliminare
+            if (utente.ruolo === 'admin' || utente.ruolo === 'supervisore') {
+                addLog(`🔓 ${utente.ruolo} può eliminare allegato di ${allegato.caricato_da}`, 'info');
+                return true;
+            }
+            
+            // Tecnici possono eliminare solo i propri allegati
+            const puo = utente.nome_completo === allegato.caricato_da;
+            addLog(`🔒 Tecnico ${utente.nome_completo} ${puo ? 'PUÒ' : 'NON PUÒ'} eliminare allegato di ${allegato.caricato_da}`, puo ? 'success' : 'info');
+            return puo;
+        }
+
+        function uploadAllegato() {
+            document.getElementById('file-upload').click();
+        }
+
+        async function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            addLog(`📄 File selezionato: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`, 'info');
+            
+            if (file.type !== 'application/pdf') {
+                addLog('❌ File non PDF', 'error');
+                mostraNotifica('Solo file PDF sono accettati', 'errore');
+                return;
+            }
+            
+            if (file.size > 5 * 1024 * 1024) {
+                addLog('❌ File troppo grande', 'error');
+                mostraNotifica('File troppo grande (max 5MB)', 'errore');
+                return;
+            }
+            
+            try {
+                mostraLoading();
+                
+                const fileName = `${Date.now()}_${file.name}`;
+                const filePath = `lavoro_${lavoroId}/${fileName}`;
+                
+                addLog(`📤 Upload su storage: ${filePath}`, 'info');
+                
+                // Upload su Storage
+                const { error: uploadError } = await supabaseClient.storage
+                    .from('lavori_allegati')
+                    .upload(filePath, file);
+                
+                if (uploadError) {
+                    addLog(`❌ Errore storage: ${uploadError.message}`, 'error');
+                    throw uploadError;
+                }
+                
+                addLog('✅ Upload storage completato', 'success');
+                
+                // Ottieni URL pubblico
+                const { data: urlData } = supabaseClient.storage
+                    .from('lavori_allegati')
+                    .getPublicUrl(filePath);
+                
+                addLog(`🔗 URL generato: ${urlData.publicUrl}`, 'info');
+                
+                // Salva nel database
+                const caricatoDa = document.getElementById('tecnico-display').textContent.replace('Tecnico: ', '');
+                addLog(`💾 Salvataggio in DB - Caricato da: ${caricatoDa}`, 'info');
+                
+                const { error: dbError } = await supabaseClient
+                    .from('allegati')
+                    .insert([{
+                        lavoro_id: lavoroId,
+                        nome_file: file.name,
+                        url_file: urlData.publicUrl,
+                        caricato_da: caricatoDa
+                    }]);
+                
+                if (dbError) {
+                    addLog(`❌ Errore DB: ${dbError.message}`, 'error');
+                    throw dbError;
+                }
+                
+                addLog('✅ Allegato salvato in DB', 'success');
+                mostraNotifica('File caricato con successo', 'successo');
+                await caricaAllegati();
+                
+            } catch (error) {
+                addLog(`❌ Errore upload: ${error.message}`, 'error');
+                console.error('❌ Errore upload:', error);
+                mostraNotifica('Errore nel caricamento del file', 'errore');
+            } finally {
+                nascondiLoading();
+                document.getElementById('file-upload').value = '';
+            }
+        }
+
+        async function eliminaAllegato(id) {
+            addLog(`🗑️ Tentativo eliminazione allegato ID: ${id}`, 'info');
+            
+            if (!confirm('Eliminare definitivamente questo allegato?')) {
+                addLog('❌ Eliminazione annullata dall\'utente', 'info');
+                return;
+            }
+            
+            try {
+                mostraLoading();
+                
+                const allegato = allegatiList.find(a => a.id == id);
+                if (!allegato) {
+                    addLog(`❌ Allegato con ID ${id} non trovato in lista`, 'error');
+                    return;
+                }
+                
+                addLog(`📄 Allegato da eliminare: ${allegato.nome_file}`, 'info');
+                addLog(`   URL: ${allegato.url_file}`, 'info');
+                addLog(`   Caricato da: ${allegato.caricato_da}`, 'info');
+                
+                // Estrai il nome del file dall'URL
+                const urlParts = allegato.url_file.split('/');
+                const fileName = urlParts[urlParts.length - 1];
+                const filePath = `lavoro_${lavoroId}/${fileName}`;
+                
+                addLog(`   Path storage: ${filePath}`, 'info');
+                
+                // Elimina da Storage
+                addLog('📤 Tentativo eliminazione da storage...', 'info');
+                const { error: storageError } = await supabaseClient.storage
+                    .from('lavori_allegati')
+                    .remove([filePath]);
+                
+                if (storageError) {
+                    addLog(`❌ Errore storage: ${storageError.message}`, 'error');
+                    throw storageError;
+                }
+                addLog('✅ Eliminazione da storage completata', 'success');
+                
+                // Elimina dal database
+                addLog('💾 Tentativo eliminazione da database...', 'info');
+                const { error: dbError } = await supabaseClient
+                    .from('allegati')
+                    .delete()
+                    .eq('id', id);
+                
+                if (dbError) {
+                    addLog(`❌ Errore DB: ${dbError.message}`, 'error');
+                    throw dbError;
+                }
+                addLog('✅ Eliminazione da database completata', 'success');
+                
+                addLog('✅ Allegato eliminato con successo', 'success');
+                mostraNotifica('Allegato eliminato', 'successo');
+                await caricaAllegati();
+                
+            } catch (error) {
+                addLog(`❌ Errore eliminazione: ${error.message}`, 'error');
+                console.error('❌ Errore eliminazione:', error);
+                mostraNotifica('Errore nell\'eliminazione', 'errore');
+            } finally {
+                nascondiLoading();
+            }
+        }
+
+        function visualizzaPDF(url, nome) {
+            addLog(`📖 Visualizzazione PDF: ${nome}`, 'info');
+            document.getElementById('pdf-title').textContent = nome;
+            document.getElementById('pdf-frame').src = url;
+            document.getElementById('pdf-viewer').style.display = 'flex';
+        }
+
+        function chiudiPDF() {
+            document.getElementById('pdf-viewer').style.display = 'none';
+            document.getElementById('pdf-frame').src = '';
+        }
+
+        function mostraNotifica(messaggio, tipo = 'info') {
+            const notifica = document.createElement('div');
+            notifica.className = `notifica ${tipo}`;
+            
+            let icona = 'info';
+            if (tipo === 'successo') icona = 'check_circle';
+            if (tipo === 'errore') icona = 'error';
+            
+            notifica.innerHTML = `
+                <span class="material-symbols-rounded" style="font-size: 14px;">${icona}</span>
+                <span>${messaggio}</span>
+            `;
+            
+            document.body.appendChild(notifica);
+            
+            setTimeout(() => {
+                if (notifica.parentNode) {
+                    notifica.style.opacity = '0';
+                    notifica.style.transform = 'translateX(-50%) translateY(-5px)';
+                    notifica.style.transition = 'all 0.15s ease';
+                    
+                    setTimeout(() => {
+                        if (notifica.parentNode) notifica.remove();
+                    }, 150);
+                }
+            }, 2000);
+        }
+
+        function mostraLoading() {
+            document.getElementById('loading-overlay').style.display = 'flex';
+        }
+
+        function nascondiLoading() {
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

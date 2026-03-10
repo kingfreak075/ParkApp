@@ -70,6 +70,14 @@
         <span class="material-symbols-rounded">assignment</span>
         Fogli Lavoro
     </button>
+<!-- ✅ NUOVO PULSANTE GESTIONE LAVORI -->
+<button class="nav-btn" data-tab="lavori">
+    <span class="material-symbols-rounded">assignment_turned_in</span>
+    Gestione Lavori
+</button>
+
+
+
     <!-- ANNOTAZIONI SPOSTATA QUI -->
     <button class="nav-btn" data-tab="annotazioni">
         <span class="material-symbols-rounded">note_alt</span>
@@ -2416,7 +2424,316 @@
     </div>
 </div>
 
+<!-- NUOVO TAB: GESTIONE LAVORI (AGENDA ADMIN) -->
+<div id="tab-lavori" class="tab-content">
+    <div class="card">
+        <div class="card-header">
+            <h3>
+                <span class="material-symbols-rounded">assignment_turned_in</span>
+                Gestione Lavori
+            </h3>
+            <div class="card-actions">
+                <button class="btn btn-primary" onclick="apriModaleNuovoLavoro()">
+                    <span class="material-symbols-rounded">add</span>
+                    Nuovo Lavoro
+                </button>
+                <button class="btn btn-icon" onclick="caricaLavoriAdmin()" title="Aggiorna">
+                    <span class="material-symbols-rounded">refresh</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <!-- STATISTICHE DASHBOARD -->
+            <div class="stats-grid" style="margin-bottom: 2rem;" id="statistiche-lavori-admin">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-symbols-rounded">assignment</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stat-lavori-totali">0</div>
+                        <div class="stat-label">Totale Lavori</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-symbols-rounded">new_releases</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stat-lavori-aperti">0</div>
+                        <div class="stat-label">Aperti</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-symbols-rounded">pending</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stat-lavori-lavorazione">0</div>
+                        <div class="stat-label">In Lavorazione</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-symbols-rounded">priority_high</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stat-lavori-alta">0</div>
+                        <div class="stat-label">Priorità ALTA</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-symbols-rounded">check_circle</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stat-lavori-chiusi">0</div>
+                        <div class="stat-label">Da Terminare</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-symbols-rounded">done_all</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stat-lavori-terminati">0</div>
+                        <div class="stat-label">Terminati</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- FILTRI AVANZATI -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                <div class="form-group">
+                    <label>🔍 Ricerca</label>
+                    <input type="text" id="filtro-ricerca-lavori" class="form-control" placeholder="Impianto o note...">
+                </div>
+                <div class="form-group">
+                    <label>📋 Stato</label>
+                    <select id="filtro-stato-lavori" class="form-control">
+                        <option value="tutti">Tutti gli stati</option>
+                        <option value="Aperto">Aperti</option>
+                        <option value="Accettata">Accettati</option>
+                        <option value="Lavorazione">Lavorazione</option>
+                        <option value="Sospesa">Sospesi</option>
+                        <option value="Chiusa">Chiusi</option>
+                        <option value="Terminata">Terminati</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>👤 Tecnico</label>
+                    <select id="filtro-tecnico-lavori" class="form-control">
+                        <option value="tutti">Tutti i tecnici</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>⚡ Priorità</label>
+                    <select id="filtro-priorita-lavori" class="form-control">
+                        <option value="tutti">Tutte</option>
+                        <option value="ALTA">ALTA</option>
+                        <option value="BASSA">BASSA</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- LISTA LAVORI -->
+            <div id="lista-lavori-admin-container"></div>
+        </div>
+    </div>
+    
+              <!-- MODALE ALLEGATI (VERSIONE COMPLETA) -->
+<div class="modal" id="modal-allegati-lavoro">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+            <h3>
+                <span class="material-symbols-rounded">attach_file</span>
+                Gestione Allegati - <span id="allegati-lavoro-id"></span>
+            </h3>
+            <button class="btn-icon-small" onclick="chiudiModaleAllegati()">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+        </div>
+        
+        <div class="modal-body">
+            <!-- Area Upload -->
+            <div style="margin-bottom: 2rem;">
+                <div class="file-upload-area" id="drop-zone-allegati" style="border: 2px dashed var(--border); border-radius: 12px; padding: 1.5rem; text-align: center; cursor: pointer;" onclick="document.getElementById('file-allegato-upload').click()">
+                    <input type="file" id="file-allegato-upload" accept=".pdf" style="display: none;">
+                    <span class="material-symbols-rounded" style="font-size: 3rem; color: var(--primary);">cloud_upload</span>
+                    <p style="font-weight: 600; color: var(--text-main); margin: 0.5rem 0;">Trascina qui il file PDF</p>
+                    <p style="color: #64748b; font-size: 0.9rem;">oppure clicca per selezionare</p>
+                    <small style="color: #94a3b8;">Solo PDF - Max 5MB</small>
+                </div>
+            </div>
+            
+            <!-- Lista Allegati -->
+            <div style="background: #f8fafc; border-radius: 12px; padding: 1rem;">
+                <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <span class="material-symbols-rounded">description</span>
+                    Documenti caricati
+                </h4>
+                <div id="lista-allegati-container" style="max-height: 300px; overflow-y: auto;"></div>
+            </div>
+        </div>
+    </div>
+</div>
 
+<!-- MODALE DETTAGLIO LAVORO (VERSIONE GRANDE) -->
+<div class="modal" id="modal-dettaglio-lavoro-admin">
+    <div class="modal-content" style="max-width: 900px; width: 90%;">
+        <div class="modal-header">
+            <h3>
+                <span class="material-symbols-rounded">info</span>
+                Dettaglio Lavoro
+            </h3>
+            <button class="btn-icon-small" onclick="chiudiModaleDettaglioLavoro()">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+        </div>
+        <div class="modal-body" id="dettaglio-lavoro-content">
+            <!-- Contenuto dinamico -->
+        </div>
+        <input type="file" id="file-allegato-dettaglio" accept=".pdf" style="display: none;">
+    </div>
+</div>
+
+<!-- MODALE NOTE LAVORAZIONE (VERSIONE GRANDE) -->
+<div class="modal" id="modal-note-lavoro-admin">
+    <div class="modal-content" style="max-width: 700px;">
+        <div class="modal-header">
+            <h3>
+                <span class="material-symbols-rounded">notes</span>
+                Note Lavorazione
+            </h3>
+            <button class="btn-icon-small" onclick="chiudiModaleNoteLavoro()">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <!-- Lista Note -->
+            <div style="background: #f8fafc; border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem;">
+                <h4 style="margin: 0 0 1rem 0;">📝 Storico note</h4>
+                <div id="note-lavoro-list" style="max-height: 300px; overflow-y: auto;"></div>
+            </div>
+            
+            <!-- Nuova Nota -->
+            <div style="background: #f8fafc; border-radius: 12px; padding: 1rem;">
+                <h4 style="margin: 0 0 1rem 0;">✏️ Aggiungi nota</h4>
+                <div class="form-group">
+                    <textarea id="nuova-nota-lavoro" class="form-control" rows="3" placeholder="Scrivi una nota..."></textarea>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="chiudiModaleNoteLavoro()">Annulla</button>
+            <button class="btn btn-primary" onclick="salvaNotaLavoroAdmin()">
+                <span class="material-symbols-rounded">save</span>
+                Salva Nota
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODALE NUOVO/MODIFICA LAVORO (CON INDIRIZZO) -->
+<div class="modal" id="modal-lavoro-admin">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+            <h3 id="modal-lavoro-titolo">Nuovo Lavoro</h3>
+            <button class="btn-icon-small" onclick="chiudiModaleLavoro()">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="form-lavoro-admin">
+                <input type="hidden" id="lavoro-id">
+                
+                <!-- Campo Impianto con ricerca -->
+                <div class="form-group">
+                    <label>Impianto *</label>
+                    <input type="text" id="lavoro-impianto" class="form-control" placeholder="Codice impianto" list="lista-impianti-admin" required>
+                    <datalist id="lista-impianti-admin"></datalist>
+                </div>
+                
+                <!-- Riquadro indirizzo (dinamico) -->
+                <div id="indirizzo-ricerca" style="margin-bottom: 1rem;"></div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Tecnico *</label>
+                        <select id="lavoro-tecnico" class="form-control" required>
+                            <option value="">Seleziona...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo Lavoro *</label>
+                        <select id="lavoro-tipo" class="form-control" required onchange="gestisciTipoAltroAdmin()">
+                            <option value="">Seleziona...</option>
+                            <option value="Ordine a Consuntivo">Ordine a Consuntivo</option>
+                            <option value="Lavoro da Verbale">Lavoro da Verbale</option>
+                            <option value="Commessa">Commessa</option>
+                            <option value="Riparazione">Riparazione</option>
+                            <option value="Altro">Altro</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="container-tipo-altro-admin" style="display: none; margin-top: 1rem;">
+                    <div class="form-group">
+                        <label>Specifica altro *</label>
+                        <input type="text" id="lavoro-tipo-altro" class="form-control" placeholder="Descrizione">
+                    </div>
+                </div>
+                
+                <div style="margin-top: 1rem;">
+                    <label>Priorità *</label>
+                    <div style="display: flex; gap: 1rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="radio" name="lavoro-priorita" value="ALTA" checked> ALTA
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="radio" name="lavoro-priorita" value="BASSA"> BASSA
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label>Note Lavoro</label>
+                    <textarea id="lavoro-note" class="form-control" rows="3" placeholder="Note per il tecnico..."></textarea>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="chiudiModaleLavoro()">Annulla</button>
+            <button class="btn btn-primary" onclick="salvaLavoroAdmin()">
+                <span class="material-symbols-rounded">save</span>
+                Salva Lavoro
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODALE VISUALIZZATORE PDF -->
+<div class="modal" id="pdf-viewer-modal">
+    <div class="modal-content" style="max-width: 800px; width: 90%; height: 80vh;">
+        <div class="modal-header">
+            <h3>
+                <span class="material-symbols-rounded">picture_as_pdf</span>
+                Visualizzatore PDF
+            </h3>
+            <button class="btn-icon-small" onclick="chiudiPDF()">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+        </div>
+        <div class="modal-body" style="height: calc(100% - 60px); padding: 0;">
+            <iframe id="pdf-frame" style="width: 100%; height: 100%; border: none;"></iframe>
+        </div>
+    </div>
+</div>
+    
+   
+    
+
+</div>
 
 
 
@@ -2775,7 +3092,53 @@
         </div>
     </div>
 </div>
-
+<!-- MODALE CAMBIO STATO LAVORO -->
+<div class="modal" id="modal-cambio-stato">
+    <div class="modal-content" style="max-width: 450px;">
+        <div class="modal-header">
+            <h3>
+                <span class="material-symbols-rounded">sync_alt</span>
+                Cambia Stato Lavoro
+            </h3>
+            <button class="btn-icon-small" onclick="chiudiModaleCambioStato()">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div style="margin-bottom: 1.5rem;">
+                <div style="background: #f8fafc; border-radius: 12px; padding: 1rem; margin-bottom: 1rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span style="font-weight: 700;">Impianto:</span>
+                        <span id="cambio-stato-impianto" style="font-weight: 800;"></span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="font-weight: 700;">Stato attuale:</span>
+                        <span id="cambio-stato-attuale" style="font-weight: 800;"></span>
+                    </div>
+                </div>
+                
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Nuovo stato</label>
+                <select id="cambio-stato-select" class="form-control" style="margin-bottom: 1rem;">
+                    <!-- Opzioni generate dinamicamente -->
+                </select>
+                
+                <div class="form-group">
+                    <label>Note (opzionale)</label>
+                    <textarea id="cambio-stato-note" class="form-control" rows="2" placeholder="Motivazione del cambio stato..."></textarea>
+                </div>
+            </div>
+            
+            <input type="hidden" id="cambio-stato-lavoro-id">
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="chiudiModaleCambioStato()">Annulla</button>
+            <button class="btn btn-primary" onclick="confermaCambioStato()">
+                <span class="material-symbols-rounded">check</span>
+                Conferma Cambio
+            </button>
+        </div>
+    </div>
+</div>
 
  </body>
 <!-- Poi il bottone di debug -->
@@ -3141,6 +3504,7 @@ window.logout = async function() {
 <script src="admin_annotazioni.js"></script>
 <script src="admin_foglio.js"></script>
 <script src="admin_users.js"></script>
+<script src="admin_lavori.js"></script>
 
 </body>
 </html>

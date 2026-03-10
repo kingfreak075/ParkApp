@@ -3298,3 +3298,77 @@ body {
     overflow-y: auto;
     padding: 1.5rem;
 }
+
+/* Stili per i badge delle tipologie */
+.badge-tipologia {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-left: 0.5rem;
+}
+
+/* Stili per le note */
+.nota-item {
+    background: white;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s;
+}
+
+.nota-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* File upload area migliorata */
+.file-upload-area {
+    border: 2px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    background: #f8fafc;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.file-upload-area:hover {
+    border-color: #3b82f6;
+    background: #eff6ff;
+}
+
+/* Badge per stato impianto */
+.impianto-presente {
+    background: #f0fdf4;
+    border-left: 4px solid #22c55e;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    margin: 0.5rem 0;
+}
+
+.impianto-assente {
+    background: #fef2f2;
+    border-left: 4px solid #ef4444;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    margin: 0.5rem 0;
+    color: #991b1b;
+    font-weight: 600;
+}
+
+/* Lavoro card migliorata */
+.lavoro-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.25rem;
+    border: 1px solid #e2e8f0;
+    border-left: 6px solid #3b82f6;
+    transition: all 0.2s;
+}
+
+.lavoro-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    transform: translateY(-2px);
+}

@@ -73,26 +73,32 @@
             </button>
 
             <!-- SEZIONE ADMIN (VISIBILE SOLO A SUPERVISORI/ADMIN) -->
-            <div id="admin-section" style="display: none; margin-top: 20px; grid-column: 1 / -1;">
-                <div style="margin: 10px 0 15px 0; position: relative;">
-                    <div style="position: absolute; left: 0; top: 50%; width: 100%; height: 1px; background: linear-gradient(90deg, transparent, #e2e8f0, transparent);"></div>
-                    <div style="position: relative; display: inline-block; background: #f8fafc; padding: 0 15px; margin-left: 10px; font-size: 0.8rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">
-                        <span class="material-symbols-rounded" style="font-size: 1rem; vertical-align: middle; margin-right: 5px;">admin_panel_settings</span>
-                        AREA AMMINISTRATIVA
-                    </div>
-                </div>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <button onclick="window.location.href='admin_veicoli.html'" class="menu-item-v2">
-                        <span class="material-symbols-rounded" style="color: #f59e0b;">directions_car</span>
-                        ADMIN VEICOLI
-                    </button>
-                    <button onclick="window.location.href='admin_reperibilita.html'" class="menu-item-v2">
-                        <span class="material-symbols-rounded" style="color: #8b5cf6;">calendar_month</span>
-                        ADMIN REPERIBILITÀ
-                    </button>
-                </div>
-            </div>
+           <!-- SEZIONE ADMIN (VISIBILE SOLO A SUPERVISORI/ADMIN) -->
+<div id="admin-section" style="display: none; margin-top: 20px; grid-column: 1 / -1;">
+    <div style="margin: 10px 0 15px 0; position: relative;">
+        <div style="position: absolute; left: 0; top: 50%; width: 100%; height: 1px; background: linear-gradient(90deg, transparent, #e2e8f0, transparent);"></div>
+        <div style="position: relative; display: inline-block; background: #f8fafc; padding: 0 15px; margin-left: 10px; font-size: 0.8rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">
+            <span class="material-symbols-rounded" style="font-size: 1rem; vertical-align: middle; margin-right: 5px;">admin_panel_settings</span>
+            AREA AMMINISTRATIVA
+        </div>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+        <button onclick="window.location.href='admin_veicoli.html'" class="menu-item-v2">
+            <span class="material-symbols-rounded" style="color: #f59e0b;">directions_car</span>
+            ADMIN VEICOLI
+        </button>
+        <button onclick="window.location.href='admin_reperibilita.html'" class="menu-item-v2">
+            <span class="material-symbols-rounded" style="color: #8b5cf6;">calendar_month</span>
+            ADMIN REPERIBILITÀ
+        </button>
+        <button onclick="window.location.href='agenda_admin.html'" class="menu-item-v2">
+            <span class="material-symbols-rounded" style="color: #22c55e;">assignment</span>
+            AGENDA ADMIN
+        </button>
+        <!-- Aggiungi altri bottoni admin qui se necessario -->
+    </div>
+</div>
         </main>
 
         <footer class="app-footer">

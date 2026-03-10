@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ParkApp - La mia Agenda</title>
+    <title>ParkApp - Gestione Lavori</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
@@ -16,8 +16,8 @@
     <script>
         (function() {
             const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
-            if (!utente) {
-                window.location.href = 'index.html';
+            if (!utente || (utente.ruolo !== 'admin' && utente.ruolo !== 'supervisore')) {
+                window.location.href = 'menu.html';
             }
         })();
     </script>
@@ -31,65 +31,126 @@
     <style>
         .app-container { max-width: 450px; margin: 0 auto; min-height: 100vh; padding-bottom: 5rem; }
         
-        .filtri-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
+        /* Header con pulsante nuovo lavoro */
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 1.5rem;
         }
         
-        .filtro-chip {
-            padding: 10px 5px;
+        .btn-nuovo-lavoro {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            font-weight: 800;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+        }
+        
+        /* Statistiche dashboard */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .stat-card {
             background: white;
-            border: 2px solid var(--border);
-            border-radius: 30px;
-            font-size: 0.8rem;
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        
+        .stat-card.highlight {
+            background: #fee2e2;
+            border-color: #ef4444;
+        }
+        
+        .stat-card.warning {
+            background: #fef3c7;
+            border-color: #f59e0b;
+        }
+        
+        .stat-valore {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--primary);
+        }
+        
+        .stat-label {
+            font-size: 0.7rem;
             font-weight: 700;
             color: var(--text-muted);
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
+            text-transform: uppercase;
         }
         
-        .filtro-chip.attivo {
-            background: var(--primary);
-            border-color: var(--primary);
-            color: white;
+        /* Filtri avanzati */
+        .filtri-avanzati {
+            background: white;
+            border-radius: 16px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border);
         }
         
-        .filtro-chip:hover {
-            border-color: var(--primary);
+        .filtri-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .select-field {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            background: white;
         }
         
         .ricerca-wrapper {
             position: relative;
-            margin-bottom: 1rem;
+            margin-top: 0.5rem;
         }
         
         .ricerca-input {
             width: 100%;
-            padding: 0.875rem 1rem 0.875rem 3rem;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
             border: 2px solid var(--border);
-            border-radius: 12px;
-            font-size: 0.95rem;
+            border-radius: 10px;
+            font-size: 0.9rem;
             font-weight: 600;
             box-sizing: border-box;
         }
         
         .ricerca-icona {
             position: absolute;
-            left: 1rem;
+            left: 0.75rem;
             top: 50%;
             transform: translateY(-50%);
             color: var(--text-muted);
         }
         
+        /* Card lavori (stesse di agenda.js ma con più azioni) */
         .lavoro-card {
             background: white;
             border-radius: 16px;
             padding: 1rem;
             margin-bottom: 1rem;
             border: 1px solid var(--border);
+            border-left: 6px solid var(--primary);
             box-shadow: 0 2px 8px rgba(0,0,0,0.04);
             transition: all 0.2s;
         }
@@ -218,40 +279,50 @@
             background: #ef4444;
         }
         
-        .lavoro-stati-rapidi {
-            display: flex;
-            gap: 0.5rem;
-            margin-top: 0.75rem;
-            padding-top: 0.75rem;
-            border-top: 1px dashed var(--border);
+        .btn-icona.modifica:hover {
+            background: #f59e0b;
+            color: white;
         }
         
-        .btn-stato-rapido {
-            flex: 1;
+        .lavoro-timeline {
+            margin: 0.75rem 0;
             padding: 0.5rem;
-            border: none;
+            background: #f8fafc;
             border-radius: 8px;
-            font-size: 0.7rem;
+            font-size: 0.75rem;
+        }
+        
+        .timeline-compact {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        
+        .timeline-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-termina {
+            width: 100%;
+            background: #22c55e;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 0.75rem;
             font-weight: 800;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
             cursor: pointer;
-            transition: all 0.2s;
+            margin-top: 0.5rem;
         }
         
-        .btn-stato-rapido:hover {
-            transform: translateY(-1px);
-            filter: brightness(0.9);
-        }
-        
-        .vuoto-state {
-            text-align: center;
-            padding: 3rem 1rem;
-            color: var(--text-muted);
-        }
-        
-        .vuoto-state .material-symbols-rounded {
-            font-size: 3rem;
-            opacity: 0.3;
-            margin-bottom: 1rem;
+        .btn-termina:hover {
+            background: #16a34a;
         }
         
         /* MODALI */
@@ -311,25 +382,68 @@
             gap: 0.75rem;
         }
         
-        .nota-item {
-            background: #f8fafc;
-            border-radius: 12px;
-            padding: 1rem;
-            margin-bottom: 0.75rem;
-            border-left: 4px solid var(--primary);
+        /* Form inputs */
+        .input-group {
+            margin-bottom: 1.25rem;
         }
         
-        .nota-testo {
-            font-size: 0.9rem;
-            color: var(--text-main);
-            margin-bottom: 0.5rem;
-        }
-        
-        .nota-meta {
-            font-size: 0.7rem;
+        .input-label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 800;
             color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+        }
+        
+        .input-field {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            background: #f8fafc;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-main);
+            outline: none;
+            box-sizing: border-box;
+        }
+        
+        .input-field:focus {
+            border-color: var(--primary);
+            background: white;
+        }
+        
+        .radio-group {
             display: flex;
-            justify-content: space-between;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+        
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+        
+        .radio-option input[type="radio"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary);
+        }
+        
+        .vuoto-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-muted);
+        }
+        
+        .vuoto-state .material-symbols-rounded {
+            font-size: 3rem;
+            opacity: 0.3;
+            margin-bottom: 1rem;
         }
         
         .btn-primario {
@@ -444,7 +558,7 @@
                     <span class="material-symbols-rounded" style="color: var(--primary);">arrow_back</span>
                 </button>
                 <div style="flex-grow: 1;">
-                    <h1 style="font-size: 1.25rem; font-weight: 800; color: var(--primary); margin: 0;">La mia Agenda</h1>
+                    <h1 style="font-size: 1.25rem; font-weight: 800; color: var(--primary); margin: 0;">Gestione Lavori</h1>
                     <p id="tecnico-display" style="margin: 0; font-size: 0.85rem; color: var(--text-muted); font-weight: 600;"></p>
                 </div>
                 <div id="db-status-dot" style="position: absolute; top: 15px; right: 15px; width: 14px; height: 14px; background: #22c55e; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2); z-index: 10;"></div>
@@ -452,22 +566,56 @@
         </header>
         
         <main style="padding: 1rem;">
-            <div class="ricerca-wrapper">
-                <span class="material-symbols-rounded ricerca-icona">search</span>
-                <input type="text" class="ricerca-input" id="ricerca-testo" placeholder="Cerca impianto o note...">
+            <div class="admin-header">
+                <h2 style="font-size: 1rem; margin: 0;">Panoramica</h2>
+                <button class="btn-nuovo-lavoro" onclick="apriModaleNuovoLavoro()">
+                    <span class="material-symbols-rounded">add</span>
+                    NUOVO LAVORO
+                </button>
             </div>
             
- <!-- Sostituisci questa sezione: -->
-<div class="filtri-grid" id="filtri-container">
-    <span class="filtro-chip attivo" data-stato="tutti">Tutti</span>
-    <span class="filtro-chip" data-stato="Aperto">Aperti</span>
-    <span class="filtro-chip" data-stato="Accettata">Accettati</span>
-    <span class="filtro-chip" data-stato="Lavorazione">Lavorazione</span>
-    <span class="filtro-chip" data-stato="Sospesa">Sospesi</span>
-    <span class="filtro-chip" data-stato="Chiusa">Chiusi</span>
-</div>
+            <div id="statistiche-admin" class="stat-grid">
+                <!-- Popolato dinamicamente -->
+                <div class="stat-card">
+                    <div class="stat-valore">0</div>
+                    <div class="stat-label">Caricamento...</div>
+                </div>
+            </div>
             
-            <div id="lista-lavori-tecnico"></div>
+            <div class="filtri-avanzati">
+                <div class="filtri-row">
+                    <select id="filtro-stato" class="select-field">
+                        <option value="tutti">Tutti gli stati</option>
+                        <option value="Aperto">Aperti</option>
+                        <option value="Accettata">Accettati</option>
+                        <option value="Lavorazione">Lavorazione</option>
+                        <option value="Sospesa">Sospesi</option>
+                        <option value="Chiusa">Chiusi</option>
+                        <option value="Terminata">Terminati</option>
+                    </select>
+                    <select id="filtro-tecnico" class="select-field">
+                        <option value="tutti">Tutti i tecnici</option>
+                    </select>
+                </div>
+                <div class="filtri-row">
+                    <select id="filtro-priorita" class="select-field">
+                        <option value="tutti">Tutte le priorità</option>
+                        <option value="ALTA">ALTA</option>
+                        <option value="BASSA">BASSA</option>
+                    </select>
+                    <select id="ordinamento" class="select-field">
+                        <option value="data_apertura_desc">Più recenti</option>
+                        <option value="data_apertura_asc">Meno recenti</option>
+                        <option value="priorita_desc">Priorità ALTA prima</option>
+                    </select>
+                </div>
+                <div class="ricerca-wrapper">
+                    <span class="material-symbols-rounded ricerca-icona">search</span>
+                    <input type="text" class="ricerca-input" id="ricerca-testo" placeholder="Cerca impianto o note...">
+                </div>
+            </div>
+            
+            <div id="lista-lavori-admin"></div>
         </main>
         
         <footer class="app-footer">
@@ -498,6 +646,74 @@
         </div>
     </div>
 
+    <!-- MODALE NUOVO LAVORO / MODIFICA -->
+    <div class="modale-overlay" id="modale-nuovo-lavoro">
+        <div class="modale-content">
+            <div class="modale-header">
+                <h3 class="modale-title" id="modale-lavoro-titolo">Nuovo Lavoro</h3>
+                <button class="modale-close" onclick="chiudiModaleNuovoLavoro()">
+                    <span class="material-symbols-rounded">close</span>
+                </button>
+            </div>
+            <div class="modale-body">
+                <input type="hidden" id="lavoro-id-modifica">
+                
+                <div class="input-group">
+                    <label class="input-label">Impianto *</label>
+                    <input type="text" id="impianto-id" class="input-field" placeholder="Codice impianto" required>
+                </div>
+                
+                <div class="input-group">
+                    <label class="input-label">Tecnico *</label>
+                    <select id="tecnico-id" class="input-field" required>
+                        <option value="">Seleziona tecnico...</option>
+                    </select>
+                </div>
+                
+                <div class="input-group">
+                    <label class="input-label">Tipo lavoro *</label>
+                    <select id="tipo-lavoro" class="input-field" onchange="gestisciTipoAltro()" required>
+                        <option value="">Seleziona tipo...</option>
+                        <option value="Ordine a Consuntivo">Ordine a Consuntivo</option>
+                        <option value="Lavoro da Verbale">Lavoro da Verbale</option>
+                        <option value="Commessa">Commessa</option>
+                        <option value="Riparazione">Riparazione</option>
+                        <option value="Altro">Altro</option>
+                    </select>
+                </div>
+                
+                <div class="input-group" id="tipo-altro-container" style="display: none;">
+                    <label class="input-label">Specifica altro *</label>
+                    <input type="text" id="tipo-altro" class="input-field" placeholder="Descrizione tipo lavoro">
+                </div>
+                
+                <div class="input-group">
+                    <label class="input-label">Priorità *</label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="priorita" value="ALTA" checked> ALTA
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="priorita" value="BASSA"> BASSA
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label class="input-label">Note lavoro</label>
+                    <textarea id="note-lavoro" class="input-field" rows="3" placeholder="Note per il tecnico..."></textarea>
+                </div>
+            </div>
+            <div class="modale-footer">
+                <button class="btn-secondario" onclick="chiudiModaleNuovoLavoro()">Annulla</button>
+                <button class="btn-primario" onclick="salvaLavoro()" id="btn-salva-lavoro">
+                    <span class="material-symbols-rounded">save</span>
+                    Salva Lavoro
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODALE NOTE LAVORAZIONE -->
     <div class="modale-overlay" id="modale-note">
         <div class="modale-content">
@@ -511,44 +727,17 @@
                 <div id="note-list" style="margin-bottom: 1.5rem; max-height: 300px; overflow-y: auto;"></div>
                 
                 <div class="input-group">
-                    <label class="input-label">Nuova nota</label>
+                    <label class="input-label">Nuova nota (solo admin/supervisori)</label>
                     <textarea id="nuova-nota" class="input-field" rows="3" placeholder="Scrivi una nota..."></textarea>
                 </div>
             </div>
             <div class="modale-footer">
                 <button class="btn-secondario" onclick="chiudiModaleNote()">Annulla</button>
-                <button class="btn-primario" onclick="salvaNota()">Salva Nota</button>
+                <button class="btn-primario" onclick="salvaNotaAdmin()">Salva Nota</button>
             </div>
         </div>
     </div>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
-        const display = document.getElementById('tecnico-display');
-        if (utente && utente.nome_completo && display) {
-            display.innerText = `Tecnico: ${utente.nome_completo}`;
-        }
-        
-        const footerEl = document.getElementById('footer-text');
-        if (footerEl && window.FOOTER_CONFIG) {
-            footerEl.innerText = window.FOOTER_CONFIG.testo;
-        }
-        
-        const configInfo = getDbConfigInfo();
-        const dot = document.getElementById('db-status-dot');
-        if (dot) {
-            if (configInfo.configured) {
-                dot.style.background = '#22c55e';
-            } else {
-                dot.style.background = '#f59e0b';
-            }
-        }
-        
-        
-    });
-</script>
-    
-    <script src="agenda.js"></script>
+    <script src="agenda_admin.js"></script>
 </body>
 </html>
