@@ -9,6 +9,24 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="db-config.js"></script>
+    <script src="check-db-config.js"></script>
+    <!-- ✅ AGGIUNTO: Auth.js per gestione login -->
+    <script src="auth.js"></script>
+    <!-- ✅ GATEKEEPER: Protezione pagina -->
+    <script>
+        (function() {
+            const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+            if (!utente) {
+                window.location.href = 'index.html';
+            }
+        })();
+    </script>
+    <!-- ✅ CONFIGURAZIONE FOOTER -->
+    <script>
+        window.FOOTER_CONFIG = {
+            testo: "EDIT BY KINGFREAK Version 1.0"
+        };
+    </script>
     <style>
         /* Stili specifici per tecnico reperibilità */
         .app-container { max-width: 450px; margin: 0 auto; min-height: 100vh; padding-bottom: 5rem; }
@@ -28,9 +46,9 @@
             border-bottom: 1px solid var(--border); 
             overflow-x: auto; 
             padding: 0 1rem; 
-            position: sticky; 
-            top: 60px; 
-            z-index: 10; 
+             /* position: sticky;  <- COMMENTA O RIMUOVI */
+    /* top: 60px; <- COMMENTA O RIMUOVI */
+    /* z-index: 10; <- COMMENTA O RIMUOVI */
         }
         
         .tecnico-tab { 
@@ -221,7 +239,7 @@
         }
         
         .stato-pending { background: #fef3c7; color: #92400e; }
-                .stato-approved { background: #d1fae5; color: #065f46; }
+        .stato-approved { background: #d1fae5; color: #065f46; }
         .stato-rejected { background: #fee2e2; color: #991b1b; }
         .stato-peer { background: #dbeafe; color: #1e40af; }
         
@@ -301,11 +319,125 @@
         .input-group { margin-bottom: 1.25rem; }
         .input-label { display: block; font-size: 0.8rem; font-weight: 800; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; }
         .input-field { width: 100%; padding: 0.875rem 1rem; background: #f8fafc; border: 2px solid var(--border); border-radius: 12px; font-family: 'Inter', sans-serif; font-size: 0.95rem; font-weight: 600; color: var(--text-main); outline: none; }
-        .btn-action { padding: 1rem; border: none; border-radius: 12px; font-family: 'Inter', sans-serif; font-size: 0.95rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
-        .btn-primary { background: var(--primary); color: var(--white); }
-        .btn-secondary { background: var(--primary-light); color: var(--primary); border: 2px solid var(--border); }
-        .btn-success { background: #22c55e; color: white; }
-        .btn-danger { background: #ef4444; color: white; }
+        
+        /* Uniformazione pulsanti */
+        .btn-primario {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 700;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        }
+        
+        .btn-primario:hover {
+            background: color-mix(in srgb, var(--primary) 85%, black);
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondario {
+            background: white;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 700;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-secondario:hover {
+            background: var(--primary-light);
+            transform: translateY(-1px);
+        }
+        
+        .btn-success {
+            background: #22c55e;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 700;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-success:hover {
+            background: #16a34a;
+            transform: translateY(-1px);
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 700;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+            transform: translateY(-1px);
+        }
+        
+        .btn-action {
+            padding: 0.5rem 1rem;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-action.btn-primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+        }
+        
+        .btn-action.btn-primary:hover {
+            background: color-mix(in srgb, var(--primary) 85%, black);
+        }
+        
+        .btn-action.btn-secondary {
+            background: white;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+        
+        .btn-action.btn-secondary:hover {
+            background: var(--primary-light);
+        }
         
         /* MESSAGGI */
         .message { display: none; padding: 1rem; border-radius: 12px; margin: 1rem 0; font-size: 0.9rem; font-weight: 600; }
@@ -346,12 +478,47 @@
             opacity: 0.3;
             margin-bottom: 1rem;
         }
+
+        /* Notifiche compatte */
+        .notifica {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 2000;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 500;
+            max-width: 90%;
+            width: auto;
+            height: 28px;
+            min-height: 28px;
+            line-height: 1;
+            animation: slideUp 0.2s ease;
+            pointer-events: none;
+        }
+
+        .notifica.successo { background: #22c55e; }
+        .notifica.errore { background: #ef4444; }
+        .notifica.info { background: #334155; }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translate(-50%, 20px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
     </style>
 </head>
 <body class="bg-app">
     <div class="app-container">
-        <!-- HEADER -->
-        <header class="app-header-tecnico">
+        <!-- HEADER con indicatore DB e nome tecnico -->
+        <header class="app-header-tecnico" style="position: relative;">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
                 <button onclick="window.location.href='menu.html'" style="background: none; border: none; padding: 0.5rem; color: var(--primary); cursor: pointer;">
                     <span class="material-symbols-rounded" style="font-size: 1.5rem;">arrow_back</span>
@@ -364,6 +531,8 @@
                         Caricamento...
                     </p>
                 </div>
+                <!-- ✅ INDICATORE DB STATICO (verde con glow) -->
+                <div id="db-status-dot" style="position: absolute; top: 15px; right: 15px; width: 14px; height: 14px; background: #22c55e; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2); z-index: 10;"></div>
             </div>
         </header>
 
@@ -438,39 +607,39 @@
                     </div>
                 </div>
                 
-                <button onclick="caricaTuttiTurni()" class="btn-action btn-secondary" style="width: 100%;">
+                <button onclick="caricaTuttiTurni()" class="btn-secondario" style="width: 100%;">
                     <span class="material-symbols-rounded">refresh</span>
                     Aggiorna lista
                 </button>
             </div>
 
-            <!-- TAB 3: RICHIESTE -->
-            <div id="richieste-tab" class="tab-content">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                    <div>
-                        <h2 class="calendario-title">Le mie richieste</h2>
-                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">
-                            Storico e stato delle tue richieste
-                        </p>
-                    </div>
-                    <button onclick="apriModalNuovaRichiesta()" class="btn-action btn-primary" style="padding: 0.75rem 1rem;">
-                        <span class="material-symbols-rounded">add</span>
-                        Nuova
-                    </button>
-                </div>
-                
-                <div id="lista-richieste" class="lista-turni">
-                    <div class="vuoto-state">
-                        <span class="material-symbols-rounded">pending_actions</span>
-                        <p>Nessuna richiesta inviata</p>
-                    </div>
-                </div>
-                
-                <button onclick="caricaRichieste()" class="btn-action btn-secondary" style="width: 100%;">
-                    <span class="material-symbols-rounded">refresh</span>
-                    Aggiorna richieste
-                </button>
-            </div>
+        <!-- TAB 3: RICHIESTE -->
+<div id="richieste-tab" class="tab-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <div>
+            <h2 class="calendario-title">Le mie richieste</h2>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">
+                Storico e stato delle tue richieste
+            </p>
+        </div>
+        <button onclick="apriModalNuovaRichiesta()" class="btn-action btn-primary" style="padding: 0.5rem 0.75rem; font-size: 0.7rem; width: auto; min-width: 80px;">
+            <span class="material-symbols-rounded" style="font-size: 16px;">add</span>
+            Nuova
+        </button>
+    </div>
+    
+    <div id="lista-richieste" class="lista-turni">
+        <div class="vuoto-state">
+            <span class="material-symbols-rounded">pending_actions</span>
+            <p>Nessuna richiesta inviata</p>
+        </div>
+    </div>
+    
+    <button onclick="caricaRichieste()" class="btn-secondario" style="width: 100%;">
+        <span class="material-symbols-rounded">refresh</span>
+        Aggiorna richieste
+    </button>
+</div>
 
             <!-- TAB 4: STATISTICHE -->
             <div id="statistiche-tab" class="tab-content">
@@ -533,10 +702,10 @@
                     </div>
                 </div>
                 <div class="modale-footer">
-                    <button onclick="chiudiModaleDettaglio()" class="btn-action btn-secondary" style="flex: 1;">
+                    <button onclick="chiudiModaleDettaglio()" class="btn-secondario" style="flex: 1;">
                         Chiudi
                     </button>
-                    <button onclick="apriModalRichiestaDaDettaglio()" class="btn-action btn-primary" style="flex: 2;">
+                    <button onclick="apriModalRichiestaDaDettaglio()" class="btn-primario" style="flex: 2;">
                         <span class="material-symbols-rounded">swap_horiz</span>
                         Richiedi modifica
                     </button>
@@ -611,10 +780,10 @@
                     </div>
                 </div>
                 <div class="modale-footer">
-                    <button onclick="chiudiModaleRichiesta()" class="btn-action btn-secondary" style="flex: 1;">
+                    <button onclick="chiudiModaleRichiesta()" class="btn-secondario" style="flex: 1;">
                         Annulla
                     </button>
-                    <button onclick="inviaRichiesta()" class="btn-action btn-primary" style="flex: 2;">
+                    <button onclick="inviaRichiesta()" class="btn-primario" style="flex: 2;">
                         <span class="material-symbols-rounded">send</span>
                         Invia Richiesta
                     </button>
@@ -625,11 +794,75 @@
         <!-- MESSAGGI -->
         <div id="messaggio-tecnico" class="message"></div>
 
-        <!-- FOOTER -->
+        <!-- FOOTER CENTRALIZZATO -->
         <footer class="app-footer">
-            <span class="footer-text">EDIT BY KINGFREAK Version 1.0 | Reperibilità Tecnico</span>
+            <span class="footer-text" id="footer-text"></span>
         </footer>
     </div>
+
+    <script>
+        // Funzione notifica unificata
+        function mostraNotifica(messaggio, tipo = 'info') {
+            const notifica = document.createElement('div');
+            notifica.className = `notifica ${tipo}`;
+            
+            let icona = 'info';
+            if (tipo === 'successo') icona = 'check_circle';
+            if (tipo === 'errore') icona = 'error';
+            
+            notifica.innerHTML = `
+                <span class="material-symbols-rounded" style="font-size: 14px;">${icona}</span>
+                <span>${messaggio}</span>
+            `;
+            
+            document.body.appendChild(notifica);
+            
+            setTimeout(() => {
+                if (notifica.parentNode) {
+                    notifica.style.opacity = '0';
+                    notifica.style.transform = 'translateX(-50%) translateY(-5px)';
+                    notifica.style.transition = 'all 0.15s ease';
+                    
+                    setTimeout(() => {
+                        if (notifica.parentNode) notifica.remove();
+                    }, 150);
+                }
+            }, 1500);
+        }
+
+        // Inizializzazione pagina
+        document.addEventListener('DOMContentLoaded', function() {
+            // ✅ NOME TECNICO DA authGetUtente()
+            const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+            const nomeTecnico = document.getElementById('nome-tecnico');
+            if (utente && utente.nome_completo && nomeTecnico) {
+                nomeTecnico.textContent = `Tecnico: ${utente.nome_completo}`;
+            }
+            
+            // ✅ FOOTER CENTRALIZZATO
+            const footerEl = document.getElementById('footer-text');
+            if (footerEl && window.FOOTER_CONFIG) {
+                footerEl.innerText = window.FOOTER_CONFIG.testo;
+            } else if (footerEl) {
+                footerEl.innerText = 'EDIT BY KINGFREAK Version 1.0';
+            }
+            
+            // Controlla configurazione DB
+            const configInfo = getDbConfigInfo();
+            const dot = document.getElementById('db-status-dot');
+            
+            if (dot) {
+                if (configInfo.configured) {
+                    dot.style.background = '#22c55e';
+                    dot.title = `DB configurato • ${configInfo.urlShort || 'N/A'}`;
+                } else {
+                    dot.style.background = '#f59e0b';
+                    dot.title = 'Database non configurato';
+                    mostraNotifica('⚠️ Database non configurato', 'info');
+                }
+            }
+        });
+    </script>
 
     <!-- SCRIPT PRINCIPALE -->
     <script src="reperibilita_tecnico.js"></script>

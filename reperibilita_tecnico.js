@@ -2,14 +2,91 @@
 // REPERIBILITÀ TECNICO - PARKAPP
 // ============================================
 
+// ✅ SOSTITUITO CON CLIENT CENTRALIZZATO
+const supabaseClient = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+
+// ✅ CONTROLLO CLIENT INIZIALE
+if (!supabaseClient) {
+    console.error('Client Supabase non disponibile');
+    mostraNotifica('Connessione al database non disponibile', 'errore');
+}
+
+// ✅ SOSTITUITO con authGetUtente()
+const utenteCorrente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+const tecnicoNome = utenteCorrente ? utenteCorrente.nome_completo : null;
+
 // VARIABILI GLOBALI
-let tecnicoNome = '';
 let turniList = [];
 let richiesteList = [];
 let zoneList = [];
 let colleghiList = [];
 let meseCorrente = new Date().getMonth(); // 0-11
 let annoCorrente = new Date().getFullYear();
+
+// Funzione notifica unificata
+function mostraNotifica(messaggio, tipo = 'info') {
+    const notificaEsistente = document.querySelector('.notifica');
+    if (notificaEsistente) notificaEsistente.remove();
+    
+    const notifica = document.createElement('div');
+    notifica.className = `notifica ${tipo}`;
+    
+    let icona = 'info';
+    if (tipo === 'successo') icona = 'check_circle';
+    if (tipo === 'errore') icona = 'error';
+    
+    notifica.innerHTML = `
+        <span class="material-symbols-rounded" style="font-size: 14px;">${icona}</span>
+        <span>${messaggio}</span>
+    `;
+    
+    document.body.appendChild(notifica);
+    
+    setTimeout(() => {
+        if (notifica.parentNode) {
+            notifica.style.opacity = '0';
+            notifica.style.transform = 'translateX(-50%) translateY(-5px)';
+            notifica.style.transition = 'all 0.15s ease';
+            
+            setTimeout(() => {
+                if (notifica.parentNode) notifica.remove();
+            }, 150);
+        }
+    }, 1500);
+}
+
+// Mantieni anche mostraMessaggio per retrocompatibilità
+function mostraMessaggio(testo, tipo = 'info') {
+    const messaggioDiv = document.getElementById('messaggio-tecnico');
+    if (!messaggioDiv) return;
+    
+    messaggioDiv.textContent = testo;
+    messaggioDiv.className = 'message';
+    
+    switch(tipo) {
+        case 'success': 
+            messaggioDiv.classList.add('message-success'); 
+            mostraNotifica(testo, 'successo');
+            break;
+        case 'error': 
+            messaggioDiv.classList.add('message-error'); 
+            mostraNotifica(testo, 'errore');
+            break;
+        case 'warning': 
+            messaggioDiv.classList.add('message-warning'); 
+            mostraNotifica(testo, 'info');
+            break;
+        default: 
+            messaggioDiv.classList.add('message-info');
+            mostraNotifica(testo, 'info');
+    }
+    
+    messaggioDiv.style.display = 'block';
+    
+    setTimeout(() => {
+        messaggioDiv.style.display = 'none';
+    }, 5000);
+}
 
 // ============================================
 // INIZIALIZZAZIONE PAGINA
@@ -19,15 +96,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     try {
         console.log('🔄 Inizializzazione Reperibilità Tecnico...');
         
-        // Ottieni nome tecnico loggato
-        tecnicoNome = localStorage.getItem('tecnico_loggato') || 'Tecnico';
-        document.getElementById('nome-tecnico').textContent = tecnicoNome;
-        
-        // Controlla connessione DB
-        const configInfo = getDbConfigInfo();
-        if (!configInfo.configured) {
-            mostraMessaggio('Database non configurato', 'error');
+        // ✅ CONTROLLO CLIENT
+        if (!supabaseClient) {
+            mostraNotifica('Errore di connessione al database', 'errore');
+            return;
         }
+        
+        // Aggiorna nome tecnico nell'header (già fatto nell'HTML)
+        document.getElementById('nome-tecnico').textContent = `Tecnico: ${tecnicoNome || 'Tecnico'}`;
         
         // Inizializza le tab
         inizializzaTabsTecnico();
@@ -46,7 +122,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
     } catch (error) {
         console.error('❌ Errore inizializzazione:', error);
-        mostraMessaggio('Errore inizializzazione pagina', 'error');
+        mostraNotifica('Errore inizializzazione pagina', 'errore');
     }
 });
 
@@ -129,18 +205,18 @@ async function caricaDatiIniziali() {
         
     } catch (error) {
         console.error('❌ Errore caricamento dati iniziali:', error);
-        mostraMessaggio('Errore nel caricamento dei dati', 'error');
+        mostraNotifica('Errore nel caricamento dei dati', 'errore');
     }
 }
 
 async function caricaZone() {
     try {
-        const supabase = getSupabaseClient();
-        if (!supabase) throw new Error('DB non configurato');
+        // ✅ CONTROLLO CLIENT
+        if (!supabaseClient) throw new Error('DB non configurato');
         
         console.log('📍 Caricamento zone...');
         
-        const { data: zone, error } = await supabase
+        const { data: zone, error } = await supabaseClient
             .from('zone_reperibilita')
             .select('*')
             .eq('attivo', true)
@@ -159,12 +235,12 @@ async function caricaZone() {
 
 async function caricaTurniTecnico() {
     try {
-        const supabase = getSupabaseClient();
-        if (!supabase) throw new Error('DB non configurato');
+        // ✅ CONTROLLO CLIENT
+        if (!supabaseClient) throw new Error('DB non configurato');
         
         console.log(`📋 Caricamento turni per ${tecnicoNome}...`);
         
-        const { data: turni, error } = await supabase
+        const { data: turni, error } = await supabaseClient
             .from('turni_reperibilita')
             .select(`
                 *,
@@ -188,20 +264,20 @@ async function caricaTurniTecnico() {
         
     } catch (error) {
         console.error('❌ Errore caricamento turni:', error);
-        mostraMessaggio('Errore nel caricamento dei turni', 'error');
+        mostraNotifica('Errore nel caricamento dei turni', 'errore');
     }
 }
 
 // Nuova funzione: carica parziali per i turni caricati
 async function caricaParzialiPerTurni(turni) {
     try {
-        const supabase = getSupabaseClient();
-        if (!supabase || !turni || turni.length === 0) return {};
+        // ✅ CONTROLLO CLIENT
+        if (!supabaseClient || !turni || turni.length === 0) return {};
 
         const ids = turni.map(t => t.id).filter(Boolean);
         if (ids.length === 0) return {};
 
-        const { data: parziali, error } = await supabase
+        const { data: parziali, error } = await supabaseClient
             .from('turni_parziali')
             .select('*')
             .in('turno_originale_id', ids)
@@ -239,13 +315,13 @@ async function calcolaPesoTurni(turni) {
 
 async function caricaColleghi() {
     try {
-        const supabase = getSupabaseClient();
-        if (!supabase) return;
+        // ✅ CONTROLLO CLIENT
+        if (!supabaseClient) return;
         
         console.log('👥 Caricamento colleghi...');
         
         // Ottieni tutti i tecnici unici dai turni
-        const { data: turniColleghi, error } = await supabase
+        const { data: turniColleghi, error } = await supabaseClient
             .from('turni_reperibilita')
             .select('tecnico_id')
             .not('tecnico_id', 'eq', tecnicoNome)
@@ -266,12 +342,12 @@ async function caricaColleghi() {
 
 async function caricaRichieste() {
     try {
-        const supabase = getSupabaseClient();
-        if (!supabase) throw new Error('DB non configurato');
+        // ✅ CONTROLLO CLIENT
+        if (!supabaseClient) throw new Error('DB non configurato');
         
         console.log(`📨 Caricamento richieste di ${tecnicoNome}...`);
         
-        const { data: richieste, error } = await supabase
+        const { data: richieste, error } = await supabaseClient
             .from('richieste_cambio')
             .select(`
                 *,
@@ -291,7 +367,7 @@ async function caricaRichieste() {
         
     } catch (error) {
         console.error('❌ Errore caricamento richieste:', error);
-        mostraMessaggio('Errore nel caricamento delle richieste', 'error');
+        mostraNotifica('Errore nel caricamento delle richieste', 'errore');
     }
 }
 
@@ -521,7 +597,7 @@ async function caricaTuttiTurni() {
         
     } catch (error) {
         console.error('❌ Errore caricamento tutti turni:', error);
-        mostraMessaggio('Errore nel caricamento dei turni', 'error');
+        mostraNotifica('Errore nel caricamento dei turni', 'errore');
     }
 }
 
@@ -554,12 +630,10 @@ function creaHTMLTurnoItem(turno, zona, inizio, fine) {
                 <div>
                     <div class="turno-zona" style="background: ${coloreZona}20; color: ${coloreZona};">${nomeZona} ${statoIcona}</div>
                     <div class="turno-date">${dataInizio} → ${dataFine}</div>
-<div style="font-size: 0.75rem; color: #64748b; margin-top: 0.25rem;">
-    <span class="material-symbols-rounded" style="font-size: 0.8rem; vertical-align: middle;">info</span>
-    Il turno termina alle 8:00 del ${dataFine}
-</div>
-
-
+                    <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.25rem;">
+                        <span class="material-symbols-rounded" style="font-size: 0.8rem; vertical-align: middle;">info</span>
+                        Il turno termina alle 8:00 del ${dataFine}
+                    </div>
                 </div>
                 <div style="text-align: right;">
                     <div style="font-size: 0.85rem; color: var(--text-muted);">Durata</div>
@@ -759,8 +833,8 @@ function aggiornaGraficoZone() {
 
 async function apriModalDettaglio(turnoId) {
     try {
-        const supabase = getSupabaseClient();
-        if (!supabase) throw new Error('DB non configurato');
+        // ✅ CONTROLLO CLIENT
+        if (!supabaseClient) throw new Error('DB non configurato');
         
         // Se turnoId è stringa, cerca il turno, altrimenti usa l'oggetto
         let turno;
@@ -768,7 +842,7 @@ async function apriModalDettaglio(turnoId) {
             turno = turniList.find(t => t.id === turnoId);
             if (!turno) {
                 // Carica dal DB se non in cache
-                const { data: turnoDB, error } = await supabase
+                const { data: turnoDB, error } = await supabaseClient
                     .from('turni_reperibilita')
                     .select(`
                         *,
@@ -785,7 +859,7 @@ async function apriModalDettaglio(turnoId) {
         }
         
         if (!turno) {
-            mostraMessaggio('Turno non trovato', 'error');
+            mostraNotifica('Turno non trovato', 'errore');
             return;
         }
         
@@ -829,24 +903,24 @@ async function apriModalDettaglio(turnoId) {
                 <div style="background: #f8fafc; border-radius: 12px; padding: 1rem; margin-bottom: 1rem;">
                     <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
                         <span class="material-symbols-rounded" style="color: var(--primary);">calendar_today</span>
-                       <div>
-    <div style="font-weight: 800; color: var(--text-main);">Inizio</div>
-    <div style="color: var(--text-muted);">${dataInizio}</div>
-    <div style="font-size: 0.75rem; color: #3B82F6; margin-top: 0.25rem;">
-        Venerdì 8:00
-    </div>
-</div>
+                        <div>
+                            <div style="font-weight: 800; color: var(--text-main);">Inizio</div>
+                            <div style="color: var(--text-muted);">${dataInizio}</div>
+                            <div style="font-size: 0.75rem; color: #3B82F6; margin-top: 0.25rem;">
+                                Venerdì 8:00
+                            </div>
+                        </div>
                     </div>
                     
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         <span class="material-symbols-rounded" style="color: var(--primary);">event_available</span>
-                       <div>
-    <div style="font-weight: 800; color: var(--text-main);">Fine</div>
-    <div style="color: var(--text-muted);">${dataFine}</div>
-    <div style="font-size: 0.75rem; color: #EF4444; margin-top: 0.25rem;">
-        Venerdì 8:00 (turno escluso questo giorno)
-    </div>
-</div>
+                        <div>
+                            <div style="font-weight: 800; color: var(--text-main);">Fine</div>
+                            <div style="color: var(--text-muted);">${dataFine}</div>
+                            <div style="font-size: 0.75rem; color: #EF4444; margin-top: 0.25rem;">
+                                Venerdì 8:00 (turno escluso questo giorno)
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
@@ -880,7 +954,7 @@ async function apriModalDettaglio(turnoId) {
         
     } catch (error) {
         console.error('❌ Errore apertura dettaglio turno:', error);
-        mostraMessaggio('Errore nel caricamento dei dettagli', 'error');
+        mostraNotifica('Errore nel caricamento dei dettagli', 'errore');
     }
 }
 
@@ -971,17 +1045,17 @@ function cambiaTipoRichiesta() {
 
 async function inviaRichiesta() {
     try {
+        // ✅ CONTROLLO CLIENT
+        if (!supabaseClient) throw new Error('DB non configurato');
+        
         const tipo = document.getElementById('tipo-richiesta').value;
         const turnoId = document.getElementById('turno-richiesta').value;
         const motivo = document.getElementById('motivo-richiesta').value.trim();
         
         if (!tipo || !turnoId || !motivo) {
-            mostraMessaggio('Compila tutti i campi obbligatori', 'error');
+            mostraNotifica('Compila tutti i campi obbligatori', 'errore');
             return;
         }
-        
-        const supabase = getSupabaseClient();
-        if (!supabase) throw new Error('DB non configurato');
         
         let datiRichiesta = {
             turno_originale_id: turnoId,
@@ -996,7 +1070,7 @@ async function inviaRichiesta() {
             case 'scambio':
                 const collegaScambio = document.getElementById('collega-scambio').value;
                 if (!collegaScambio) {
-                    mostraMessaggio('Seleziona un collega per lo scambio', 'error');
+                    mostraNotifica('Seleziona un collega per lo scambio', 'errore');
                     return;
                 }
                 datiRichiesta.tecnico_destinatario_id = collegaScambio;
@@ -1005,7 +1079,7 @@ async function inviaRichiesta() {
             case 'sostituzione':
                 const collegaSostituto = document.getElementById('collega-sostituto').value;
                 if (!collegaSostituto) {
-                    mostraMessaggio('Seleziona un collega sostituto', 'error');
+                    mostraNotifica('Seleziona un collega sostituto', 'errore');
                     return;
                 }
                 datiRichiesta.nuovo_tecnico_id = collegaSostituto;
@@ -1017,12 +1091,12 @@ async function inviaRichiesta() {
                 const dataFineCessione = document.getElementById('data-fine-cessione').value;
                 
                 if (!collegaCessionario || !dataInizioCessione || !dataFineCessione) {
-                    mostraMessaggio('Compila tutti i campi per la cessione', 'error');
+                    mostraNotifica('Compila tutti i campi per la cessione', 'errore');
                     return;
                 }
                 
                 if (new Date(dataFineCessione) <= new Date(dataInizioCessione)) {
-                    mostraMessaggio('La data fine deve essere successiva alla data inizio', 'error');
+                    mostraNotifica('La data fine deve essere successiva alla data inizio', 'errore');
                     return;
                 }
                 
@@ -1035,7 +1109,7 @@ async function inviaRichiesta() {
         }
         
         // Invia la richiesta
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('richieste_cambio')
             .insert([datiRichiesta]);
         
@@ -1043,47 +1117,15 @@ async function inviaRichiesta() {
         
         // Chiudi modale e mostra successo
         chiudiModaleRichiesta();
-        mostraMessaggio('Richiesta inviata con successo!', 'success');
+        mostraNotifica('Richiesta inviata con successo!', 'successo');
         
         // Ricarica le richieste
         await caricaRichieste();
         
     } catch (error) {
         console.error('❌ Errore invio richiesta:', error);
-        mostraMessaggio(`Errore nell'invio della richiesta: ${error.message}`, 'error');
+        mostraNotifica(`Errore nell'invio della richiesta: ${error.message}`, 'errore');
     }
-}
-
-// ============================================
-// FUNZIONI UTILITY
-// ============================================
-
-function mostraMessaggio(testo, tipo = 'info') {
-    const messaggioDiv = document.getElementById('messaggio-tecnico');
-    if (!messaggioDiv) return;
-    
-    messaggioDiv.textContent = testo;
-    messaggioDiv.className = 'message';
-    
-    switch(tipo) {
-        case 'success': 
-            messaggioDiv.classList.add('message-success'); 
-            break;
-        case 'error': 
-            messaggioDiv.classList.add('message-error'); 
-            break;
-        case 'warning': 
-            messaggioDiv.classList.add('message-warning'); 
-            break;
-        default: 
-            messaggioDiv.classList.add('message-info');
-    }
-    
-    messaggioDiv.style.display = 'block';
-    
-    setTimeout(() => {
-        messaggioDiv.style.display = 'none';
-    }, 5000);
 }
 
 // ============================================

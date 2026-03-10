@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -11,6 +10,23 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="db-config.js"></script>
     <script src="check-db-config.js"></script>
+    <!-- ✅ AGGIUNTO: Auth.js per gestione login -->
+    <script src="auth.js"></script>
+    <!-- ✅ GATEKEEPER: Protezione pagina -->
+    <script>
+        (function() {
+            const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+            if (!utente) {
+                window.location.href = 'index.html';
+            }
+        })();
+    </script>
+    <!-- ✅ CONFIGURAZIONE FOOTER -->
+    <script>
+        window.FOOTER_CONFIG = {
+            testo: "EDIT BY KINGFREAK Version 1.0"
+        };
+    </script>
     <style>
         .app-container {
             max-width: 450px;
@@ -73,31 +89,94 @@
             outline: none;
         }
         
-        .btn-action {
-            padding: 1rem;
+        /* Uniformazione pulsanti */
+        .btn-primario {
+            background: var(--primary);
+            color: white;
             border: none;
             border-radius: 12px;
-            font-family: 'Inter', sans-serif;
-            font-size: 0.95rem;
-            font-weight: 800;
-            cursor: pointer;
+            padding: 0.75rem 1.5rem;
+            font-weight: 700;
+            font-size: 0.9rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.5rem;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
             width: 100%;
             margin-top: 1rem;
         }
         
-        .btn-primary {
-            background: var(--primary);
-            color: var(--white);
+        .btn-primario:hover {
+            background: color-mix(in srgb, var(--primary) 85%, black);
+            transform: translateY(-1px);
         }
         
-        .btn-secondary {
-            background: var(--primary-light);
+        .btn-secondario {
+            background: white;
             color: var(--primary);
-            border: 2px solid var(--border);
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 700;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+            margin-top: 1rem;
+        }
+        
+        .btn-secondario:hover {
+            background: var(--primary-light);
+            transform: translateY(-1px);
+        }
+        
+        .btn-success {
+            background: #22c55e;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 0.5rem 1rem;
+            font-weight: 700;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-success:hover {
+            background: #16a34a;
+            transform: translateY(-1px);
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 0.5rem 1rem;
+            font-weight: 700;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+            transform: translateY(-1px);
         }
         
         .lista-veicoli {
@@ -167,11 +246,46 @@
             color: var(--text-muted);
             font-weight: 600;
         }
+
+        /* Notifiche compatte */
+        .notifica {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 2000;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 500;
+            max-width: 90%;
+            width: auto;
+            height: 28px;
+            min-height: 28px;
+            line-height: 1;
+            animation: slideUp 0.2s ease;
+            pointer-events: none;
+        }
+
+        .notifica.successo { background: #22c55e; }
+        .notifica.errore { background: #ef4444; }
+        .notifica.info { background: #334155; }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translate(-50%, 20px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
     </style>
 </head>
 <body class="bg-app">
     <div class="app-container">
-        <header class="app-header-admin">
+        <header class="app-header-admin" style="position: relative;">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
                 <button onclick="window.location.href='menu.html'" style="background: none; border: none; padding: 0.5rem; color: var(--primary);">
                     <span class="material-symbols-rounded" style="font-size: 1.5rem;">arrow_back</span>
@@ -180,15 +294,66 @@
                     <h1 style="font-size: 1.25rem; font-weight: 800; color: var(--primary); margin: 0;">
                         Admin Veicoli
                     </h1>
-                    <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">
+                    <p id="tecnico-display" style="margin: 0; font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">
                         Assegnazione veicoli aziendali
                     </p>
                 </div>
+                <!-- ✅ INDICATORE DB STATICO (verde con glow) -->
+                <div id="db-status-dot" style="position: absolute; top: 15px; right: 15px; width: 14px; height: 14px; background: #22c55e; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2); z-index: 10;"></div>
             </div>
         </header>
 
         <main>
-            <!-- SEZIONE INSERIMENTO VEICOLO -->
+         
+
+            <!-- SEZIONE LISTA VEICOLI -->
+            <div class="admin-section">
+                <h2 class="section-title">
+                    <span class="material-symbols-rounded">list</span>
+                    Veicoli Registrati
+                </h2>
+                
+                <div id="lista-veicoli" class="lista-veicoli">
+                    <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                        Caricamento veicoli...
+                    </div>
+                </div>
+                
+                <button onclick="caricaVeicoli()" class="btn-secondario">
+                    <span class="material-symbols-rounded">refresh</span>
+                    Aggiorna Lista
+                </button>
+            </div>
+
+            <!-- SEZIONE APPROVAZIONE KILOMETRI -->
+            <div class="admin-section">
+                <h2 class="section-title">
+                    <span class="material-symbols-rounded">approval</span>
+                    Approvazione Kilometri
+                </h2>
+                
+                <div class="input-group">
+                    <label class="input-label">Filtra per Veicolo</label>
+                    <select id="filtro-veicolo" class="input-field" onchange="caricaKilometriDaApprovare()">
+                        <option value="">Tutti i veicoli</option>
+                        <!-- Le opzioni verranno caricate dinamicamente -->
+                    </select>
+                </div>
+                
+                <div id="lista-kilometri-approvazione" class="lista-veicoli">
+                    <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                        Caricamento kilometri in attesa...
+                    </div>
+                </div>
+                
+                <button onclick="caricaKilometriDaApprovare()" class="btn-secondario">
+                    <span class="material-symbols-rounded">refresh</span>
+                    Aggiorna Lista
+                </button>
+            </div>
+
+
+               <!-- SEZIONE INSERIMENTO VEICOLO -->
             <div class="admin-section">
                 <h2 class="section-title">
                     <span class="material-symbols-rounded">add_circle</span>
@@ -215,248 +380,198 @@
                     <textarea id="note" class="input-field" rows="3" placeholder="Note sul veicolo..."></textarea>
                 </div>
                 
-                <button onclick="inserisciVeicolo()" class="btn-action btn-primary">
+                <button onclick="inserisciVeicolo()" class="btn-primario">
                     <span class="material-symbols-rounded">save</span>
                     Salva Veicolo
                 </button>
             </div>
-
-            <!-- SEZIONE LISTA VEICOLI -->
-            <div class="admin-section">
-                <h2 class="section-title">
-                    <span class="material-symbols-rounded">list</span>
-                    Veicoli Registrati
-                </h2>
-                
-                <div id="lista-veicoli" class="lista-veicoli">
-                    <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
-                        Caricamento veicoli...
-                    </div>
-                </div>
-                
-                <button onclick="caricaVeicoli()" class="btn-action btn-secondary">
-                    <span class="material-symbols-rounded">refresh</span>
-                    Aggiorna Lista
-                </button>
-            </div>
         </main>
-<!-- SEZIONE APPROVAZIONE KILOMETRI -->
-<div class="admin-section">
-    <h2 class="section-title">
-        <span class="material-symbols-rounded">approval</span>
-        Approvazione Kilometri
-    </h2>
-    
-    <div class="input-group">
-        <label class="input-label">Filtra per Veicolo</label>
-        <select id="filtro-veicolo" class="input-field" onchange="caricaKilometriDaApprovare()">
-            <option value="">Tutti i veicoli</option>
-            <!-- Le opzioni verranno caricate dinamicamente -->
-        </select>
-    </div>
-    
-    <div id="lista-kilometri-approvazione" class="lista-veicoli">
-        <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
-            Caricamento kilometri in attesa...
-        </div>
-    </div>
-    
-    <button onclick="caricaKilometriDaApprovare()" class="btn-action btn-secondary">
-        <span class="material-symbols-rounded">refresh</span>
-        Aggiorna Lista
-    </button>
-</div>
+
         <!-- MESSAGGI -->
         <div id="messaggio-admin" class="message"></div>
 
         <footer class="app-footer">
-            <span class="footer-text">EDIT BY KINGFREAK Version 1.0</span>
+            <span class="footer-text" id="footer-text"></span>
         </footer>
     </div>
 
     <script>
-        // FUNZIONI ADMIN VEICOLI
-        async function caricaVeicoli() {
-            try {
-                const supabase = getSupabaseClient();
-                if (!supabase) throw new Error('DB non configurato');
-                
-                const { data: veicoli, error } = await supabase
-                    .from('veicoli')
-                    .select('*')
-                    .order('targa', { ascending: true });
-                
-                if (error) throw error;
-                
-                const container = document.getElementById('lista-veicoli');
-                if (!container) return;
-                
-                if (!veicoli || veicoli.length === 0) {
-                    container.innerHTML = `
-                        <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
-                            <span class="material-symbols-rounded">directions_car_off</span>
-                            <p style="margin-top: 0.5rem;">Nessun veicolo registrato</p>
-                        </div>
-                    `;
-                    return;
-                }
-                
-                let html = '';
-                veicoli.forEach(veicolo => {
-                    html += `
-                        <div class="veicolo-item">
-                            <div class="veicolo-info">
-                                <h4>${veicolo.targa}</h4>
-                                <p>${veicolo.modello || 'Modello non specificato'}</p>
-                                <p style="font-size: 0.8rem; color: ${veicolo.attivo ? '#22c55e' : '#ef4444'};">
-                                    <strong>Tecnico:</strong> ${veicolo.tecnico_assegnato}
-                                    • ${veicolo.attivo ? 'Attivo' : 'Non attivo'}
-                                </p>
-                            </div>
-                            <button onclick="cambiaStatoVeicolo('${veicolo.id}', ${!veicolo.attivo})" 
-                                    style="background: none; border: none; color: ${veicolo.attivo ? '#ef4444' : '#22c55e'}; cursor: pointer;">
-                                <span class="material-symbols-rounded">
-                                    ${veicolo.attivo ? 'toggle_off' : 'toggle_on'}
-                                </span>
-                            </button>
-                        </div>
-                    `;
-                });
-                
-                container.innerHTML = html;
-                
-            } catch (error) {
-                console.error('Errore caricamento veicoli:', error);
-                mostraMessaggioAdmin('Errore nel caricamento veicoli', 'error');
-            }
-        }
-        
-        async function inserisciVeicolo() {
-            try {
-                const targa = document.getElementById('targa').value.trim().toUpperCase();
-                const modello = document.getElementById('modello').value.trim();
-                const tecnico = document.getElementById('tecnico').value.trim();
-                const note = document.getElementById('note').value.trim();
-                
-                // Validazioni
-                if (!targa) {
-                    mostraMessaggioAdmin('Inserisci la targa', 'error');
-                    return;
-                }
-                
-                if (!tecnico) {
-                    mostraMessaggioAdmin('Inserisci il tecnico assegnato', 'error');
-                    return;
-                }
-                
-                // Formato targa italiano
-                const targaRegex = /^[A-Z]{2}[0-9]{3}[A-Z]{2}$/;
-                if (!targaRegex.test(targa)) {
-                    if (!confirm(`La targa "${targa}" non segue il formato italiano standard (AA111AA). Vuoi procedere comunque?`)) {
-                        return;
-                    }
-                }
-                
-                const supabase = getSupabaseClient();
-                if (!supabase) throw new Error('DB non configurato');
-                
-                // Controlla se la targa esiste già
-                const { data: esistente, error: checkError } = await supabase
-                    .from('veicoli')
-                    .select('id')
-                    .eq('targa', targa)
-                    .maybeSingle();
-                
-                if (checkError) throw checkError;
-                
-                if (esistente) {
-                    mostraMessaggioAdmin(`La targa ${targa} è già registrata`, 'error');
-                    return;
-                }
-                
-                // Inserisci veicolo
-                const { error } = await supabase
-                    .from('veicoli')
-                    .insert([{
-                        targa: targa,
-                        modello: modello || null,
-                        tecnico_assegnato: tecnico,
-                        data_assegnazione: new Date().toISOString().split('T')[0],
-                        note: note || null,
-                        attivo: true
-                    }]);
-                
-                if (error) throw error;
-                
-                // Reset form e mostra successo
-                document.getElementById('targa').value = '';
-                document.getElementById('modello').value = '';
-                document.getElementById('tecnico').value = '';
-                document.getElementById('note').value = '';
-                
-                mostraMessaggioAdmin(`Veicolo ${targa} inserito con successo!`, 'success');
-                
-                // Ricarica lista
-                await caricaVeicoli();
-                
-            } catch (error) {
-                console.error('Errore inserimento veicolo:', error);
-                mostraMessaggioAdmin(`Errore: ${error.message}`, 'error');
-            }
-        }
-        
-        async function cambiaStatoVeicolo(id, nuovoStato) {
-            try {
-                if (!confirm(`Sei sicuro di voler ${nuovoStato ? 'attivare' : 'disattivare'} questo veicolo?`)) {
-                    return;
-                }
-                
-                const supabase = getSupabaseClient();
-                if (!supabase) throw new Error('DB non configurato');
-                
-                const { error } = await supabase
-                    .from('veicoli')
-                    .update({ attivo: nuovoStato })
-                    .eq('id', id);
-                
-                if (error) throw error;
-                
-                mostraMessaggioAdmin(`Veicolo ${nuovoStato ? 'attivato' : 'disattivato'}`, 'success');
-                
-                // Ricarica lista
-                await caricaVeicoli();
-                
-            } catch (error) {
-                console.error('Errore cambio stato veicolo:', error);
-                mostraMessaggioAdmin(`Errore: ${error.message}`, 'error');
-            }
-        }
-        
-        function mostraMessaggioAdmin(testo, tipo = 'info') {
-            const messaggioDiv = document.getElementById('messaggio-admin');
-            if (!messaggioDiv) return;
+        // Funzione notifica unificata
+        function mostraNotifica(messaggio, tipo = 'info') {
+            const notifica = document.createElement('div');
+            notifica.className = `notifica ${tipo}`;
             
-            messaggioDiv.textContent = testo;
-            messaggioDiv.className = 'message';
+            let icona = 'info';
+            if (tipo === 'successo') icona = 'check_circle';
+            if (tipo === 'errore') icona = 'error';
             
-            if (tipo === 'success') {
-                messaggioDiv.classList.add('message-success');
-            } else if (tipo === 'error') {
-                messaggioDiv.classList.add('message-error');
-            }
+            notifica.innerHTML = `
+                <span class="material-symbols-rounded" style="font-size: 14px;">${icona}</span>
+                <span>${messaggio}</span>
+            `;
             
-            messaggioDiv.style.display = 'block';
+            document.body.appendChild(notifica);
             
             setTimeout(() => {
-                messaggioDiv.style.display = 'none';
-            }, 5000);
+                if (notifica.parentNode) {
+                    notifica.style.opacity = '0';
+                    notifica.style.transform = 'translateX(-50%) translateY(-5px)';
+                    notifica.style.transition = 'all 0.15s ease';
+                    
+                    setTimeout(() => {
+                        if (notifica.parentNode) notifica.remove();
+                    }, 150);
+                }
+            }, 1500);
+        }
+
+        // Mantieni anche mostraMessaggioAdmin per retrocompatibilità
+    function mostraMessaggioAdmin(testo, tipo = 'info') {
+    const messaggioDiv = document.getElementById('messaggio-admin');
+    if (!messaggioDiv) return;
+    
+    messaggioDiv.textContent = testo;
+    messaggioDiv.className = 'message';
+    
+    if (tipo === 'success') {
+        messaggioDiv.classList.add('message-success');
+        mostraNotifica(testo, 'successo');
+    } else if (tipo === 'error') {
+        messaggioDiv.classList.add('message-error');
+        mostraNotifica(testo, 'errore');
+    }
+    
+    messaggioDiv.style.display = 'block';
+    
+    setTimeout(() => {
+        messaggioDiv.style.display = 'none';
+    }, 5000);
+}
+        // Inizializzazione
+        document.addEventListener('DOMContentLoaded', function() {
+            // ✅ NOME TECNICO DA authGetUtente()
+            const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+            const display = document.getElementById('tecnico-display');
+            if (utente && utente.nome_completo && display) {
+                display.innerText = `Assegnazione veicoli aziendali • ${utente.nome_completo}`;
+            }
+            
+            // ✅ FOOTER CENTRALIZZATO
+            const footerEl = document.getElementById('footer-text');
+            if (footerEl && window.FOOTER_CONFIG) {
+                footerEl.innerText = window.FOOTER_CONFIG.testo;
+            } else if (footerEl) {
+                footerEl.innerText = 'EDIT BY KINGFREAK Version 1.0';
+            }
+              // Carica veicoli all'avvio
+    caricaVeicoli();
+    caricaKilometriDaApprovare();
+            // Controlla configurazione DB
+            const configInfo = getDbConfigInfo();
+            const dot = document.getElementById('db-status-dot');
+            
+            if (dot) {
+                if (configInfo.configured) {
+                    dot.style.background = '#22c55e';
+                    dot.title = `DB configurato • ${configInfo.urlShort || 'N/A'}`;
+                } else {
+                    dot.style.background = '#f59e0b';
+                    dot.title = 'Database non configurato';
+                    mostraNotifica('⚠️ Database non configurato', 'info');
+                }
+            }
+            
+            // Carica dati iniziali
+            if (typeof caricaVeicoli === 'function') {
+                caricaVeicoli();
+            }
+            if (typeof caricaKilometriDaApprovare === 'function') {
+                caricaKilometriDaApprovare();
+            }
+        });
+
+// FUNZIONI ADMIN VEICOLI
+async function caricaVeicoli() {
+    try {
+        const supabase = getSupabaseClient();
+        if (!supabase) throw new Error('DB non configurato');
+        
+        const { data: veicoli, error } = await supabase
+            .from('veicoli')
+            .select('*')
+            .order('targa', { ascending: true });
+        
+        if (error) throw error;
+        
+        const container = document.getElementById('lista-veicoli');
+        if (!container) return;
+        
+        if (!veicoli || veicoli.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                    <span class="material-symbols-rounded">directions_car_off</span>
+                    <p style="margin-top: 0.5rem;">Nessun veicolo registrato</p>
+                </div>
+            `;
+            return;
         }
         
-        // Inizializzazione
-        document.addEventListener('DOMContentLoaded', async function() {
-            await caricaVeicoli();
-            await caricaKilometriDaApprovare(); // Aggiungi questa linea
+        let html = '';
+        veicoli.forEach(veicolo => {
+            html += `
+                <div class="veicolo-item">
+                    <div class="veicolo-info">
+                        <h4>${veicolo.targa}</h4>
+                        <p>${veicolo.modello || 'Modello non specificato'}</p>
+                        <p style="font-size: 0.8rem; color: ${veicolo.attivo ? '#22c55e' : '#ef4444'};">
+                            <strong>Tecnico:</strong> ${veicolo.tecnico_assegnato}
+                            • ${veicolo.attivo ? 'Attivo' : 'Non attivo'}
+                        </p>
+                    </div>
+                    <button onclick="cambiaStatoVeicolo('${veicolo.id}', ${!veicolo.attivo})" 
+                            style="background: none; border: none; color: ${veicolo.attivo ? '#ef4444' : '#22c55e'}; cursor: pointer;">
+                        <span class="material-symbols-rounded">
+                            ${veicolo.attivo ? 'toggle_off' : 'toggle_on'}
+                        </span>
+                    </button>
+                </div>
+            `;
         });
+        
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Errore caricamento veicoli:', error);
+        mostraMessaggioAdmin('Errore nel caricamento veicoli', 'error');
+    }
+}
+
+async function cambiaStatoVeicolo(id, nuovoStato) {
+    try {
+        if (!confirm(`Sei sicuro di voler ${nuovoStato ? 'attivare' : 'disattivare'} questo veicolo?`)) {
+            return;
+        }
+        
+        const supabase = getSupabaseClient();
+        if (!supabase) throw new Error('DB non configurato');
+        
+        const { error } = await supabase
+            .from('veicoli')
+            .update({ attivo: nuovoStato })
+            .eq('id', id);
+        
+        if (error) throw error;
+        
+        mostraMessaggioAdmin(`Veicolo ${nuovoStato ? 'attivato' : 'disattivato'}`, 'success');
+        
+        // Ricarica lista
+        await caricaVeicoli();
+        
+    } catch (error) {
+        console.error('Errore cambio stato veicolo:', error);
+        mostraMessaggioAdmin(`Errore: ${error.message}`, 'error');
+    }
+}
 
 async function caricaKilometriDaApprovare() {
     try {
@@ -503,9 +618,6 @@ async function caricaKilometriDaApprovare() {
         kilometri.forEach(km => {
             const veicolo = km.veicoli;
             const meseAnno = `${getNomeMese(km.mese)} ${km.anno}`;
-            
-            // Calcola differenza con l'ultimo inserimento confermato
-            const kmPrecedenti = 0; // Dovresti caricare gli ultimi km confermati
             
             html += `
                 <div class="veicolo-item" style="flex-direction: column; align-items: stretch;">
@@ -576,7 +688,7 @@ async function caricaFiltroVeicoli() {
         // Salva l'opzione selezionata
         const selectedValue = select.value;
         
-        // Costruisci le opzioni (mantenendo "Tutti i veicoli" come prima opzione)
+        // Costruisci le opzioni
         let options = '<option value="">Tutti i veicoli</option>';
         
         if (veicoli && veicoli.length > 0) {
@@ -656,7 +768,6 @@ async function rifiutaKilometri(id) {
     }
 }
 
-// Funzioni utility
 function getNomeMese(numeroMese) {
     const mesi = [
         'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',

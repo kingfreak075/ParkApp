@@ -2,12 +2,91 @@
 // GESTIONE VEICOLI - PARKAPP
 // ================================
 
+// ✅ SOSTITUITO CON CLIENT CENTRALIZZATO
+const supabaseClient = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+
+// ✅ CONTROLLO CLIENT INIZIALE
+if (!supabaseClient) {
+    console.error('Client Supabase non disponibile');
+    mostraNotifica('Connessione al database non disponibile', 'errore');
+}
+
+// ✅ SOSTITUITO con authGetUtente()
+const utenteCorrente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+const tecnicoLoggato = utenteCorrente ? utenteCorrente.nome_completo : null;
+
 // VARIABILI GLOBALI
 let veicoloCorrente = null;
 let kilometriMensili = [];
 let reminderList = [];
 let meseCorrente = new Date().getMonth() + 1;
 let annoCorrente = new Date().getFullYear();
+
+// Funzione notifica unificata
+function mostraNotifica(messaggio, tipo = 'info') {
+    // Rimuovi notifica esistente
+    const notificaEsistente = document.querySelector('.notifica');
+    if (notificaEsistente) notificaEsistente.remove();
+    
+    const notifica = document.createElement('div');
+    notifica.className = `notifica ${tipo}`;
+    
+    let icona = 'info';
+    if (tipo === 'successo') icona = 'check_circle';
+    if (tipo === 'errore') icona = 'error';
+    
+    notifica.innerHTML = `
+        <span class="material-symbols-rounded" style="font-size: 14px;">${icona}</span>
+        <span>${messaggio}</span>
+    `;
+    
+    document.body.appendChild(notifica);
+    
+    setTimeout(() => {
+        if (notifica.parentNode) {
+            notifica.style.opacity = '0';
+            notifica.style.transform = 'translateX(-50%) translateY(-5px)';
+            notifica.style.transition = 'all 0.15s ease';
+            
+            setTimeout(() => {
+                if (notifica.parentNode) notifica.remove();
+            }, 150);
+        }
+    }, 1500);
+}
+
+// Mantieni anche mostraMessaggio per retrocompatibilità
+function mostraMessaggio(testo, tipo = 'info') {
+    const messaggioDiv = document.getElementById('messaggio-veicoli');
+    if (!messaggioDiv) return;
+    
+    messaggioDiv.textContent = testo;
+    messaggioDiv.className = 'message-veicoli';
+    
+    switch(tipo) {
+        case 'success': 
+            messaggioDiv.classList.add('message-success'); 
+            mostraNotifica(testo, 'successo');
+            break;
+        case 'error': 
+            messaggioDiv.classList.add('message-error'); 
+            mostraNotifica(testo, 'errore');
+            break;
+        case 'warning': 
+            messaggioDiv.classList.add('message-warning'); 
+            mostraNotifica(testo, 'info');
+            break;
+        default: 
+            messaggioDiv.classList.add('message-info');
+            mostraNotifica(testo, 'info');
+    }
+    
+    messaggioDiv.style.display = 'block';
+    
+    setTimeout(() => {
+        messaggioDiv.style.display = 'none';
+    }, 5000);
+}
 
 // ================================
 // INIZIALIZZAZIONE PAGINA
@@ -17,20 +96,27 @@ document.addEventListener('DOMContentLoaded', async function() {
     try {
         console.log('🔄 Inizializzazione pagina Gestione Veicoli...');
         
+        // ✅ CONTROLLO CLIENT
+        if (!supabaseClient) {
+            mostraNotifica('Errore di connessione al database', 'errore');
+            return;
+        }
+        
         // Mostra nome tecnico
-        const tecnico = localStorage.getItem('tecnico_loggato') || 'Tecnico';
-        document.getElementById('tecnico-veicoli').textContent = `Tecnico: ${tecnico}`;
+        document.getElementById('tecnico-veicoli').textContent = `Tecnico: ${tecnicoLoggato || 'Tecnico'}`;
         
         // Controlla configurazione DB
         const configInfo = getDbConfigInfo();
-        const indicator = document.getElementById('db-status-indicator');
+        const dot = document.getElementById('db-status-dot');
         
-        if (configInfo.configured) {
-            indicator.style.background = '#22c55e';
-            indicator.title = `DB configurato • ${configInfo.urlShort || 'N/A'}`;
-        } else {
-            indicator.style.background = '#f59e0b';
-            indicator.title = 'Database non configurato';
+        if (dot) {
+            if (configInfo.configured) {
+                dot.style.background = '#22c55e';
+                dot.title = `DB configurato • ${configInfo.urlShort || 'N/A'}`;
+            } else {
+                dot.style.background = '#f59e0b';
+                dot.title = 'Database non configurato';
+            }
         }
         
         // Inizializza le tab
@@ -40,9 +126,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         inizializzaPulsantiFluttuanti();
         
         // Inizializza bottoni nelle sezioni
-        document.getElementById('btn-nuovo-km')?.addEventListener('click', apriModaleKm);
-        document.getElementById('btn-nuovo-reminder')?.addEventListener('click', apriModaleReminder);
-        
+      // Inizializza bottoni nelle sezioni
+document.getElementById('btn-nuovo-km')?.addEventListener('click', apriModaleKm);
+document.getElementById('btn-nuovo-reminder')?.addEventListener('click', apriModaleReminder);
         // Carica dati iniziali
         await caricaDatiIniziali();
         
@@ -53,11 +139,19 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         }, 30000);
         
+        // ✅ FOOTER CENTRALIZZATO
+        const footerEl = document.getElementById('footer-text');
+        if (footerEl && window.FOOTER_CONFIG) {
+            footerEl.innerText = window.FOOTER_CONFIG.testo;
+        } else if (footerEl) {
+            footerEl.innerText = 'EDIT BY KINGFREAK Version 1.0';
+        }
+        
         console.log('✅ Pagina inizializzata correttamente');
         
     } catch (error) {
         console.error('❌ Errore inizializzazione:', error);
-        mostraMessaggio('Errore inizializzazione pagina', 'error');
+        mostraNotifica('Errore inizializzazione pagina', 'errore');
     }
 });
 
@@ -192,25 +286,24 @@ async function caricaDatiIniziali() {
         
     } catch (error) {
         console.error('❌ Errore caricamento dati:', error);
-        mostraMessaggio('Errore nel caricamento dei dati', 'error');
+        mostraNotifica('Errore nel caricamento dei dati', 'errore');
         nascondiLoading();
     }
 }
 
 async function caricaVeicoloTecnico() {
     try {
-        const supabase = getSupabaseClient();
-        if (!supabase) throw new Error('Database non configurato');
+        // ✅ CONTROLLO CLIENT
+        if (!supabaseClient) throw new Error('Database non configurato');
         
-        const tecnico = localStorage.getItem('tecnico_loggato');
-        if (!tecnico) throw new Error('Nessun tecnico loggato');
+        if (!tecnicoLoggato) throw new Error('Nessun tecnico loggato');
         
-        console.log(`🔍 Cerco veicolo per tecnico: ${tecnico}`);
+        console.log(`🔍 Cerco veicolo per tecnico: ${tecnicoLoggato}`);
         
-        const { data: veicoli, error } = await supabase
+        const { data: veicoli, error } = await supabaseClient
             .from('veicoli')
             .select('*')
-            .ilike('tecnico_assegnato', `%${tecnico}%`)
+            .ilike('tecnico_assegnato', `%${tecnicoLoggato}%`)
             .eq('attivo', true)
             .limit(1);
         
@@ -221,10 +314,10 @@ async function caricaVeicoloTecnico() {
             console.log(`✅ Veicolo trovato: ${veicoloCorrente.targa} - ${veicoloCorrente.modello}`);
             
             // Aggiorna il nome nel DB per farlo corrispondere esattamente
-            if (veicoloCorrente.tecnico_assegnato !== tecnico) {
-                await supabase
+            if (veicoloCorrente.tecnico_assegnato !== tecnicoLoggato) {
+                await supabaseClient
                     .from('veicoli')
-                    .update({ tecnico_assegnato: tecnico })
+                    .update({ tecnico_assegnato: tecnicoLoggato })
                     .eq('id', veicoloCorrente.id);
                 console.log('🔄 Nome tecnico normalizzato nel DB');
             }
@@ -254,12 +347,12 @@ async function caricaKilometriVeicolo() {
             return;
         }
         
-        const supabase = getSupabaseClient();
-        if (!supabase) return;
+        // ✅ CONTROLLO CLIENT
+        if (!supabaseClient) return;
         
         console.log(`📊 Caricamento kilometri per veicolo: ${veicoloCorrente.targa}`);
         
-        const { data: km, error } = await supabase
+        const { data: km, error } = await supabaseClient
             .from('kilometri_mensili')
             .select('*')
             .eq('veicolo_id', veicoloCorrente.id)
@@ -281,19 +374,49 @@ async function caricaStatistiche() {
     try {
         if (!veicoloCorrente) return;
         
-        const supabase = getSupabaseClient();
-        if (!supabase) return;
+        console.log('📊 Caricamento statistiche per veicolo:', veicoloCorrente.id);
         
-        // Usa la vista statistiche_veicoli
-        const { data: stats, error } = await supabase
+        // ✅ CONTROLLO CLIENT
+        if (!supabaseClient) return;
+        
+        // Usa maybeSingle() invece di single() per evitare errori
+        const { data: stats, error } = await supabaseClient
             .from('statistiche_veicoli')
             .select('*')
             .eq('id', veicoloCorrente.id)
-            .single();
+            .maybeSingle();
         
-        if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows
+        console.log('📊 Risposta statistica:', { stats, error });
         
-        aggiornaUI_Statistiche(stats);
+        if (error) {
+            console.error('❌ Errore query statistiche:', error);
+            throw error;
+        }
+        
+        console.log('✅ Statistiche ricevute:', stats);
+        
+        // ✅ CALCOLA ULTIMO INSERIMENTO DA KILOMETRIMENSILI
+        let ultimoIns = null;
+        if (kilometriMensili && kilometriMensili.length > 0) {
+            // Trova il record più recente per data_inserimento
+            const recordOrdinati = [...kilometriMensili].sort((a, b) => {
+                return new Date(b.data_inserimento) - new Date(a.data_inserimento);
+            });
+            ultimoIns = recordOrdinati[0].data_inserimento;
+            console.log('📅 Ultimo inserimento trovato:', ultimoIns);
+        }
+        
+        // Crea un oggetto stats completo
+        const statsCompleti = {
+            km_totali: stats?.km_attuali || 0,
+            km_medi_mensili: stats?.media_km_mensile || 0,
+            mesi_registrati: stats?.mesi_registrati || 0,
+            ultimo_inserimento: ultimoIns
+        };
+        
+        console.log('📊 Statistiche complete:', statsCompleti);
+        
+        aggiornaUI_Statistiche(statsCompleti);
         
     } catch (error) {
         console.error('❌ Errore caricamento statistiche:', error);
@@ -304,10 +427,10 @@ async function caricaReminder() {
     try {
         if (!veicoloCorrente) return;
         
-        const supabase = getSupabaseClient();
-        if (!supabase) return;
+        // ✅ CONTROLLO CLIENT
+        if (!supabaseClient) return;
         
-        const { data: reminders, error } = await supabase
+        const { data: reminders, error } = await supabaseClient
             .from('reminder_veicoli')
             .select('*')
             .eq('veicolo_id', veicoloCorrente.id)
@@ -416,6 +539,7 @@ function aggiornaUI_Statistiche(stats) {
         return;
     }
     
+    // ✅ USA I NUOVI NOMI DALLA FUNZIONE caricaStatistiche()
     const kmTotali = stats.km_totali || 0;
     const kmMedi = Math.round(stats.km_medi_mensili || 0);
     const mesiReg = stats.mesi_registrati || 0;
@@ -423,11 +547,12 @@ function aggiornaUI_Statistiche(stats) {
     
     let ultimoTesto = 'Mai';
     if (ultimoIns) {
-        const giorniPassati = Math.floor((new Date() - ultimoIns) / (1000 * 60 * 60 * 24));
+        const oggi = new Date();
+        const giorniPassati = Math.floor((oggi - ultimoIns) / (1000 * 60 * 60 * 24));
+        
         if (giorniPassati === 0) ultimoTesto = 'Oggi';
         else if (giorniPassati === 1) ultimoTesto = 'Ieri';
-        else if (giorniPassati < 30) ultimoTesto = `${giorniPassati} giorni fa`;
-        else ultimoTesto = formattaData(ultimoIns);
+        else ultimoTesto = `${giorniPassati} giorni fa`;
     }
     
     container.innerHTML = `
@@ -522,17 +647,19 @@ function aggiornaUI_Reminder() {
         }
         
         html += `
-            <div class="reminder-card ${giorniDiff < 0 ? 'pulse-animation' : ''}">
+            <div class="reminder-card">
                 <span class="material-symbols-rounded reminder-icon" style="color: ${colore};">${icona}</span>
-                <div class="reminder-content">
-                    <h4>${tipoTesto}</h4>
-                    <p>${reminder.descrizione || 'Nessuna descrizione'}</p>
+                <div class="reminder-content" style="flex:1;">
+                    <h4 style="margin: 0 0 0.25rem 0;">${tipoTesto}</h4>
+                    <p style="margin: 0; color: #64748b; font-size: 0.9rem;">${reminder.descrizione || 'Nessuna descrizione'}</p>
                     <div style="font-size: 0.75rem; color: #b45309; margin-top: 0.25rem;">
                         Scadenza: ${formattaData(scadenza)}
                     </div>
                 </div>
-                <div class="reminder-giorni" style="background: ${giorniDiff < 0 ? '#ef4444' : (giorniDiff <= 7 ? '#f59e0b' : '#10b981')}">
-                    ${giorniDiff < 0 ? 'SCADUTO' : `${giorniDiff} giorni`}
+                <div style="min-width: 70px; text-align: right;">
+                    <div style="padding: 0.25rem 0.75rem; background: ${giorniDiff < 0 ? '#ef4444' : (giorniDiff <= 7 ? '#f59e0b' : '#10b981')}; color: white; border-radius: 20px; font-size: 0.75rem; font-weight: 800;">
+                        ${giorniDiff < 0 ? 'SCADUTO' : `${giorniDiff} giorni`}
+                    </div>
                 </div>
             </div>
         `;
@@ -548,7 +675,7 @@ function mostraStatoVuoto() {
                 <span class="material-symbols-rounded">directions_car_off</span>
                 <h3 style="color: var(--text-muted); margin: 1rem 0 0.5rem 0;">Nessun veicolo assegnato</h3>
                 <p>Contatta l'amministrazione per l'assegnazione di un veicolo aziendale.</p>
-                <button onclick="location.reload()" class="btn-action btn-secondary" style="margin-top: 1.5rem; padding: 0.75rem 1.5rem;">
+                <button onclick="location.reload()" class="btn-secondario" style="margin-top: 1.5rem;">
                     <span class="material-symbols-rounded">refresh</span>
                     Ricarica
                 </button>
@@ -587,7 +714,7 @@ async function caricaListaKilometriCompleta() {
                     <span class="material-symbols-rounded">history</span>
                     <h3 style="color: var(--text-muted); margin: 1rem 0 0.5rem 0;">Nessun chilometraggio registrato</h3>
                     <p>Inizia inserendo i kilometri del tuo veicolo.</p>
-                    <button onclick="apriModaleKm()" class="btn-action btn-primary" style="margin-top: 1.5rem;">
+                    <button onclick="apriModaleKm()" class="btn-primario" style="margin-top: 1.5rem;">
                         <span class="material-symbols-rounded">add</span>
                         Inserisci Kilometri
                     </button>
@@ -632,7 +759,7 @@ async function caricaListaKilometriCompleta() {
         
     } catch (error) {
         console.error('❌ Errore caricamento lista kilometri:', error);
-        mostraMessaggio('Errore nel caricamento dello storico kilometri', 'error');
+        mostraNotifica('Errore nel caricamento dello storico kilometri', 'errore');
     }
 }
 
@@ -706,40 +833,88 @@ async function caricaListaReminderCompleta() {
                     break;
             }
             
-            // Usa un ID univoco per i bottoni
             const reminderId = reminder.id || `reminder-${Date.now()}`;
             
-            html += `
-                <div class="reminder-card">
-                    <div style="display: flex; align-items: flex-start; gap: 1rem; width: 100%;">
-                        <span class="material-symbols-rounded reminder-icon" style="color: ${colore};">${icona}</span>
-                        <div style="flex: 1;">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                                <div>
-                                    <h4 style="margin: 0 0 0.25rem 0; color: #1e293b;">${tipoTesto}</h4>
-                                    <p style="margin: 0; color: #64748b; font-size: 0.9rem;">${reminder.descrizione || 'Nessuna descrizione'}</p>
-                                </div>
-                                <div style="text-align: right;">
-                                    <div style="padding: 0.25rem 0.75rem; background: ${giorniDiff < 0 ? '#ef4444' : (giorniDiff <= 7 ? '#f59e0b' : '#10b981')}; color: white; border-radius: 20px; font-size: 0.75rem; font-weight: 800;">
-                                        ${giorniDiff < 0 ? 'SCADUTO' : `${giorniDiff} giorni`}
-                                    </div>
-                                    <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.25rem;">
-                                        Scade: ${formattaData(scadenza)}
-                                    </div>
-                                </div>
-                            </div>
-                            <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-                                <button onclick="completaReminder('${reminderId}')" class="btn-action btn-success" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
-                                    <span class="material-symbols-rounded">check</span> Completa
-                                </button>
-                                <button onclick="eliminaReminder('${reminderId}')" class="btn-action btn-danger" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
-                                    <span class="material-symbols-rounded">delete</span> Elimina
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
+            // ✅ STRUTTURA CARD MIGLIORATA
+          // Sostituisci questa parte nella funzione caricaListaReminderCompleta()
+html += `
+    <div class="reminder-card" style="
+        background: #fffbeb;
+        border: 2px solid #fbbf24;
+        border-radius: 16px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    ">
+        <!-- Intestazione con icona e titolo -->
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <span class="material-symbols-rounded" style="color: ${colore};">${icona}</span>
+            <span style="font-weight: 800; color: #1e293b;">${tipoTesto}</span>
+        </div>
+        
+        <!-- Badge giorni (a capo se necessario) -->
+        <div style="margin-bottom: 0.5rem;">
+            <span style="
+                display: inline-block;
+                padding: 0.25rem 0.75rem;
+                background: ${giorniDiff < 0 ? '#ef4444' : (giorniDiff <= 7 ? '#f59e0b' : '#10b981')};
+                color: white;
+                border-radius: 20px;
+                font-size: 0.7rem;
+                font-weight: 800;
+            ">
+                ${giorniDiff < 0 ? 'SCADUTO' : `${giorniDiff} giorni`}
+            </span>
+        </div>
+        
+        <!-- Descrizione (se presente) -->
+        ${reminder.descrizione ? `
+            <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 0.5rem;">
+                ${reminder.descrizione}
+            </div>
+        ` : ''}
+        
+        <!-- Data scadenza -->
+        <div style="font-size: 0.75rem; color: #92400e; margin-bottom: 1rem;">
+            Scade: ${formattaData(scadenza)}
+        </div>
+        
+        <!-- Bottoni azione con flex-wrap -->
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button onclick="completaReminder('${reminderId}')" style="
+                background: #22c55e;
+                color: white;
+                border: none;
+                border-radius: 20px;
+                padding: 0.3rem 0.8rem;
+                font-size: 0.5rem;
+                font-weight: 700;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.30rem;
+                cursor: pointer;
+                white-space: nowrap;
+            ">
+                <span class="material-symbols-rounded" style="font-size: 14px;">check</span> Completa
+            </button>
+            <button onclick="eliminaReminder('${reminderId}')" style="
+                background: #fee2e2;
+                color: #dc2626;
+                border: none;
+                border-radius: 20px;
+                padding: 0.3rem 0.8rem;
+                font-size: 0.7rem;
+                font-weight: 700;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.25rem;
+                cursor: pointer;
+                white-space: nowrap;
+            ">
+                <span class="material-symbols-rounded" style="font-size: 14px;">delete</span> Elimina
+            </button>
+        </div>
+    </div>
+`;
         });
         
         container.innerHTML = html;
@@ -747,17 +922,17 @@ async function caricaListaReminderCompleta() {
         
     } catch (error) {
         console.error('❌ Errore caricamento lista reminder:', error);
-        mostraMessaggio('Errore nel caricamento dei reminder', 'error');
+        mostraNotifica('Errore nel caricamento dei reminder', 'errore');
     }
 }
 
 // ================================
-// FUNZIONI MODALI (rimangono uguali)
+// FUNZIONI MODALI
 // ================================
 
 function apriModaleKm() {
     if (!veicoloCorrente) {
-        mostraMessaggio('Nessun veicolo assegnato. Contatta l\'amministrazione.', 'warning');
+        mostraNotifica('Nessun veicolo assegnato. Contatta l\'amministrazione.', 'errore');
         return;
     }
     
@@ -795,7 +970,7 @@ function chiudiModaleKm() {
 
 function apriModaleReminder() {
     if (!veicoloCorrente) {
-        mostraMessaggio('Nessun veicolo assegnato. Contatta l\'amministrazione.', 'warning');
+        mostraNotifica('Nessun veicolo assegnato. Contatta l\'amministrazione.', 'errore');
         return;
     }
     
@@ -817,33 +992,39 @@ function chiudiModaleReminder() {
 }
 
 // ================================
-// FUNZIONI CRUD (rimangono uguali)
+// FUNZIONI CRUD
 // ================================
 
 async function salvaKilometri() {
     try {
+        // ✅ CONTROLLO CLIENT
+        if (!supabaseClient) {
+            mostraNotifica('Errore di connessione al database', 'errore');
+            return;
+        }
+        
         const mese = parseInt(document.getElementById('mese-km').value);
         const anno = parseInt(document.getElementById('anno-km').value);
         const km = parseInt(document.getElementById('km-fine-mese').value);
         const note = document.getElementById('note-km').value.trim();
         
         if (!mese || !anno || !km) {
-            mostraMessaggio('Compila tutti i campi obbligatori', 'error');
+            mostraNotifica('Compila tutti i campi obbligatori', 'errore');
             return;
         }
         
         if (mese < 1 || mese > 12) {
-            mostraMessaggio('Mese non valido', 'error');
+            mostraNotifica('Mese non valido', 'errore');
             return;
         }
         
         if (anno < 2020 || anno > 2030) {
-            mostraMessaggio('Anno non valido', 'error');
+            mostraNotifica('Anno non valido', 'errore');
             return;
         }
         
         if (km <= 0) {
-            mostraMessaggio('Inserisci un valore valido per i kilometri', 'error');
+            mostraNotifica('Inserisci un valore valido per i kilometri', 'errore');
             return;
         }
         
@@ -870,11 +1051,6 @@ async function salvaKilometri() {
         
         mostraLoading();
         
-        const supabase = getSupabaseClient();
-        if (!supabase) throw new Error('Database non configurato');
-        
-        const tecnico = localStorage.getItem('tecnico_loggato');
-        
         const datiKm = {
             veicolo_id: veicoloCorrente.id,
             anno: anno,
@@ -883,12 +1059,12 @@ async function salvaKilometri() {
             data_inserimento: new Date().toISOString().split('T')[0],
             note: note || null,
             confermato: false,
-            created_by: tecnico
+            created_by: tecnicoLoggato
         };
         
         let result;
         if (esistente) {
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('kilometri_mensili')
                 .update(datiKm)
                 .eq('id', esistente.id)
@@ -897,7 +1073,7 @@ async function salvaKilometri() {
             if (error) throw error;
             result = data?.[0];
         } else {
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('kilometri_mensili')
                 .insert([datiKm])
                 .select();
@@ -911,13 +1087,13 @@ async function salvaKilometri() {
         await caricaUltimiInserimenti();
         
         chiudiModaleKm();
-        mostraMessaggio('Kilometri salvati con successo! In attesa di conferma.', 'success');
+        mostraNotifica('Kilometri salvati con successo! In attesa di conferma.', 'successo');
         
         await verificaInserimentoTardivo(mese, anno);
         
     } catch (error) {
         console.error('❌ Errore salvataggio kilometri:', error);
-        mostraMessaggio(`Errore nel salvataggio: ${error.message}`, 'error');
+        mostraNotifica(`Errore nel salvataggio: ${error.message}`, 'errore');
     } finally {
         nascondiLoading();
     }
@@ -925,12 +1101,18 @@ async function salvaKilometri() {
 
 async function salvaReminder() {
     try {
+        // ✅ CONTROLLO CLIENT
+        if (!supabaseClient) {
+            mostraNotifica('Errore di connessione al database', 'errore');
+            return;
+        }
+        
         const tipo = document.getElementById('tipo-reminder').value;
         const dataScadenza = document.getElementById('data-scadenza').value;
         const descrizione = document.getElementById('descrizione-reminder').value.trim();
         
         if (!dataScadenza) {
-            mostraMessaggio('Inserisci una data di scadenza', 'error');
+            mostraNotifica('Inserisci una data di scadenza', 'errore');
             return;
         }
         
@@ -945,12 +1127,7 @@ async function salvaReminder() {
         
         mostraLoading();
         
-        const supabase = getSupabaseClient();
-        if (!supabase) throw new Error('Database non configurato');
-        
-        const tecnico = localStorage.getItem('tecnico_loggato');
-        
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('reminder_veicoli')
             .insert([{
                 veicolo_id: veicoloCorrente.id,
@@ -959,7 +1136,7 @@ async function salvaReminder() {
                 descrizione: descrizione || null,
                 notificato: false,
                 completato: false,
-                created_by: tecnico
+                created_by: tecnicoLoggato
             }])
             .select();
         
@@ -968,11 +1145,11 @@ async function salvaReminder() {
         await caricaReminder();
         
         chiudiModaleReminder();
-        mostraMessaggio('Reminder creato con successo!', 'success');
+        mostraNotifica('Reminder creato con successo!', 'successo');
         
     } catch (error) {
         console.error('❌ Errore creazione reminder:', error);
-        mostraMessaggio(`Errore nella creazione: ${error.message}`, 'error');
+        mostraNotifica(`Errore nella creazione: ${error.message}`, 'errore');
     } finally {
         nascondiLoading();
     }
@@ -980,14 +1157,17 @@ async function salvaReminder() {
 
 async function completaReminder(id) {
     try {
+        // ✅ CONTROLLO CLIENT
+        if (!supabaseClient) {
+            mostraNotifica('Errore di connessione al database', 'errore');
+            return;
+        }
+        
         if (!confirm('Segnare questo reminder come completato?')) return;
         
         mostraLoading();
         
-        const supabase = getSupabaseClient();
-        if (!supabase) throw new Error('Database non configurato');
-        
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('reminder_veicoli')
             .update({ completato: true })
             .eq('id', id);
@@ -1001,11 +1181,11 @@ async function completaReminder(id) {
             await caricaListaReminderCompleta();
         }
         
-        mostraMessaggio('Reminder completato!', 'success');
+        mostraNotifica('Reminder completato!', 'successo');
         
     } catch (error) {
         console.error('❌ Errore completamento reminder:', error);
-        mostraMessaggio(`Errore: ${error.message}`, 'error');
+        mostraNotifica(`Errore: ${error.message}`, 'errore');
     } finally {
         nascondiLoading();
     }
@@ -1013,14 +1193,17 @@ async function completaReminder(id) {
 
 async function eliminaReminder(id) {
     try {
+        // ✅ CONTROLLO CLIENT
+        if (!supabaseClient) {
+            mostraNotifica('Errore di connessione al database', 'errore');
+            return;
+        }
+        
         if (!confirm('Eliminare definitivamente questo reminder?')) return;
         
         mostraLoading();
         
-        const supabase = getSupabaseClient();
-        if (!supabase) throw new Error('Database non configurato');
-        
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('reminder_veicoli')
             .delete()
             .eq('id', id);
@@ -1034,40 +1217,103 @@ async function eliminaReminder(id) {
             await caricaListaReminderCompleta();
         }
         
-        mostraMessaggio('Reminder eliminato!', 'success');
+        mostraNotifica('Reminder eliminato!', 'successo');
         
     } catch (error) {
         console.error('❌ Errore eliminazione reminder:', error);
-        mostraMessaggio(`Errore: ${error.message}`, 'error');
+        mostraNotifica(`Errore: ${error.message}`, 'errore');
     } finally {
         nascondiLoading();
     }
 }
 
 // ================================
-// FUNZIONI UTILITY (rimangono uguali)
+// FUNZIONI DI VERIFICA AGGIUNTIVE
 // ================================
 
-function mostraMessaggio(testo, tipo = 'info') {
-    const messaggioDiv = document.getElementById('messaggio-veicoli');
-    if (!messaggioDiv) return;
-    
-    messaggioDiv.textContent = testo;
-    messaggioDiv.className = 'message-veicoli';
-    
-    switch(tipo) {
-        case 'success': messaggioDiv.classList.add('message-success'); break;
-        case 'error': messaggioDiv.classList.add('message-error'); break;
-        case 'warning': messaggioDiv.classList.add('message-warning'); break;
-        default: messaggioDiv.classList.add('message-info');
+async function verificaInserimentoTardivo(mese, anno) {
+    try {
+        const oggi = new Date();
+        const dataInserimento = new Date(anno, mese - 1, 1);
+        const mesiDiff = (oggi.getFullYear() - anno) * 12 + (oggi.getMonth() + 1 - mese);
+        
+        if (mesiDiff > 1) {
+            // ✅ CONTROLLO CLIENT
+            if (!supabaseClient) return;
+            
+            const { data, error } = await supabaseClient
+                .from('log_azioni')
+                .insert([{
+                    azione: 'inserimento_tardivo_km',
+                    dettagli: JSON.stringify({
+                        veicolo_id: veicoloCorrente.id,
+                        targa: veicoloCorrente.targa,
+                        mese: mese,
+                        anno: anno,
+                        mesi_ritardo: mesiDiff
+                    }),
+                    created_by: tecnicoLoggato
+                }]);
+            
+            if (!error) {
+                console.log(`⚠️ Inserimento tardivo registrato: ${mesiDiff} mesi di ritardo`);
+            }
+        }
+    } catch (error) {
+        console.error('❌ Errore verifica inserimento tardivo:', error);
     }
-    
-    messaggioDiv.style.display = 'block';
-    
-    setTimeout(() => {
-        messaggioDiv.style.display = 'none';
-    }, 5000);
 }
+
+async function verificaAlert() {
+    try {
+        console.log('🔍 Verifica alert in corso...');
+        
+        if (!veicoloCorrente) return;
+        
+        // ✅ CONTROLLO CLIENT
+        if (!supabaseClient) return;
+        
+        // Verifica reminder scaduti o in scadenza
+        const oggi = new Date().toISOString().split('T')[0];
+        const settimanaProssima = new Date();
+        settimanaProssima.setDate(settimanaProssima.getDate() + 7);
+        const dataSettimana = settimanaProssima.toISOString().split('T')[0];
+        
+        const { data: reminderUrgenti, error } = await supabaseClient
+            .from('reminder_veicoli')
+            .select('*')
+            .eq('veicolo_id', veicoloCorrente.id)
+            .eq('completato', false)
+            .lte('data_scadenza', dataSettimana)
+            .order('data_scadenza', { ascending: true });
+        
+        if (error) {
+            console.error('❌ Errore verifica alert:', error);
+            return;
+        }
+        
+        // Mostra notifica se ci sono reminder urgenti
+        if (reminderUrgenti && reminderUrgenti.length > 0) {
+            const scaduti = reminderUrgenti.filter(r => new Date(r.data_scadenza) < new Date());
+            const inScadenza = reminderUrgenti.filter(r => new Date(r.data_scadenza) >= new Date());
+            
+            if (scaduti.length > 0) {
+                console.warn(`⚠️ ${scaduti.length} reminder SCADUTI!`);
+                mostraNotifica(`Hai ${scaduti.length} reminder scaduti!`, 'errore');
+            }
+            if (inScadenza.length > 0) {
+                console.log(`📅 ${inScadenza.length} reminder in scadenza nei prossimi 7 giorni`);
+            }
+        }
+        
+    } catch (error) {
+        console.error('❌ Errore verifica alert:', error);
+    }
+}
+
+// ================================
+// FUNZIONI UTILITY
+// ================================
 
 function mostraLoading() {
     let loading = document.getElementById('loading-overlay-veicoli');
@@ -1128,90 +1374,7 @@ function getNomeMese(numeroMese) {
     ];
     return mesi[numeroMese - 1] || 'Mese non valido';
 }
-// ================================
-// FUNZIONI DI VERIFICA AGGIUNTIVE
-// ================================
 
-async function verificaInserimentoTardivo(mese, anno) {
-    try {
-        const oggi = new Date();
-        const dataInserimento = new Date(anno, mese - 1, 1);
-        const mesiDiff = (oggi.getFullYear() - anno) * 12 + (oggi.getMonth() + 1 - mese);
-        
-        if (mesiDiff > 1) {
-            const supabase = getSupabaseClient();
-            if (!supabase) return;
-            
-            const tecnico = localStorage.getItem('tecnico_loggato');
-            
-            const { data, error } = await supabase
-                .from('log_azioni')
-                .insert([{
-                    azione: 'inserimento_tardivo_km',
-                    dettagli: JSON.stringify({
-                        veicolo_id: veicoloCorrente.id,
-                        targa: veicoloCorrente.targa,
-                        mese: mese,
-                        anno: anno,
-                        mesi_ritardo: mesiDiff
-                    }),
-                    created_by: tecnico
-                }]);
-            
-            if (!error) {
-                console.log(`⚠️ Inserimento tardivo registrato: ${mesiDiff} mesi di ritardo`);
-            }
-        }
-    } catch (error) {
-        console.error('❌ Errore verifica inserimento tardivo:', error);
-    }
-}
-
-async function verificaAlert() {
-    try {
-        console.log('🔍 Verifica alert in corso...');
-        
-        if (!veicoloCorrente) return;
-        
-        const supabase = getSupabaseClient();
-        if (!supabase) return;
-        
-        // Verifica reminder scaduti o in scadenza
-        const oggi = new Date().toISOString().split('T')[0];
-        const settimanaProssima = new Date();
-        settimanaProssima.setDate(settimanaProssima.getDate() + 7);
-        const dataSettimana = settimanaProssima.toISOString().split('T')[0];
-        
-        const { data: reminderUrgenti, error } = await supabase
-            .from('reminder_veicoli')
-            .select('*')
-            .eq('veicolo_id', veicoloCorrente.id)
-            .eq('completato', false)
-            .lte('data_scadenza', dataSettimana)
-            .order('data_scadenza', { ascending: true });
-        
-        if (error) {
-            console.error('❌ Errore verifica alert:', error);
-            return;
-        }
-        
-        // Mostra notifica se ci sono reminder urgenti
-        if (reminderUrgenti && reminderUrgenti.length > 0) {
-            const scaduti = reminderUrgenti.filter(r => new Date(r.data_scadenza) < new Date());
-            const inScadenza = reminderUrgenti.filter(r => new Date(r.data_scadenza) >= new Date());
-            
-            if (scaduti.length > 0) {
-                console.warn(`⚠️ ${scaduti.length} reminder SCADUTI!`);
-            }
-            if (inScadenza.length > 0) {
-                console.log(`📅 ${inScadenza.length} reminder in scadenza nei prossimi 7 giorni`);
-            }
-        }
-        
-    } catch (error) {
-        console.error('❌ Errore verifica alert:', error);
-    }
-}
 // ================================
 // ESPORTA FUNZIONI GLOBALI
 // ================================

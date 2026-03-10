@@ -10,6 +10,23 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="db-config.js"></script>
     <script src="check-db-config.js"></script>
+    <!-- ✅ AGGIUNTO: Auth.js per gestione login -->
+    <script src="auth.js"></script>
+    <!-- ✅ GATEKEEPER: Protezione pagina -->
+    <script>
+        (function() {
+            const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+            if (!utente) {
+                window.location.href = 'index.html';
+            }
+        })();
+    </script>
+    <!-- ✅ CONFIGURAZIONE FOOTER -->
+    <script>
+        window.FOOTER_CONFIG = {
+            testo: "EDIT BY KINGFREAK Version 1.0"
+        };
+    </script>
     <style>
         /* Stili principali rimangono uguali */
         .app-container { max-width: 450px; margin: 0 auto; min-height: 100vh; position: relative; padding-bottom: 5rem; }
@@ -40,43 +57,236 @@
         .message-success { background: #f0fdf4; color: #166534; border-left: 4px solid #22c55e; }
         .message-error { background: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; }
         .message-warning { background: #fffbeb; color: #92400e; border-left: 4px solid #f59e0b; }
-        .app-footer { background: var(--white); padding: 1rem; text-align: center; border-top: 1px solid var(--border); position: fixed; bottom: 0; left: 0; right: 0; max-width: 450px; margin: 0 auto; z-index: 100; }
+        
+        /* Uniformazione pulsanti */
+        .btn-primario {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 700;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        }
+        
+        .btn-primario:hover {
+            background: color-mix(in srgb, var(--primary) 85%, black);
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondario {
+            background: white;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 700;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-secondario:hover {
+            background: var(--primary-light);
+            transform: translateY(-1px);
+        }
+        
+        .btn-danger {
+            background: #fee2e2;
+            color: #dc2626;
+            border: 2px solid #fecaca;
+            border-radius: 12px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 700;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+            color: white;
+            border-color: #dc2626;
+            transform: translateY(-1px);
+        }
+        
+        .btn-success {
+            background: #22c55e;
+            color: white;
+            border: 2px solid #22c55e;
+            border-radius: 12px;
+            padding: 0.5rem 1rem;
+            font-weight: 700;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-success:hover {
+            background: #16a34a;
+            border-color: #16a34a;
+            transform: translateY(-1px);
+        }
+        
+        .app-footer {
+            background: var(--white);
+            padding: 1rem;
+            text-align: center;
+            border-top: 1px solid var(--border);
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            max-width: 450px;
+            margin: 0 auto;
+            z-index: 100;
+        }
         .footer-text { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; }
+        
         @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
 
-
         /* ASSICURA CHE I MODALI SIANO SOPRA TUTTO */
-.modale-overlay {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    background: rgba(0, 0, 0, 0.5) !important;
-    z-index: 9999 !important;
-    display: none;
-    align-items: center;
-    justify-content: center;
-}
+        .modale-overlay {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: rgba(0, 0, 0, 0.5) !important;
+            z-index: 9999 !important;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
 
-.modale-content {
-    background: white !important;
-    border-radius: 16px !important;
-    padding: 1.5rem !important;
-    max-width: 90% !important;
-    width: 500px !important;
-    max-height: 90vh !important;
-    overflow-y: auto !important;
-    z-index: 10000 !important;
-    position: relative !important;
-}
+        .modale-content {
+            background: white !important;
+            border-radius: 16px !important;
+            padding: 1.5rem !important;
+            max-width: 90% !important;
+            width: 500px !important;
+            max-height: 90vh !important;
+            overflow-y: auto !important;
+            z-index: 10000 !important;
+            position: relative !important;
+        }
+
+        .modale-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modale-title {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin: 0;
+        }
+
+        .modale-footer {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+
+        /* Notifiche compatte */
+        .notifica {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 2000;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 500;
+            max-width: 90%;
+            width: auto;
+            height: 28px;
+            min-height: 28px;
+            line-height: 1;
+            animation: slideUp 0.2s ease;
+            pointer-events: none;
+        }
+
+        .notifica.successo { background: #22c55e; }
+        .notifica.errore { background: #ef4444; }
+        .notifica.info { background: #334155; }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translate(-50%, 20px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
+
+        /* Bottoni azione */
+        .btn-action {
+            padding: 0.5rem 1rem;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-action.btn-primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+        }
+
+        .btn-action.btn-primary:hover {
+            background: color-mix(in srgb, var(--primary) 85%, black);
+            transform: translateY(-1px);
+        }
+
+        .btn-action.btn-secondary {
+            background: white;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+
+        .btn-action.btn-secondary:hover {
+            background: var(--primary-light);
+            transform: translateY(-1px);
+        }
     </style>
 </head>
 <body class="bg-app">
     <div class="app-container">
-        <!-- HEADER -->
-        <header class="app-header-veicoli">
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; position: relative;">
+        <!-- HEADER con indicatore DB e nome tecnico -->
+        <header class="app-header-veicoli" style="position: relative;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
                 <button onclick="window.location.href='menu.html'" style="background: none; border: none; padding: 0.5rem; border-radius: 10px; color: var(--primary); cursor: pointer; display: flex; align-items: center; justify-content: center;">
                     <span class="material-symbols-rounded" style="font-size: 1.5rem;">arrow_back</span>
                 </button>
@@ -84,7 +294,8 @@
                     <h1 style="font-size: 1.25rem; font-weight: 800; color: var(--primary); margin: 0;">Gestione Veicoli</h1>
                     <p id="tecnico-veicoli" style="margin: 0; font-size: 0.85rem; color: var(--text-muted); font-weight: 600;"></p>
                 </div>
-                <div id="db-status-indicator" style="width: 10px; height: 10px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); background: #f59e0b; cursor: help; position: absolute; top: 0; right: 0;"></div>
+                <!-- ✅ INDICATORE DB STATICO (verde con glow) -->
+                <div id="db-status-dot" style="position: absolute; top: 15px; right: 15px; width: 14px; height: 14px; background: #22c55e; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2); z-index: 10;"></div>
             </div>
         </header>
 
@@ -146,43 +357,44 @@
                 </div>
             </div>
 
-            <!-- SEZIONE KILOMETRI (nascosta inizialmente) -->
-            <div id="kilometri-section" class="veicoli-section" style="display: none;">
-                <div class="section-header">
-                    <h2 class="section-title">
-                        <span class="material-symbols-rounded">speed</span> Storico Kilometri
-                    </h2>
-                    <button id="btn-nuovo-km" class="btn-action btn-primary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
-                        <span class="material-symbols-rounded">add</span> Nuovo
-                    </button>
-                </div>
-                <div id="lista-kilometri"></div>
-            </div>
+          <!-- SEZIONE KILOMETRI -->
+<div id="kilometri-section" class="veicoli-section" style="display: none;">
+    <div class="section-header">
+        <h2 class="section-title">
+            <span class="material-symbols-rounded">speed</span> Storico Kilometri
+        </h2>
+        <button id="btn-nuovo-km" class="btn-action btn-primary" style="padding: 0.35rem 0.7rem; font-size: 0.7rem; width: auto; min-width: 70px;">
+            <span class="material-symbols-rounded" style="font-size: 16px;">add</span> Nuovo
+        </button>
+    </div>
+    <div id="lista-kilometri"></div>
+</div>
 
-            <!-- SEZIONE REMINDER (nascosta inizialmente) -->
-            <div id="reminder-section" class="veicoli-section" style="display: none;">
-                <div class="section-header">
-                    <h2 class="section-title">
-                        <span class="material-symbols-rounded">notifications</span> Gestione Reminder
-                    </h2>
-                    <button id="btn-nuovo-reminder" class="btn-action btn-primary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
-                        <span class="material-symbols-rounded">add_alert</span> Nuovo
-                    </button>
-                </div>
-                <div id="lista-reminder"></div>
-            </div>
+<!-- SEZIONE REMINDER -->
+<div id="reminder-section" class="veicoli-section" style="display: none;">
+    <div class="section-header">
+        <h2 class="section-title">
+            <span class="material-symbols-rounded">notifications</span> Gestione Reminder
+        </h2>
+       <button id="btn-nuovo-reminder" class="btn-action btn-primary" style="padding: 0.35rem 0.7rem; font-size: 0.7rem; width: auto; min-width: 80px;">
+    <span class="material-symbols-rounded" style="font-size: 16px;">add_alert</span> Nuovo
+</button>
+    </div>
+    <div id="lista-reminder"></div>
+</div>
         </main>
 
-        <!-- BOTTONE AZIONE PRINCIPALE -->
-        <div style="position: fixed; bottom: 5rem; right: 1rem; z-index: 99;">
-            <button id="btn-azione-principale" class="btn-action btn-primary" style="width: 56px; height: 56px; border-radius: 50%; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);">
-                <span class="material-symbols-rounded">add</span>
-            </button>
-        </div>
+        <!-- BOTTONE AZIONE PRINCIPALE - COMMENTATO PER DISATTIVARLO
+<div style="position: fixed; bottom: 5rem; right: 1rem; z-index: 99;">
+    <button id="btn-azione-principale" class="btn-action btn-primary" style="width: 56px; height: 56px; border-radius: 50%; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);">
+        <span class="material-symbols-rounded">add</span>
+    </button>
+</div>
+-->
 
-        <!-- FOOTER -->
+        <!-- FOOTER CENTRALIZZATO -->
         <footer class="app-footer">
-            <span class="footer-text">EDIT BY KINGFREAK Version 1.0</span>
+            <span class="footer-text" id="footer-text"></span>
         </footer>
 
         <!-- MODALE INSERIMENTO KM -->
@@ -227,8 +439,8 @@
                     </div>
                 </div>
                 <div class="modale-footer">
-                    <button onclick="chiudiModaleKm()" class="btn-action btn-secondary" style="flex: 1;">Annulla</button>
-                    <button onclick="salvaKilometri()" class="btn-action btn-primary" style="flex: 2;">
+                    <button onclick="chiudiModaleKm()" class="btn-secondario" style="flex: 1;">Annulla</button>
+                    <button onclick="salvaKilometri()" class="btn-primario" style="flex: 2;">
                         <span class="material-symbols-rounded">save</span> Salva Kilometri
                     </button>
                 </div>
@@ -266,16 +478,16 @@
                     </div>
                 </div>
                 <div class="modale-footer">
-                    <button onclick="chiudiModaleReminder()" class="btn-action btn-secondary" style="flex: 1;">Annulla</button>
-                    <button onclick="salvaReminder()" class="btn-action btn-primary" style="flex: 2;">
+                    <button onclick="chiudiModaleReminder()" class="btn-secondario" style="flex: 1;">Annulla</button>
+                    <button onclick="salvaReminder()" class="btn-primario" style="flex: 2;">
                         <span class="material-symbols-rounded">add_alert</span> Crea Reminder
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- MESSAGGI -->
-        <div id="messaggio-veicoli" class="message-veicoli"></div>
+        <!-- MESSAGGI (mantenuto per retrocompatibilità) -->
+        <div id="messaggio-veicoli" class="message-veicoli" style="display: none;"></div>
     </div>
 
     <!-- SCRIPT PRINCIPALE -->
