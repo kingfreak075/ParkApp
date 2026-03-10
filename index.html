@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ParkApp - Login</title>
+    <title>ParkApp - Accesso</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
@@ -11,159 +11,1119 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="db-config.js"></script>
     <script src="auth.js"></script>
-    
     <style>
-        /* ... (stili precedenti conservati) ... */
-        .login-container { background: white; border-radius: 24px; padding: 2rem; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto; text-align: center; }
-        .input-group { display: flex; align-items: center; background: #f8fafc; border-radius: 12px; padding: 0 15px; margin-bottom: 15px; border: 2px solid #e2e8f0; transition: border-color 0.2s; }
-        .form-input { flex: 1; padding: 15px; border: none; background: transparent; font-size: 1rem; outline: none; }
-        .btn-primary { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: 700; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        /* Stili specifici per la pagina di login */
+        .app-container {
+            max-width: 450px;
+            margin: 0 auto;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 1rem;
+        }
         
-        /* STILE MODALE SUPERVISORE */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
-        .modal-content { background: white; border-radius: 24px; padding: 2rem; max-width: 400px; width: 100%; text-align: center; animation: modalPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        @keyframes modalPop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .header-login {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
         
-        .modal-btn { padding: 18px; border-radius: 15px; border: 2px solid #e2e8f0; margin-bottom: 12px; display: flex; align-items: center; gap: 15px; width: 100%; cursor: pointer; transition: all 0.2s; background: white; text-align: left; }
-        .modal-btn:hover { border-color: var(--primary); background: #f0f9ff; }
-        .modal-btn b { display: block; font-size: 1.1rem; color: #1e293b; }
-        .modal-btn span.desc { font-size: 0.85rem; color: #64748b; font-weight: 400; }
-        .modal-btn i { font-size: 2.5rem; color: var(--primary); }
+        .logo h1 {
+            font-size: 1.8rem;
+            font-weight: 900;
+            color: var(--primary);
+            margin: 0;
+            line-height: 1;
+        }
+        
+        .logo span {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        
+        .config-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: var(--primary-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+        
+        .config-icon.configurato {
+            background: #22c55e20;
+            border-color: #22c55e;
+            color: #22c55e;
+        }
+        
+        .config-icon.non-configurato {
+            background: #ef444420;
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+        
+        .config-icon:hover {
+            transform: scale(1.05);
+        }
+        
+        .config-icon .material-symbols-rounded {
+            font-size: 24px;
+        }
+        
+        .card-accesso {
+            background: white;
+            border-radius: 24px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1.5rem;
+        }
+        
+        .section-title {
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .tecnici-list {
+            max-height: 250px;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+        
+        .tecnico-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .tecnico-item:last-child {
+            border-bottom: none;
+        }
+        
+        .tecnico-item:hover {
+            background: var(--primary-light);
+        }
+        
+        .tecnico-item.selezionato {
+            background: var(--primary-light);
+            border-left: 4px solid var(--primary);
+        }
+        
+        .tecnico-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .tecnico-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.1rem;
+        }
+        
+        .tecnico-nome {
+            font-weight: 700;
+            color: var(--text-main);
+        }
+        
+        .tecnico-azioni {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .btn-icona {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        
+        .btn-icona:hover {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+        
+        .btn-icona.elimina:hover {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+        
+        .btn-outline {
+            width: 100%;
+            padding: 1rem;
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            background: white;
+            color: var(--text-muted);
+            font-weight: 700;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 1rem;
+        }
+        
+        .btn-outline:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: var(--primary-light);
+        }
+        
+        .btn-clear-all {
+            width: 100%;
+            padding: 0.75rem;
+            background: #fee2e2;
+            border: none;
+            border-radius: 12px;
+            color: #991b1b;
+            font-weight: 700;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-clear-all:hover {
+            background: #fecaca;
+        }
+        
+        .pin-section {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+        }
+        
+        .pin-display {
+            background: #f8fafc;
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            padding: 1rem;
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: 10px;
+            margin-bottom: 1.5rem;
+            color: var(--text-main);
+        }
+        
+        .pin-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .pin-btn {
+            aspect-ratio: 1;
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+        
+        .pin-btn:active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+            transform: scale(0.95);
+        }
+        
+        .pin-btn.zero {
+            grid-column: span 1;
+        }
+        
+        .pin-btn.clear {
+            background: #fee2e2;
+            border-color: #fecaca;
+            color: #991b1b;
+        }
+        
+        .pin-btn.clear:active {
+            background: #ef4444;
+            border-color: #ef4444;
+            color: white;
+        }
+        
+        .btn-accedi {
+            width: 100%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            padding: 1.2rem;
+            font-size: 1.1rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+        
+        .btn-accedi:disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        
+        .btn-accedi:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
+        }
+        
+        /* MODALE CONFIGURAZIONE */
+        .modale-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        
+        .modale-content {
+            background: white;
+            border-radius: 24px;
+            padding: 1.5rem;
+            max-width: 450px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+        
+        .modale-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .modale-title {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .modale-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 8px;
+        }
+        
+        .modale-body {
+            margin-bottom: 1.5rem;
+        }
+        
+        .db-status {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .db-status-label {
+            font-weight: 700;
+            color: var(--text-main);
+        }
+        
+        .db-status-badge {
+            padding: 0.25rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 800;
+        }
+        
+        .db-status-badge.configurato {
+            background: #22c55e20;
+            color: #22c55e;
+        }
+        
+        .db-status-badge.non-configurato {
+            background: #ef444420;
+            color: #ef4444;
+        }
+        
+        .input-group {
+            margin-bottom: 1rem;
+        }
+        
+        .input-label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+        }
+        
+        .input-field {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            background: #f8fafc;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-main);
+            outline: none;
+            box-sizing: border-box;
+        }
+        
+        .input-field:focus {
+            border-color: var(--primary);
+            background: white;
+        }
+        
+        .input-with-icon {
+            position: relative;
+        }
+        
+        .input-with-icon .material-symbols-rounded {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+        
+        .separator {
+            display: flex;
+            align-items: center;
+            margin: 1.5rem 0;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+        
+        .separator::before,
+        .separator::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+        
+        .separator span {
+            padding: 0 1rem;
+        }
+        
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            margin-bottom: 1rem;
+        }
+        
+        .drop-zone:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+        
+        .file-info {
+            display: none;
+            background: #f0fdf4;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-top: 1rem;
+            border-left: 4px solid #22c55e;
+        }
+        
+        .modale-footer {
+            display: flex;
+            gap: 0.75rem;
+        }
+        
+        /* Notifiche */
+        .notifica {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 2000;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 500;
+            max-width: 90%;
+            width: auto;
+            height: 28px;
+            min-height: 28px;
+            line-height: 1;
+            animation: slideUp 0.2s ease;
+            pointer-events: none;
+        }
+
+        .notifica.successo { background: #22c55e; }
+        .notifica.errore { background: #ef4444; }
+        .notifica.info { background: #334155; }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translate(-50%, 20px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
+        
+        .footer-text {
+            text-align: center;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-top: 2rem;
+        }
     </style>
 </head>
 <body class="bg-app">
-    <div class="app-container" style="justify-content: center;">
-        
-        <div class="login-container">
-            <div id="message-container"></div>
-            
-            <div id="vista-login-completo">
-                <div style="margin-bottom: 2rem;">
-                    <span class="material-symbols-rounded" style="font-size: 4rem; color: var(--primary);">shield_person</span>
-                    <h1 style="font-size: 1.8rem; font-weight: 800; margin: 0; color: var(--primary);">ParkApp</h1>
-                    <p style="color: #64748b;">Accedi al sistema</p>
-                </div>
+    <div class="app-container">
+        <!-- HEADER LOGIN -->
+        <div class="header-login">
+            <div class="logo">
+                <h1>ParkApp</h1>
+                <span>Gestione tecnica</span>
+            </div>
+            <div class="config-icon non-configurato" id="config-icon" onclick="apriModaleConfig()">
+                <span class="material-symbols-rounded">settings</span>
+            </div>
+        </div>
 
-                <form onsubmit="event.preventDefault(); gestisciLogin();">
-                    <div class="input-group">
-                        <span class="material-symbols-rounded">mail</span>
-                        <input type="email" id="email" placeholder="Email" class="form-input" required>
+        <!-- CARD ACCESSO PRINCIPALE -->
+        <div class="card-accesso">
+            <!-- SEZIONE TECNICI MEMORIZZATI -->
+            <div>
+                <div class="section-title">
+                    <span class="material-symbols-rounded">group</span>
+                    TECNICI MEMORIZZATI
+                </div>
+                
+                <div id="tecnici-container" class="tecnici-list">
+                    <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                        <span class="material-symbols-rounded" style="font-size: 2rem;">person_off</span>
+                        <p style="margin-top: 0.5rem;">Nessun tecnico memorizzato</p>
                     </div>
-                    <div class="input-group">
-                        <span class="material-symbols-rounded">lock</span>
-                        <input type="password" id="password" placeholder="Password" class="form-input" required>
-                    </div>
-                    <button type="submit" class="btn-primary" id="btn-login">ACCEDI</button>
-                </form>
+                </div>
+                
+                <button class="btn-outline" id="btn-nuovo-tecnico">
+                    <span class="material-symbols-rounded">person_add</span>
+                    Aggiungi nuovo tecnico
+                </button>
+                
+                <button class="btn-clear-all" id="btn-clear-all">
+                    <span class="material-symbols-rounded">delete_sweep</span>
+                    Cancella tutti i tecnici
+                </button>
             </div>
 
-            <div id="vista-login-pin" style="display: none;">
-                <div style="margin-bottom: 2rem;">
-                    <h1 style="font-size: 1.5rem;">Bentornato!</h1>
-                    <p id="nome-bentornato" style="font-weight: 600; color: var(--primary);"></p>
+            <!-- SEZIONE PIN (visibile solo quando un tecnico è selezionato) -->
+            <div id="pin-section" class="pin-section" style="display: none;">
+                <div class="section-title">
+                    <span class="material-symbols-rounded">pin</span>
+                    INSERISCI PIN PER <span id="tecnico-selezionato-nome"></span>
                 </div>
-                <form onsubmit="event.preventDefault(); gestisciLoginPinUI();">
-                    <div class="input-group" style="max-width: 200px; margin: 0 auto 15px;">
-                        <input type="password" id="pin" placeholder="PIN" maxlength="4" class="form-input" style="text-align: center; letter-spacing: 5px;" inputmode="numeric">
-                    </div>
-                    <button type="submit" class="btn-primary" id="btn-pin">SBLOCCA</button>
-                </form>
-                <a onclick="resetDispositivo()" style="font-size: 0.8rem; color: #64748b; cursor: pointer; text-decoration: underline; display: block; margin-top: 1rem;">Usa un altro account</a>
+                
+                <div class="pin-display" id="pin-display">____</div>
+                
+                <div class="pin-grid">
+                    <button class="pin-btn" data-digit="1">1</button>
+                    <button class="pin-btn" data-digit="2">2</button>
+                    <button class="pin-btn" data-digit="3">3</button>
+                    <button class="pin-btn" data-digit="4">4</button>
+                    <button class="pin-btn" data-digit="5">5</button>
+                    <button class="pin-btn" data-digit="6">6</button>
+                    <button class="pin-btn" data-digit="7">7</button>
+                    <button class="pin-btn" data-digit="8">8</button>
+                    <button class="pin-btn" data-digit="9">9</button>
+                    <button class="pin-btn" data-digit="0">0</button>
+                    <button class="pin-btn clear" id="pin-clear">
+                        <span class="material-symbols-rounded">backspace</span>
+                    </button>
+                </div>
+                
+                <button class="btn-accedi" id="btn-accedi" disabled>
+                    <span class="material-symbols-rounded">login</span>
+                    ACCEDI
+                </button>
             </div>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="footer-text">
+            EDIT BY KINGFREAK Version 1.0
         </div>
     </div>
 
-    <div id="modal-supervisore" class="modal-overlay">
-        <div class="modal-content">
-            <h2 style="margin-top: 0; color: #1e293b;">Benvenuto Supervisore</h2>
-            <p style="color: #64748b; margin-bottom: 2rem;">Scegli come vuoi operare oggi:</p>
+    <!-- MODALE CONFIGURAZIONE DATABASE -->
+    <div class="modale-overlay" id="modale-config">
+        <div class="modale-content">
+            <div class="modale-header">
+                <h3 class="modale-title">
+                    <span class="material-symbols-rounded">database</span>
+                    Configura Database
+                </h3>
+                <button class="modale-close" onclick="chiudiModaleConfig()">
+                    <span class="material-symbols-rounded">close</span>
+                </button>
+            </div>
             
-            <button class="modal-btn" onclick="window.location.href='menu.html'">
-                <i class="material-symbols-rounded">smartphone</i>
-                <div>
-                    <b>App Mobile</b>
-                    <span class="desc">Per l'uso sul campo e veicoli</span>
+            <div class="modale-body">
+                <div id="db-status-modale" class="db-status">
+                    <span class="db-status-label">Stato database</span>
+                    <span id="db-status-badge" class="db-status-badge non-configurato">NON CONFIGURATO</span>
                 </div>
-            </button>
-
-            <button class="modal-btn" onclick="window.location.href='admin_database.html'">
-                <i class="material-symbols-rounded">desktop_windows</i>
-                <div>
-                    <b>Console PC</b>
-                    <span class="desc">Gestione dati e reportistica</span>
+                
+                <div class="input-group">
+                    <label class="input-label">Supabase URL</label>
+                    <div class="input-with-icon">
+                        <input type="url" id="supabase-url" class="input-field" placeholder="https://tuo-progetto.supabase.co">
+                        <span class="material-symbols-rounded">link</span>
+                    </div>
                 </div>
-            </button>
+                
+                <div class="input-group">
+                    <label class="input-label">Anon Key</label>
+                    <div class="input-with-icon">
+                        <input type="password" id="supabase-key" class="input-field" placeholder="eyJhbGciOiJIUzI1NiIs...">
+                        <span class="material-symbols-rounded" id="toggle-key-icon" onclick="togglePassword()" style="cursor: pointer;">visibility</span>
+                    </div>
+                </div>
+                
+                <button class="btn-outline" onclick="testConnessione()" style="margin-bottom: 1rem;">
+                    <span class="material-symbols-rounded">wifi</span>
+                    Test Connessione
+                </button>
+                
+                <div class="separator">
+                    <span>OPPURE</span>
+                </div>
+                
+                <div class="drop-zone" onclick="document.getElementById('file-kf').click()">
+                    <input type="file" id="file-kf" accept=".kf,.txt,.json" style="display: none;">
+                    <span class="material-symbols-rounded" style="font-size: 2rem; color: var(--primary); margin-bottom: 0.5rem;">upload_file</span>
+                    <p style="font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">Carica file .kf</p>
+                    <p style="font-size: 0.8rem; color: var(--text-muted);">Trascina qui o clicca per selezionare</p>
+                </div>
+                
+                <div id="file-info" class="file-info">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <p style="font-weight: 800; color: #166534; margin-bottom: 0.25rem;" id="file-name"></p>
+                            <p style="font-size: 0.8rem; color: #15803d;" id="file-size"></p>
+                        </div>
+                        <span class="material-symbols-rounded" onclick="rimuoviFile()" style="cursor: pointer; color: #15803d;">close</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modale-footer">
+                <button class="btn-outline" onclick="chiudiModaleConfig()" style="margin-bottom: 0; flex: 1;">
+                    Annulla
+                </button>
+                <button class="btn-accedi" onclick="salvaConfigurazione()" style="margin-bottom: 0; flex: 2;">
+                    <span class="material-symbols-rounded">save</span>
+                    Salva Configurazione
+                </button>
+            </div>
         </div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const emailSalvata = localStorage.getItem('dispositivo_email');
-            if (emailSalvata) {
-                document.getElementById('vista-login-completo').style.display = 'none';
-                document.getElementById('vista-login-pin').style.display = 'block';
-                document.getElementById('nome-bentornato').textContent = localStorage.getItem(`nome_${emailSalvata}`);
+        // ============================================
+        // VARIABILI GLOBALI
+        // ============================================
+        let tecnicoSelezionato = null;
+        let pinInput = '';
+        let fileCaricato = null;
+
+        // ============================================
+        // INIZIALIZZAZIONE PAGINA
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            caricaTecniciMemorizzati();
+            aggiornaIconaConfig();
+            setupPinListeners();
+            
+            // Event listener per file upload
+            document.getElementById('file-kf').addEventListener('change', handleFileSelect);
+        });
+
+        // ============================================
+        // GESTIONE TECNICI MEMORIZZATI
+        // ============================================
+        function caricaTecniciMemorizzati() {
+            const tecnici = JSON.parse(localStorage.getItem('tecnici_memorizzati') || '[]');
+            const container = document.getElementById('tecnici-container');
+            
+            if (tecnici.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                        <span class="material-symbols-rounded" style="font-size: 2rem;">person_off</span>
+                        <p style="margin-top: 0.5rem;">Nessun tecnico memorizzato</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            tecnici.forEach(tecnico => {
+                const iniziali = tecnico.nome.split(' ').map(n => n[0]).join('').toUpperCase();
+                const isSelezionato = tecnicoSelezionato && tecnicoSelezionato.nome === tecnico.nome;
+                
+                html += `
+                    <div class="tecnico-item ${isSelezionato ? 'selezionato' : ''}" data-nome="${tecnico.nome}" data-id="${tecnico.id || ''}">
+                        <div class="tecnico-info">
+                            <div class="tecnico-avatar">${iniziali}</div>
+                            <span class="tecnico-nome">${tecnico.nome}</span>
+                        </div>
+                        <div class="tecnico-azioni">
+                            <button class="btn-icona elimina" onclick="event.stopPropagation(); rimuoviTecnico('${tecnico.nome}')">
+                                <span class="material-symbols-rounded">delete</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+            
+            // Aggiungi event listener per selezione tecnico
+            document.querySelectorAll('.tecnico-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const nome = this.dataset.nome;
+                    const id = this.dataset.id;
+                    selezionaTecnico({ nome, id });
+                });
+            });
+        }
+        
+        function selezionaTecnico(tecnico) {
+            tecnicoSelezionato = tecnico;
+            document.getElementById('tecnico-selezionato-nome').textContent = tecnico.nome;
+            document.getElementById('pin-section').style.display = 'block';
+            
+            // Resetta PIN
+            pinInput = '';
+            aggiornaPinDisplay();
+            
+            // Rimuovi selezione da tutti e aggiungi al selezionato
+            document.querySelectorAll('.tecnico-item').forEach(item => {
+                item.classList.remove('selezionato');
+                if (item.dataset.nome === tecnico.nome) {
+                    item.classList.add('selezionato');
+                }
+            });
+            
+            // Abilita pulsante accedi solo se PIN completo
+            document.getElementById('btn-accedi').disabled = true;
+        }
+        
+        function rimuoviTecnico(nome) {
+            if (!confirm(`Rimuovere ${nome} dalla lista dei tecnici memorizzati?`)) return;
+            
+            let tecnici = JSON.parse(localStorage.getItem('tecnici_memorizzati') || '[]');
+            tecnici = tecnici.filter(t => t.nome !== nome);
+            localStorage.setItem('tecnici_memorizzati', JSON.stringify(tecnici));
+            
+            // Se il tecnico rimosso era quello selezionato, deseleziona
+            if (tecnicoSelezionato && tecnicoSelezionato.nome === nome) {
+                tecnicoSelezionato = null;
+                document.getElementById('pin-section').style.display = 'none';
+            }
+            
+            caricaTecniciMemorizzati();
+        }
+        
+        document.getElementById('btn-clear-all').addEventListener('click', function() {
+            if (!confirm('Cancellare TUTTI i tecnici memorizzati?')) return;
+            localStorage.removeItem('tecnici_memorizzati');
+            tecnicoSelezionato = null;
+            document.getElementById('pin-section').style.display = 'none';
+            caricaTecniciMemorizzati();
+        });
+        
+        document.getElementById('btn-nuovo-tecnico').addEventListener('click', function() {
+            const nome = prompt('Inserisci il nome completo del tecnico:');
+            if (!nome) return;
+            
+            let tecnici = JSON.parse(localStorage.getItem('tecnici_memorizzati') || '[]');
+            
+            // Controlla se esiste già
+            if (tecnici.some(t => t.nome === nome)) {
+                alert('Questo tecnico è già presente nella lista');
+                selezionaTecnico({ nome, id: tecnici.find(t => t.nome === nome).id });
+                return;
+            }
+            
+            tecnici.push({ nome, id: 'temp_' + Date.now() });
+            localStorage.setItem('tecnici_memorizzati', JSON.stringify(tecnici));
+            caricaTecniciMemorizzati();
+        });
+
+        // ============================================
+        // GESTIONE PIN
+        // ============================================
+        function setupPinListeners() {
+            document.querySelectorAll('.pin-btn[data-digit]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (pinInput.length < 4) {
+                        pinInput += btn.dataset.digit;
+                        aggiornaPinDisplay();
+                    }
+                });
+            });
+            
+            document.getElementById('pin-clear').addEventListener('click', () => {
+                pinInput = '';
+                aggiornaPinDisplay();
+            });
+        }
+        
+        function aggiornaPinDisplay() {
+            const display = pinInput.padEnd(4, '_');
+            document.getElementById('pin-display').textContent = display.split('').join(' ');
+            document.getElementById('btn-accedi').disabled = pinInput.length !== 4;
+        }
+
+        // ============================================
+        // LOGIN CON SUPABASE
+        // ============================================
+        document.getElementById('btn-accedi').addEventListener('click', async function() {
+            if (!tecnicoSelezionato) {
+                mostraNotifica('Seleziona un tecnico', 'errore');
+                return;
+            }
+            
+            if (pinInput.length !== 4) {
+                mostraNotifica('Inserisci un PIN di 4 cifre', 'errore');
+                return;
+            }
+            
+            const btn = this;
+            const testoOriginale = btn.innerHTML;
+            btn.innerHTML = '<span class="material-symbols-rounded">progress_activity</span> VERIFICA...';
+            btn.disabled = true;
+            
+            try {
+                const configInfo = getDbConfigInfo();
+                if (!configInfo.configured) {
+                    mostraNotifica('Database non configurato', 'errore');
+                    btn.innerHTML = testoOriginale;
+                    btn.disabled = false;
+                    return;
+                }
+                
+                const SUPABASE_FUNCTION_URL = `${configInfo.url}/functions/v1/bright-function`;
+                
+                const response = await fetch(SUPABASE_FUNCTION_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        tecnico_nome: tecnicoSelezionato.nome,
+                        pin: pinInput
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Login riuscito
+                    localStorage.setItem('tecnico_loggato', data.nome || tecnicoSelezionato.nome);
+                    localStorage.setItem('tecnico_id', data.tecnico_id);
+                    
+                    // Salva ruolo
+                    if (data.ruolo) {
+                        localStorage.setItem('ruolo', data.ruolo);
+                    }
+                    
+                    // Aggiorna lista tecnici con ID reale se era temporaneo
+                    if (tecnicoSelezionato.id && tecnicoSelezionato.id.startsWith('temp_')) {
+                        let tecnici = JSON.parse(localStorage.getItem('tecnici_memorizzati') || '[]');
+                        tecnici = tecnici.map(t => 
+                            t.nome === tecnicoSelezionato.nome ? { ...t, id: data.tecnico_id } : t
+                        );
+                        localStorage.setItem('tecnici_memorizzati', JSON.stringify(tecnici));
+                    }
+                    
+                    mostraNotifica('Accesso effettuato!', 'successo');
+                    setTimeout(() => {
+                        window.location.href = 'menu.html';
+                    }, 1000);
+                } else {
+                    mostraNotifica(data.message || 'PIN errato', 'errore');
+                    pinInput = '';
+                    aggiornaPinDisplay();
+                }
+                
+            } catch (error) {
+                console.error('Errore login:', error);
+                mostraNotifica('Errore di connessione', 'errore');
+                pinInput = '';
+                aggiornaPinDisplay();
+            } finally {
+                btn.innerHTML = testoOriginale;
+                btn.disabled = false;
             }
         });
 
-        async function gestisciLogin() {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const btn = document.getElementById('btn-login');
+        // ============================================
+        // GESTIONE CONFIGURAZIONE DATABASE
+        // ============================================
+        function aggiornaIconaConfig() {
+            const configInfo = getDbConfigInfo();
+            const icona = document.getElementById('config-icon');
             
-            btn.disabled = true;
-            btn.textContent = "VERIFICA...";
-
-            const res = await authLoginCompleto(email, password);
-            
-            if (res.success) {
-                const utente = authGetUtente();
-                smistaUtente(utente);
+            if (configInfo.configured) {
+                icona.className = 'config-icon configurato';
+                icona.title = `DB configurato • ${configInfo.urlShort}`;
             } else {
-                alert("Errore: " + res.error);
-                btn.disabled = false;
-                btn.textContent = "ACCEDI";
+                icona.className = 'config-icon non-configurato';
+                icona.title = 'Database non configurato - CLICCA PER CONFIGURARE';
             }
         }
-
-        async function gestisciLoginPinUI() {
-            const pin = document.getElementById('pin').value;
-            const res = await authLoginPin(pin);
-            if (res.success) {
-                const utente = authGetUtente();
-                smistaUtente(utente);
+        
+        function apriModaleConfig() {
+            document.getElementById('modale-config').style.display = 'flex';
+            
+            const configInfo = getDbConfigInfo();
+            const urlInput = document.getElementById('supabase-url');
+            const keyInput = document.getElementById('supabase-key');
+            const badge = document.getElementById('db-status-badge');
+            
+            if (configInfo.configured) {
+                urlInput.value = configInfo.url || '';
+                keyInput.value = '••••••••••••••••';
+                badge.textContent = 'CONFIGURATO';
+                badge.className = 'db-status-badge configurato';
             } else {
-                alert("PIN Errato");
+                urlInput.value = '';
+                keyInput.value = '';
+                badge.textContent = 'NON CONFIGURATO';
+                badge.className = 'db-status-badge non-configurato';
             }
         }
-
-        // LA LOGICA DI SMISTAMENTO INTELLIGENTE
-        function smistaUtente(utente) {
-            const ruolo = (utente.ruolo || 'tecnico').toLowerCase();
+        
+        function chiudiModaleConfig() {
+            document.getElementById('modale-config').style.display = 'none';
+        }
+        
+        function togglePassword() {
+            const input = document.getElementById('supabase-key');
+            const toggleIcon = document.getElementById('toggle-key-icon');
             
-            if (ruolo === 'admin') {
-                // Admin: Diretto alla console
-                window.location.href = 'admin_database.html';
-            } 
-            else if (ruolo === 'supervisore') {
-                // Supervisore: Mostra il modale di scelta
-                document.getElementById('modal-supervisore').style.display = 'flex';
-            } 
-            else {
-                // Tecnico: Logica standard (Profilo se primo accesso, altrimenti Menu)
-                // Se password è quella temporanea, forza il profilo
-                const passInserita = document.getElementById('password').value;
-                if (utente.pin === '1234' || passInserita === 'Esa123!') {
-                    window.location.href = 'profilo.html?primo_access=true';
-                } else {
-                    window.location.href = 'menu.html';
+            if (input.type === 'password') {
+                input.type = 'text';
+                toggleIcon.textContent = 'visibility_off';
+                if (input.value === '••••••••••••••••') {
+                    const actualKey = getSupabaseKey();
+                    if (actualKey) input.value = actualKey;
+                }
+            } else {
+                input.type = 'password';
+                toggleIcon.textContent = 'visibility';
+                if (input.value !== '••••••••••••••••') {
+                    input.value = '••••••••••••••••';
                 }
             }
         }
+        
+        async function testConnessione() {
+            const url = document.getElementById('supabase-url').value.trim();
+            let key = document.getElementById('supabase-key').value;
+            
+            if (key === '••••••••••••••••') {
+                key = getSupabaseKey();
+                if (!key) {
+                    mostraNotifica('Inserisci la chiave Supabase', 'errore');
+                    return;
+                }
+            }
+            
+            if (!url || !key) {
+                mostraNotifica('Inserisci URL e Anon Key', 'errore');
+                return;
+            }
+            
+            try {
+                mostraNotifica('Test connessione...', 'info');
+                
+                const supabase = supabase.createClient(url, key);
+                const { error } = await supabase.from('auth.users').select('count', { count: 'exact', head: true });
+                
+                if (error) throw error;
+                
+                mostraNotifica('✅ Connessione riuscita!', 'successo');
+                
+            } catch (error) {
+                console.error('Errore connessione:', error);
+                mostraNotifica('❌ Connessione fallita', 'errore');
+            }
+        }
+        
+        function salvaConfigurazione() {
+            const url = document.getElementById('supabase-url').value.trim();
+            let key = document.getElementById('supabase-key').value;
+            
+            if (!url || !key) {
+                mostraNotifica('Inserisci URL e Anon Key', 'errore');
+                return;
+            }
+            
+            if (key === '••••••••••••••••') {
+                mostraNotifica('Inserisci la chiave completa', 'errore');
+                return;
+            }
+            
+            try {
+                saveDbConfig(url, key);
+                mostraNotifica('Configurazione salvata!', 'successo');
+                aggiornaIconaConfig();
+                chiudiModaleConfig();
+            } catch (error) {
+                mostraNotifica('Errore nel salvataggio', 'errore');
+            }
+        }
+        
+        function handleFileSelect(event) {
+            if (event.target.files.length) {
+                handleFile(event.target.files[0]);
+            }
+        }
+        
+        function handleFile(file) {
+            if (!file.name.match(/\.(kf|txt|json)$/i)) {
+                mostraNotifica('Formato file non supportato', 'errore');
+                return;
+            }
+            
+            if (file.size > 1024 * 10) {
+                mostraNotifica('File troppo grande (max 10KB)', 'errore');
+                return;
+            }
+            
+            fileCaricato = file;
+            
+            const fileInfo = document.getElementById('file-info');
+            const fileName = document.getElementById('file-name');
+            const fileSize = document.getElementById('file-size');
+            
+            fileInfo.style.display = 'block';
+            fileName.textContent = file.name;
+            fileSize.textContent = `${(file.size / 1024).toFixed(2)} KB`;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const success = importDbConfig(e.target.result);
+                    if (success) {
+                        mostraNotifica('Configurazione caricata!', 'successo');
+                        aggiornaIconaConfig();
+                        chiudiModaleConfig();
+                    }
+                } catch (error) {
+                    mostraNotifica('Errore nel file', 'errore');
+                }
+            };
+            reader.readAsText(file);
+        }
+        
+        function rimuoviFile() {
+            fileCaricato = null;
+            document.getElementById('file-info').style.display = 'none';
+            document.getElementById('file-kf').value = '';
+        }
 
-        function resetDispositivo() {
-            authScollegaDispositivo();
-            window.location.reload();
+        // ============================================
+        // NOTIFICHE
+        // ============================================
+        function mostraNotifica(messaggio, tipo = 'info') {
+            const notifica = document.createElement('div');
+            notifica.className = `notifica ${tipo}`;
+            
+            let icona = 'info';
+            if (tipo === 'successo') icona = 'check_circle';
+            if (tipo === 'errore') icona = 'error';
+            
+            notifica.innerHTML = `
+                <span class="material-symbols-rounded" style="font-size: 14px;">${icona}</span>
+                <span>${messaggio}</span>
+            `;
+            
+            document.body.appendChild(notifica);
+            
+            setTimeout(() => {
+                if (notifica.parentNode) {
+                    notifica.style.opacity = '0';
+                    notifica.style.transform = 'translateX(-50%) translateY(-5px)';
+                    notifica.style.transition = 'all 0.15s ease';
+                    
+                    setTimeout(() => {
+                        if (notifica.parentNode) notifica.remove();
+                    }, 150);
+                }
+            }, 2000);
         }
     </script>
 </body>
