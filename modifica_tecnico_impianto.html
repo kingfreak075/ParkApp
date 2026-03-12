@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ParkApp - Modifica Scheda Tecnica</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db-config.js"></script>
+    <script src="check-db-config.js"></script>
+    <script src="auth.js"></script>
+    
+    <script>
+        (function() {
+            const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+            if (!utente) {
+                window.location.href = 'index.html';
+            }
+        })();
+    </script>
+    
+    <script>
+        window.FOOTER_CONFIG = {
+            testo: "EDIT BY KINGFREAK Version 1.0 | Modifica Scheda Tecnica"
+        };
+    </script>
+    
+    <style>
+        .app-container { max-width: 450px; margin: 0 auto; min-height: 100vh; padding-bottom: 5rem; }
+        
+        /* Stili per le sezioni */
+        .section-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin: 0 0 1rem 0;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border);
+        }
+        
+        .section-title .material-symbols-rounded {
+            font-size: 1.2rem;
+            color: var(--primary);
+        }
+        
+        .input-group {
+            margin-bottom: 1rem;
+        }
+        
+        .input-label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.25rem;
+        }
+        
+        .input-field {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            box-sizing: border-box;
+            background: #f8fafc;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: white;
+        }
+        
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin: 0.5rem 0;
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+        
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+        
+        .btn-primario {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 0.875rem;
+            font-weight: 700;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex: 2;
+        }
+        
+        .btn-secondario {
+            background: white;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            padding: 0.875rem;
+            font-weight: 700;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex: 1;
+        }
+        
+        .foto-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+        
+        .foto-placeholder {
+            aspect-ratio: 1;
+            background: #f1f5f9;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed var(--border);
+            cursor: pointer;
+        }
+        
+        .foto-item {
+            aspect-ratio: 1;
+            background: #f1f5f9;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .foto-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .foto-remove {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        
+        .notifica {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 2000;
+            font-size: 0.7rem;
+            font-weight: 500;
+            height: 28px;
+            animation: slideUp 0.2s ease;
+        }
+        
+        .notifica.successo { background: #22c55e; }
+        .notifica.errore { background: #ef4444; }
+        .notifica.info { background: #334155; }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translate(-50%, 20px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
+        
+        .app-footer {
+            background: var(--white);
+            padding: 1rem;
+            text-align: center;
+            border-top: 1px solid var(--border);
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            max-width: 450px;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body class="bg-app">
+    <div class="app-container">
+        <header class="app-header" style="position: relative;">
+            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                <button onclick="window.history.back()" class="btn-scheda">
+                  <span class="material-symbols-rounded" style="color: white;">arrow_back</span>
+                </button>
+                <div style="flex-grow: 1;">
+                    <h1 style="font-size: 1.25rem; font-weight: 800; color: var(--primary); margin: 0;">
+                        <span id="titolo-pagina">Nuova Scheda Tecnica</span>
+                    </h1>
+                    <p id="tecnico-display" style="margin: 0; font-size: 0.85rem; color: var(--text-muted); font-weight: 600;"></p>
+                </div>
+                <div id="db-status-dot" style="position: absolute; top: 15px; right: 15px; width: 14px; height: 14px; background: #22c55e; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2); z-index: 10;"></div>
+            </div>
+        </header>
+        <!-- INTESTAZIONE IMPIANTO -->
+<div class="impianto-header" style="background: white; border-radius: 16px; padding: 1rem; margin-bottom: 1.5rem; border-left: 6px solid var(--primary);">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <div style="font-size: 1.5rem; font-weight: 900; color: var(--primary);" id="impianto-codice">-</div>
+            <div style="font-size: 0.9rem; color: var(--text-muted);" id="impianto-indirizzo">Caricamento...</div>
+        </div>
+        <div class="impianto-badge" id="impianto-tipo" style="background: var(--primary-light); color: var(--primary); padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.7rem; font-weight: 800;">
+            Scheda Tecnica
+        </div>
+    </div>
+</div>
+        <main style="padding: 1rem;">
+            <form id="form-scheda-tecnica">
+                <!-- SEZIONE 1: TIPO IMPIANTO -->
+                <div class="section-card">
+                    <h3 class="section-title">
+                        <span class="material-symbols-rounded">elevator</span>
+                        TIPO IMPIANTO
+                    </h3>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Tipo impianto *</label>
+                        <select id="tipo_impianto" class="input-field" onchange="gestisciTipoAltro()">
+                            <option value="">Seleziona tipo...</option>
+                            <optgroup label="ELEVATORI">
+                                <option value="elettrico">Elettrico</option>
+                                <option value="idraulico">Idraulico</option>
+                                <option value="mrl">MRL</option>
+                            </optgroup>
+                            <optgroup label="PIATTAFORME">
+                                <option value="piattaforma">Piattaforma</option>
+                                <option value="montascale">Montascale</option>
+                                <option value="montacarichi">Montacarichi</option>
+                            </optgroup>
+                            <optgroup label="SPECIALI">
+                                <option value="montavivande">Montavivande</option>
+                                <option value="montauto">Montauto</option>
+                                <option value="altro">Altro</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    
+                    <div id="tipo_altro_container" style="display: none;">
+                        <div class="input-group">
+                            <label class="input-label">Specifica altro</label>
+                            <input type="text" id="tipo_impianto_altro" class="input-field" placeholder="Es: Montacarichi speciale...">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- SEZIONE 2: DATI TECNICI -->
+                <div class="section-card">
+                    <h3 class="section-title">
+                        <span class="material-symbols-rounded">description</span>
+                        DATI TECNICI
+                    </h3>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Costruttore</label>
+                        <input type="text" id="costruttore" class="input-field" placeholder="Es: GMV, KONE, OTIS...">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Modello</label>
+                        <input type="text" id="modello_impianto" class="input-field" placeholder="Es: MRL 3000, Space...">
+                    </div>
+                    
+                    <div class="grid-2">
+                        <div class="input-group">
+                            <label class="input-label">Anno installazione</label>
+                            <input type="number" id="anno_installazione" class="input-field" min="1900" max="2030" placeholder="2025">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label class="input-label">Piani serviti</label>
+                            <input type="number" id="piani_serviti" class="input-field" min="1" placeholder="6">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- SEZIONE 3: PARTE MECCANICA -->
+                <div class="section-card">
+                    <h3 class="section-title">
+                        <span class="material-symbols-rounded">precision_manufacturing</span>
+                        PARTE MECCANICA
+                    </h3>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Tipo</label>
+                        <select id="tipo_meccanico" class="input-field" onchange="gestisciMeccanicoAltro()">
+                            <option value="">Seleziona tipo...</option>
+                            <option value="argano">Argano</option>
+                            <option value="centralina">Centralina</option>
+                            <option value="motore_gearless">Motore Gearless</option>
+                            <option value="altro">Altro</option>
+                        </select>
+                    </div>
+                    
+                    <div id="tipo_meccanico_altro_container" style="display: none;">
+                        <div class="input-group">
+                            <label class="input-label">Specifica altro</label>
+                            <input type="text" id="tipo_meccanico_altro" class="input-field" placeholder="Specifica tipo meccanico...">
+                        </div>
+                    </div>
+                    
+                    <div class="grid-2">
+                        <div class="input-group">
+                            <label class="input-label">Produttore</label>
+                            <input type="text" id="produttore_meccanico" class="input-field" placeholder="Es: Ziehl-Abegg">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label class="input-label">Modello</label>
+                            <input type="text" id="modello_meccanico" class="input-field" placeholder="Es: GA 2000">
+                        </div>
+                    </div>
+                    
+                    <div class="grid-2">
+                        <div class="input-group">
+                            <label class="input-label">Potenza (kW)</label>
+                            <input type="number" id="potenza_kw" class="input-field" step="0.1" min="0" placeholder="7.5">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label class="input-label">Anno installazione</label>
+                            <input type="number" id="anno_meccanico" class="input-field" min="1900" max="2030" placeholder="2025">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- SEZIONE 4: FUNI / CINGHIE -->
+                <div class="section-card">
+                    <h3 class="section-title">
+                        <span class="material-symbols-rounded">settings</span>
+                        FUNI / CINGHIE
+                    </h3>
+                    
+                    <div class="grid-2">
+                        <div class="input-group">
+                            <label class="input-label">Tipo</label>
+                            <select id="tipo_funi" class="input-field">
+                                <option value="">Seleziona...</option>
+                                <option value="fune">Fune</option>
+                                <option value="cinghia">Cinghia</option>
+                            </select>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label class="input-label">Numero</label>
+                            <input type="number" id="numero_funi" class="input-field" min="1" max="12" placeholder="6">
+                        </div>
+                    </div>
+                    
+                    <div class="grid-2">
+                        <div class="input-group">
+                            <label class="input-label">Diametro (mm)</label>
+                            <input type="number" id="diametro_funi" class="input-field" step="0.5" min="1" placeholder="10">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label class="input-label">Anno installazione</label>
+                            <input type="number" id="anno_funi" class="input-field" min="1900" max="2030" placeholder="2025">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- SEZIONE 5: LIMITATORE VELOCITÀ -->
+                <div class="section-card">
+                    <h3 class="section-title">
+                        <span class="material-symbols-rounded">speed</span>
+                        LIMITATORE VELOCITÀ
+                    </h3>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Produttore</label>
+                        <input type="text" id="produttore_limitatore" class="input-field" placeholder="Es: SAB, Ziehl-Abegg">
+                    </div>
+                    
+                    <div class="grid-2">
+                        <div class="input-group">
+                            <label class="input-label">Modello</label>
+                            <input type="text" id="modello_limitatore" class="input-field" placeholder="Es: LV 3000">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label class="input-label">Matricola</label>
+                            <input type="text" id="matricola_limitatore" class="input-field" placeholder="SN12345">
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Anno installazione</label>
+                        <input type="number" id="anno_limitatore" class="input-field" min="1900" max="2030" placeholder="2025">
+                    </div>
+                </div>
+                
+                <!-- Continua con le altre sezioni... -->
+                <!-- SEZIONE 6: PARTE ELETTRICA -->
+<div class="section-card">
+    <h3 class="section-title">
+        <span class="material-symbols-rounded">electrical_services</span>
+        PARTE ELETTRICA
+    </h3>
+    
+    <div class="input-group">
+        <label class="input-label">Quadro</label>
+        <input type="text" id="quadro" class="input-field" placeholder="Es: Monalisa smart, Ziehl-Abegg control">
+    </div>
+    
+    <div class="grid-2">
+        <div class="input-group">
+            <label class="input-label">Marca</label>
+            <input type="text" id="marca_quadro" class="input-field" placeholder="Es: Monalisa, Ziehl-Abegg">
+        </div>
+        
+        <div class="input-group">
+            <label class="input-label">Modello</label>
+            <input type="text" id="modello_quadro" class="input-field" placeholder="Es: smart 2.0, MCD 3000">
+        </div>
+    </div>
+    
+    <div class="grid-2">
+        <div class="input-group">
+            <label class="input-label">Anno installazione</label>
+            <input type="number" id="anno_quadro" class="input-field" min="1900" max="2030" placeholder="2025">
+        </div>
+        
+        <div class="input-group">
+            <label class="input-label">Bottoniere</label>
+            <input type="text" id="bottoniere" class="input-field" placeholder="Es: Series 7, Digital, Tattili">
+        </div>
+    </div>
+    
+    <div class="grid-2">
+        <div class="input-group">
+            <label class="input-label">Emergenza</label>
+            <input type="text" id="emergenza" class="input-field" placeholder="Es: In cabina, Telefono, Pulsante">
+        </div>
+        
+        <div class="input-group">
+            <label class="input-label">Combinatore</label>
+            <input type="text" id="combinatore" class="input-field" placeholder="Es: Digitale, Meccanico, Encoder">
+        </div>
+    </div>
+    
+    <div class="input-group">
+        <label class="input-label">Batterie</label>
+        <input type="text" id="batterie" class="input-field" placeholder="Es: Presenti 12V, Assenti, al piombo">
+    </div>
+</div>
+
+<!-- SEZIONE 7: PORTE E CABINA -->
+<div class="section-card">
+    <h3 class="section-title">
+        <span class="material-symbols-rounded">door_front</span>
+        PORTE E CABINA
+    </h3>
+    
+    <div class="grid-2">
+        <div class="input-group">
+            <label class="input-label">Tipo Porte</label>
+            <select id="tipo_porte" class="input-field">
+                <option value="">Seleziona...</option>
+                <option value="automatiche">Automatiche</option>
+                <option value="manuali">Manuali</option>
+                <option value="semiautomatiche">Semiautomatiche</option>
+            </select>
+        </div>
+        
+        <div class="input-group">
+            <label class="input-label">Apertura</label>
+            <select id="apertura_porte" class="input-field">
+                <option value="">Seleziona...</option>
+                <option value="laterale">Laterale</option>
+                <option value="telescopica">Telescopica</option>
+                <option value="centro">Centro-apertura</option>
+                <option value="battente">Battente</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="grid-2">
+        <div class="input-group">
+            <label class="input-label">Luce Cabina</label>
+            <input type="text" id="luce_cabina" class="input-field" placeholder="Es: LED, Fluorescente, Alogena">
+        </div>
+        
+        <div class="input-group">
+            <label class="input-label">Luce Emergenza</label>
+            <input type="text" id="luce_emergenza" class="input-field" placeholder="Es: Presente, Assente, LED">
+        </div>
+    </div>
+    
+    <div class="input-group">
+        <label class="input-label">Bottoniera</label>
+        <input type="text" id="bottoniera_cabina" class="input-field" placeholder="Es: Series 7, Tattile, Meccanica">
+    </div>
+</div>
+
+<!-- SEZIONE 8: ACCESSORI CABINA -->
+<div class="section-card">
+    <h3 class="section-title">
+        <span class="material-symbols-rounded">checklist</span>
+        ACCESSORI CABINA
+    </h3>
+    
+    <div class="checkbox-group" style="display: flex; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 1rem;">
+        <label class="checkbox-item">
+            <input type="checkbox" id="specchio"> 
+            <span>Specchio</span>
+        </label>
+        
+        <label class="checkbox-item">
+            <input type="checkbox" id="tappeto"> 
+            <span>Tappeto</span>
+        </label>
+        
+        <label class="checkbox-item">
+            <input type="checkbox" id="telefono"> 
+            <span>Telefono</span>
+        </label>
+    </div>
+    
+    <div class="input-group">
+        <label class="input-label">Altri accessori</label>
+        <input type="text" id="altri_accessori" class="input-field" placeholder="Es: maniglione, ventilatore, specchio aggiuntivo...">
+    </div>
+</div>
+
+
+
+
+<!-- SEZIONE 9: ACCESSO E CHIAVI -->
+<div class="section-card">
+    <h3 class="section-title">
+        <span class="material-symbols-rounded">key</span>
+        ACCESSO E CHIAVI
+    </h3>
+    
+    <div class="input-group">
+        <label class="input-label">Locale Macchina</label>
+        <input type="text" id="locale_macchina" class="input-field" placeholder="Es: Sottotetto scala A, Cantina...">
+    </div>
+    
+    <div class="input-group">
+        <label class="input-label">Ubicazione chiavi</label>
+        <input type="text" id="ubicazione_chiavi" class="input-field" placeholder="Es: Portineria, Cassetta esterna...">
+    </div>
+    
+    <div class="grid-2">
+        <div class="input-group">
+            <label class="input-label">Referente</label>
+            <input type="text" id="referente" class="input-field" placeholder="Nome referente">
+        </div>
+        
+        <div class="input-group">
+            <label class="input-label">Telefono</label>
+            <input type="tel" id="telefono_referente" class="input-field" placeholder="051 1234567">
+        </div>
+    </div>
+</div>
+
+
+<!-- SEZIONE 10: ENTI NOTIFICATI -->
+<div class="section-card">
+    <h3 class="section-title">
+        <span class="material-symbols-rounded">account_balance</span>
+        ENTI NOTIFICATI
+    </h3>
+    
+    <div class="input-group">
+        <label class="input-label">Ente</label>
+        <input type="text" id="ente" class="input-field" placeholder="Es: ASL Bologna, Comune di Modena...">
+    </div>
+    
+    <div class="input-group">
+        <label class="input-label">Ultima verifica</label>
+        <input type="date" id="ultima_verifica" class="input-field">
+    </div>
+</div>
+<!-- SEZIONE 11: FOTO TECNICHE -->
+<div class="section-card">
+    <h3 class="section-title">
+        <span class="material-symbols-rounded">photo_camera</span>
+        FOTO TECNICHE
+    </h3>
+    
+    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+        Tocca le celle per aggiungere foto (max 6)
+    </p>
+    
+    <div id="foto-grid" class="foto-grid">
+        <!-- Generato dinamicamente con JavaScript -->
+    </div>
+    
+    <input type="file" id="upload-foto" accept="image/*" multiple style="display: none;">
+</div>
+
+<!-- SEZIONE 12: NOTE GENERALI -->
+<div class="section-card">
+    <h3 class="section-title">
+        <span class="material-symbols-rounded">notes</span>
+        NOTE GENERALI
+    </h3>
+    
+    <div class="input-group">
+        <textarea id="note_generali" class="input-field" rows="5" placeholder="Inserisci note, avvertenze, osservazioni sull'impianto..." maxlength="1000"></textarea>
+        <div style="text-align: right; font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem;">
+            <span id="conta-caratteri">0</span>/1000
+        </div>
+    </div>
+</div>
+
+                <!-- BOTTONI SALVA/ANNULLA -->
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button type="button" onclick="window.history.back()" class="btn-secondario">ANNULLA</button>
+                    <button type="button" onclick="salvaScheda()" class="btn-primario">SALVA SCHEDA</button>
+                </div>
+            </form>
+        </main>
+        
+        <footer class="app-footer">
+            <span class="footer-text" id="footer-text"></span>
+        </footer>
+    </div>
+    
+ <script src="dettaglio_impianto.js"></script>
+<script>
+    // Variabili globali
+    let isModifica = false;
+    let schedaId = null;
+    
+    document.addEventListener('DOMContentLoaded', async function() {
+        const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+        const display = document.getElementById('tecnico-display');
+        if (utente && utente.nome_completo && display) {
+            display.innerText = `Tecnico: ${utente.nome_completo}`;
+        }
+        
+        const footerEl = document.getElementById('footer-text');
+        if (footerEl && window.FOOTER_CONFIG) {
+            footerEl.innerText = window.FOOTER_CONFIG.testo;
+        }
+        
+        const configInfo = getDbConfigInfo();
+        const dot = document.getElementById('db-status-dot');
+        if (dot) {
+            dot.style.background = configInfo.configured ? '#22c55e' : '#f59e0b';
+        }
+        
+        // Recupera ID impianto dall'URL
+        const urlParams = new URLSearchParams(window.location.search);
+        impiantoId = urlParams.get('id');
+        
+        if (!impiantoId) {
+            mostraNotifica('ID impianto non specificato', 'errore');
+            setTimeout(() => window.history.back(), 2000);
+            return;
+        }
+        
+        // Carica dati impianto
+        await caricaDatiImpianto();
+        
+        // Carica scheda esistente (se presente)
+        const scheda = await caricaSchedaTecnica();
+        
+        if (scheda) {
+            isModifica = true;
+            schedaId = scheda.id;
+            document.getElementById('titolo-pagina').textContent = 'Modifica Scheda Tecnica';
+            precompilaForm(scheda);
+        } else {
+            document.getElementById('titolo-pagina').textContent = 'Nuova Scheda Tecnica';
+        }
+    });
+    
+    async function caricaDatiImpianto() {
+        try {
+            const { data, error } = await supabaseClient
+                .from('Parco_app')
+                .select('impianto, Indirizzo, localit, prov')
+                .eq('impianto', impiantoId)
+                .single();
+            
+            if (error) throw error;
+            
+            document.getElementById('impianto-codice').textContent = data.impianto;
+            
+            let indirizzo = '';
+            if (data.Indirizzo) indirizzo += data.Indirizzo;
+            if (data.localit) indirizzo += (indirizzo ? ' - ' : '') + data.localit;
+            if (data.prov) indirizzo += (indirizzo ? ' (' : '') + data.prov + (indirizzo ? ')' : '');
+            
+            document.getElementById('impianto-indirizzo').textContent = indirizzo || 'Indirizzo non disponibile';
+            
+        } catch (error) {
+            console.error('Errore caricamento impianto:', error);
+            document.getElementById('impianto-codice').textContent = impiantoId;
+            document.getElementById('impianto-indirizzo').textContent = 'Impianto non trovato in anagrafica';
+        }
+    }
+    
+    function gestisciTipoAltro() {
+        const tipo = document.getElementById('tipo_impianto').value;
+        document.getElementById('tipo_altro_container').style.display = tipo === 'altro' ? 'block' : 'none';
+    }
+    
+    function gestisciMeccanicoAltro() {
+        const tipo = document.getElementById('tipo_meccanico').value;
+        document.getElementById('tipo_meccanico_altro_container').style.display = tipo === 'altro' ? 'block' : 'none';
+    }
+    
+    function precompilaForm(scheda) {
+    // SEZIONE 1: TIPO IMPIANTO
+    document.getElementById('tipo_impianto').value = scheda.tipo_impianto || '';
+    if (scheda.tipo_impianto === 'altro') {
+        document.getElementById('tipo_altro_container').style.display = 'block';
+        document.getElementById('tipo_impianto_altro').value = scheda.tipo_impianto_altro || '';
+    }
+    
+    // SEZIONE 2: DATI TECNICI
+    document.getElementById('costruttore').value = scheda.costruttore || '';
+    document.getElementById('modello_impianto').value = scheda.modello_impianto || '';
+    document.getElementById('anno_installazione').value = scheda.anno_installazione || '';
+    document.getElementById('piani_serviti').value = scheda.piani_serviti || '';
+    
+    // SEZIONE 3: PARTE MECCANICA
+    document.getElementById('tipo_meccanico').value = scheda.tipo_meccanico || '';
+    if (scheda.tipo_meccanico === 'altro') {
+        document.getElementById('tipo_meccanico_altro_container').style.display = 'block';
+        document.getElementById('tipo_meccanico_altro').value = scheda.tipo_meccanico_altro || '';
+    }
+    document.getElementById('produttore_meccanico').value = scheda.produttore_meccanico || '';
+    document.getElementById('modello_meccanico').value = scheda.modello_meccanico || '';
+    document.getElementById('potenza_kw').value = scheda.potenza_kw || '';
+    document.getElementById('anno_meccanico').value = scheda.anno_meccanico || '';
+    
+    // SEZIONE 4: FUNI / CINGHIE
+    document.getElementById('tipo_funi').value = scheda.tipo_funi || '';
+    document.getElementById('numero_funi').value = scheda.numero_funi || '';
+    document.getElementById('diametro_funi').value = scheda.diametro_funi || '';
+    document.getElementById('anno_funi').value = scheda.anno_funi || '';
+    
+    // SEZIONE 5: LIMITATORE VELOCITÀ
+    document.getElementById('produttore_limitatore').value = scheda.produttore_limitatore || '';
+    document.getElementById('modello_limitatore').value = scheda.modello_limitatore || '';
+    document.getElementById('matricola_limitatore').value = scheda.matricola_limitatore || '';
+    document.getElementById('anno_limitatore').value = scheda.anno_limitatore || '';
+    
+    // ===== NUOVE SEZIONI =====
+    
+    // SEZIONE 6: PARTE ELETTRICA
+    document.getElementById('quadro').value = scheda.quadro || '';
+    document.getElementById('marca_quadro').value = scheda.marca_quadro || '';
+    document.getElementById('modello_quadro').value = scheda.modello_quadro || '';
+    document.getElementById('anno_quadro').value = scheda.anno_quadro || '';
+    document.getElementById('bottoniere').value = scheda.bottoniere || '';
+    document.getElementById('emergenza').value = scheda.emergenza || '';
+    document.getElementById('combinatore').value = scheda.combinatore || '';
+    document.getElementById('batterie').value = scheda.batterie || '';
+    
+    // SEZIONE 7: PORTE E CABINA
+    document.getElementById('tipo_porte').value = scheda.tipo_porte || '';
+    document.getElementById('apertura_porte').value = scheda.apertura_porte || '';
+    document.getElementById('luce_cabina').value = scheda.luce_cabina || '';
+    document.getElementById('luce_emergenza').value = scheda.luce_emergenza || '';
+    document.getElementById('bottoniera_cabina').value = scheda.bottoniera_cabina || '';
+    
+    // SEZIONE 8: ACCESSORI CABINA
+    document.getElementById('specchio').checked = scheda.specchio || false;
+    document.getElementById('tappeto').checked = scheda.tappeto || false;
+    document.getElementById('telefono').checked = scheda.telefono || false;
+    document.getElementById('altri_accessori').value = scheda.altri_accessori || '';
+    
+    // SEZIONE 9: ACCESSO E CHIAVI
+    document.getElementById('locale_macchina').value = scheda.locale_macchina || '';
+    document.getElementById('ubicazione_chiavi').value = scheda.ubicazione_chiavi || '';
+    document.getElementById('referente').value = scheda.referente || '';
+    document.getElementById('telefono_referente').value = scheda.telefono_referente || '';
+    
+    // SEZIONE 10: ENTI NOTIFICATI
+    document.getElementById('ente').value = scheda.ente || '';
+    if (scheda.ultima_verifica) {
+        document.getElementById('ultima_verifica').value = scheda.ultima_verifica;
+    }
+    
+    // SEZIONE 11: FOTO TECNICHE
+    if (scheda.foto_urls && scheda.foto_urls.length > 0) {
+        fotoUrls = scheda.foto_urls;
+    }
+    aggiornaGrigliaFoto();
+    
+    // SEZIONE 12: NOTE GENERALI
+    document.getElementById('note_generali').value = scheda.note_generali || '';
+    document.getElementById('conta-caratteri').textContent = (scheda.note_generali || '').length;
+}
+ async function salvaScheda() {
+    const dati = {
+        // SEZIONE 1: TIPO IMPIANTO
+        tipo_impianto: document.getElementById('tipo_impianto').value,
+        tipo_impianto_altro: document.getElementById('tipo_impianto').value === 'altro' ? 
+                              document.getElementById('tipo_impianto_altro').value : null,
+        
+        // SEZIONE 2: DATI TECNICI
+        costruttore: document.getElementById('costruttore').value || null,
+        modello_impianto: document.getElementById('modello_impianto').value || null,
+        anno_installazione: document.getElementById('anno_installazione').value ? 
+                            parseInt(document.getElementById('anno_installazione').value) : null,
+        piani_serviti: document.getElementById('piani_serviti').value ? 
+                       parseInt(document.getElementById('piani_serviti').value) : null,
+        
+        // SEZIONE 3: PARTE MECCANICA
+        tipo_meccanico: document.getElementById('tipo_meccanico').value || null,
+        tipo_meccanico_altro: document.getElementById('tipo_meccanico').value === 'altro' ? 
+                              document.getElementById('tipo_meccanico_altro').value : null,
+        produttore_meccanico: document.getElementById('produttore_meccanico').value || null,
+        modello_meccanico: document.getElementById('modello_meccanico').value || null,
+        potenza_kw: document.getElementById('potenza_kw').value ? 
+                    parseFloat(document.getElementById('potenza_kw').value) : null,
+        anno_meccanico: document.getElementById('anno_meccanico').value ? 
+                        parseInt(document.getElementById('anno_meccanico').value) : null,
+        
+        // SEZIONE 4: FUNI / CINGHIE
+        tipo_funi: document.getElementById('tipo_funi').value || null,
+        numero_funi: document.getElementById('numero_funi').value ? 
+                     parseInt(document.getElementById('numero_funi').value) : null,
+        diametro_funi: document.getElementById('diametro_funi').value ? 
+                       parseFloat(document.getElementById('diametro_funi').value) : null,
+        anno_funi: document.getElementById('anno_funi').value ? 
+                   parseInt(document.getElementById('anno_funi').value) : null,
+        
+        // SEZIONE 5: LIMITATORE VELOCITÀ
+        produttore_limitatore: document.getElementById('produttore_limitatore').value || null,
+        modello_limitatore: document.getElementById('modello_limitatore').value || null,
+        matricola_limitatore: document.getElementById('matricola_limitatore').value || null,
+        anno_limitatore: document.getElementById('anno_limitatore').value ? 
+                         parseInt(document.getElementById('anno_limitatore').value) : null,
+        
+        // SEZIONE 6: PARTE ELETTRICA
+        quadro: document.getElementById('quadro').value || null,
+        marca_quadro: document.getElementById('marca_quadro').value || null,
+        modello_quadro: document.getElementById('modello_quadro').value || null,
+        anno_quadro: document.getElementById('anno_quadro').value ? 
+                     parseInt(document.getElementById('anno_quadro').value) : null,
+        bottoniere: document.getElementById('bottoniere').value || null,
+        emergenza: document.getElementById('emergenza').value || null,
+        combinatore: document.getElementById('combinatore').value || null,
+        batterie: document.getElementById('batterie').value || null,
+        
+        // SEZIONE 7: PORTE E CABINA
+        tipo_porte: document.getElementById('tipo_porte').value || null,
+        apertura_porte: document.getElementById('apertura_porte').value || null,
+        luce_cabina: document.getElementById('luce_cabina').value || null,
+        luce_emergenza: document.getElementById('luce_emergenza').value || null,
+        bottoniera_cabina: document.getElementById('bottoniera_cabina').value || null,
+        
+        // SEZIONE 8: ACCESSORI CABINA
+        specchio: document.getElementById('specchio').checked,
+        tappeto: document.getElementById('tappeto').checked,
+        telefono: document.getElementById('telefono').checked,
+        altri_accessori: document.getElementById('altri_accessori').value || null,
+        
+        // SEZIONE 9: ACCESSO E CHIAVI
+        locale_macchina: document.getElementById('locale_macchina').value || null,
+        ubicazione_chiavi: document.getElementById('ubicazione_chiavi').value || null,
+        referente: document.getElementById('referente').value || null,
+        telefono_referente: document.getElementById('telefono_referente').value || null,
+        
+        // SEZIONE 10: ENTI NOTIFICATI
+        ente: document.getElementById('ente').value || null,
+        ultima_verifica: document.getElementById('ultima_verifica').value || null,
+        
+        // SEZIONE 11: FOTO TECNICHE
+        foto_urls: fotoUrls.length > 0 ? fotoUrls : null,
+        
+        // SEZIONE 12: NOTE GENERALI
+        note_generali: document.getElementById('note_generali').value || null
+    };
+    
+    const success = await salvaSchedaConDati(dati);
+    
+    if (success) {
+        setTimeout(() => {
+            window.location.href = `dettaglio_tecnico_impianto.html?id=${impiantoId}`;
+        }, 1500);
+    }
+}
+    
+    // Variabili globali
+let fotoUrls = [];
+let fotoFiles = []; // Per tenere traccia dei file da caricare
+let fotoDaRimuovere = []; // URL delle foto da eliminare
+
+// Funzione per aggiornare la griglia foto
+function aggiornaGrigliaFoto() {
+    const grid = document.getElementById('foto-grid');
+    if (!grid) return;
+    
+    let html = '';
+    for (let i = 0; i < 6; i++) {
+        if (i < fotoUrls.length) {
+            html += `
+                <div class="foto-item" data-index="${i}">
+                    <img src="${fotoUrls[i]}" alt="Foto ${i+1}">
+                    <button type="button" class="foto-remove" onclick="rimuoviFoto(${i})">
+                        <span class="material-symbols-rounded">close</span>
+                    </button>
+                </div>
+            `;
+        } else {
+            html += `
+                <div class="foto-placeholder" onclick="aggiungiFoto()">
+                    <span class="material-symbols-rounded">add_a_photo</span>
+                </div>
+            `;
+        }
+    }
+    grid.innerHTML = html;
+}
+
+function aggiungiFoto() {
+    document.getElementById('upload-foto').click();
+}
+
+function rimuoviFoto(index) {
+    if (!confirm('Rimuovere questa foto?')) return;
+    
+    // Se è una foto già esistente (URL inizia con http), segnala per cancellazione
+    if (fotoUrls[index].startsWith('http')) {
+        fotoDaRimuovere.push(fotoUrls[index]);
+    }
+    
+    fotoUrls.splice(index, 1);
+    aggiornaGrigliaFoto();
+}
+
+// Gestione upload foto
+document.getElementById('upload-foto').addEventListener('change', async function(e) {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    
+    for (const file of files) {
+        if (fotoUrls.length >= 6) {
+            alert('Hai raggiunto il massimo di 6 foto');
+            break;
+        }
+        
+        // Crea un URL locale per preview
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            fotoUrls.push(event.target.result);
+            fotoFiles.push(file);
+            aggiornaGrigliaFoto();
+        };
+        reader.readAsDataURL(file);
+    }
+    
+    this.value = '';
+});
+
+// Modifica la funzione salvaSchedaConDati
+async function salvaSchedaConDati(dati) {
+    try {
+        mostraLoading('Caricamento foto in corso...');
+        
+        const utente = utenteCorrente;
+        const now = new Date().toISOString();
+        
+        // Array per gli URL definitivi
+        let urlFinali = [];
+        
+        // Carica le nuove foto su Supabase Storage
+        for (let i = 0; i < fotoUrls.length; i++) {
+            const foto = fotoUrls[i];
+            
+            // Se è già un URL (foto esistente), mantienilo
+            if (foto.startsWith('http')) {
+                urlFinali.push(foto);
+            } else {
+                // Altrimenti è una nuova foto da caricare
+                const file = fotoFiles[i];
+                if (file) {
+                    mostraLoading(`Caricamento foto ${i+1} di ${fotoUrls.length}...`);
+                    
+                    const fileName = `${impiantoId}_${Date.now()}_${i}.jpg`;
+                    const filePath = `dettaglio_impianti/${fileName}`;
+                    
+                    // Upload su Storage
+                    const { error: uploadError } = await supabaseClient.storage
+                        .from('dettaglio_impianti')
+                        .upload(filePath, file);
+                    
+                    if (uploadError) throw uploadError;
+                    
+                    // Ottieni URL pubblico
+                    const { data: urlData } = supabaseClient.storage
+                        .from('dettaglio_impianti')
+                        .getPublicUrl(filePath);
+                    
+                    urlFinali.push(urlData.publicUrl);
+                }
+            }
+        }
+        
+        mostraLoading('Salvataggio dati...');
+        
+        // Elimina le foto rimosse
+        for (const url of fotoDaRimuovere) {
+            const fileName = url.split('/').pop();
+            await supabaseClient.storage
+                .from('dettaglio_impianti')
+                .remove([`dettaglio_impianti/${fileName}`]);
+        }
+        
+        const datiCompleti = {
+            ...dati,
+            foto_urls: urlFinali,
+            impianto_id: impiantoId,
+            aggiornato_il: now,
+            aggiornato_da: utente.nome_completo
+        };
+        
+        if (schedaId) {
+            // AGGIORNAMENTO
+            const { error } = await supabaseClient
+                .from('dettaglio_tecnico_impianto')
+                .update(datiCompleti)
+                .eq('id', schedaId);
+            
+            if (error) throw error;
+            mostraNotifica('✅ Scheda aggiornata con successo!', 'successo');
+            
+        } else {
+            // NUOVO INSERIMENTO
+            datiCompleti.creato_il = now;
+            datiCompleti.creato_da = utente.nome_completo;
+            
+            const { error } = await supabaseClient
+                .from('dettaglio_tecnico_impianto')
+                .insert([datiCompleti]);
+            
+            if (error) throw error;
+            mostraNotifica('✅ Scheda creata con successo!', 'successo');
+        }
+        
+        nascondiLoading();
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Errore salvataggio:', error);
+        mostraNotifica('❌ Errore nel salvataggio: ' + error.message, 'errore');
+        nascondiLoading();
+        return false;
+    }
+}
+
+</script>
+</body>
+</html>

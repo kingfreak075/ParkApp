@@ -75,7 +75,11 @@
     <span class="material-symbols-rounded">assignment_turned_in</span>
     Gestione Lavori
 </button>
-
+<!-- NUOVO PULSANTE SCHEDE TECNICHE -->
+<button class="nav-btn" data-tab="schede_tecniche">
+    <span class="material-symbols-rounded">precision_manufacturing</span>
+    Schede Tecniche
+</button>
 
 
     <!-- ANNOTAZIONI SPOSTATA QUI -->
@@ -1657,7 +1661,191 @@
         </div>
     </div>
 </div>
+<!-- TAB: GESTIONE SCHEDE TECNICHE -->
+<div id="tab-schede_tecniche" class="tab-content">
+    <div class="card">
+        <div class="card-header">
+            <h3>
+                <span class="material-symbols-rounded">precision_manufacturing</span>
+                Gestione Schede Tecniche
+            </h3>
+            <div class="card-actions">
+                <button class="btn btn-primary" onclick="mostraFiltriSchede()">
+                    <span class="material-symbols-rounded">filter_alt</span>
+                    Filtri
+                </button>
+                <button class="btn btn-icon" onclick="caricaSchedeTecniche()" title="Aggiorna">
+                    <span class="material-symbols-rounded">refresh</span>
+                </button>
+                <button class="btn btn-icon" onclick="esportaSchedeCSV()" title="Esporta CSV">
+                    <span class="material-symbols-rounded">download</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <!-- STATISTICHE -->
+            <div class="stats-grid" style="margin-bottom: 2rem;" id="stats-schede">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-symbols-rounded">description</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stat-totale-schede">0</div>
+                        <div class="stat-label">Schede Totali</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-symbols-rounded">elevator</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stat-impianti-con-scheda">0</div>
+                        <div class="stat-label">Impianti con scheda</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-symbols-rounded">photo_camera</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stat-totale-foto">0</div>
+                        <div class="stat-label">Foto Caricate</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-symbols-rounded">update</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stat-ultima-modifica">-</div>
+                        <div class="stat-label">Ultima modifica</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- FILTRI (inizialmente nascosti) -->
+            <div id="filtri-schede" style="display: none; margin-bottom: 1.5rem; padding: 1rem; background: #f8fafc; border-radius: 12px;">
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+                    <div class="form-group">
+                        <label>Impianto</label>
+                        <input type="text" id="filtro-impianto-scheda" class="form-control" placeholder="Codice impianto...">
+                    </div>
+                    <div class="form-group">
+                        <label>Costruttore</label>
+                        <input type="text" id="filtro-costruttore" class="form-control" placeholder="Es: GMV, KONE...">
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo impianto</label>
+                        <select id="filtro-tipo-impianto" class="form-control">
+                            <option value="">Tutti</option>
+                            <option value="elettrico">Elettrico</option>
+                            <option value="idraulico">Idraulico</option>
+                            <option value="mrl">MRL</option>
+                            <option value="piattaforma">Piattaforma</option>
+                            <option value="montascale">Montascale</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Anno installazione</label>
+                        <input type="number" id="filtro-anno" class="form-control" placeholder="2025" min="1900" max="2030">
+                    </div>
+                </div>
+                <div style="display: flex; gap: 0.5rem; margin-top: 1rem; justify-content: flex-end;">
+                    <button class="btn btn-secondary" onclick="resetFiltriSchede()">Reset</button>
+                    <button class="btn btn-primary" onclick="applicaFiltriSchede()">Applica</button>
+                </div>
+            </div>
+            
+            <!-- TABELLA SCHEDE TECNICHE -->
+            <div class="tables-container">
+                <table class="data-table" id="tabella-schede">
+                    <thead>
+                        <tr>
+                            <th style="width: 30px;">
+                                <input type="checkbox" id="select-all-schede" onchange="selezionaTutteSchede()">
+                            </th>
+                            <th>Impianto</th>
+                            <th>Tipo</th>
+                            <th>Costruttore</th>
+                            <th>Anno</th>
+                            <th>Piani</th>
+                            <th>Foto</th>
+                            <th>Ultima modifica</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabella-schede-body">
+                        <tr>
+                            <td colspan="9" class="text-center">
+                                <div class="loading-spinner-small">
+                                    <span class="material-symbols-rounded">hourglass_top</span>
+                                    Caricamento schede tecniche...
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- BOTTONI BULK OPERATIONS -->
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="esportaSchedeSelezionate()">
+                    <span class="material-symbols-rounded">download</span>
+                    Esporta selezionate
+                </button>
+                <button class="btn btn-danger" onclick="eliminaSchedeSelezionate()">
+                    <span class="material-symbols-rounded">delete</span>
+                    Elimina selezionate
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- MODALE DETTAGLIO SCHEDA (admin) -->
+   <!-- MODALE DETTAGLIO SCHEDA (admin) - VERSIONE MIGLIORATA -->
+<div class="modal" id="modal-dettaglio-scheda-admin">
+    <div class="modal-content" style="max-width: 800px; width: 90%;">
+        <div class="modal-header">
+            <h3>
+                <span class="material-symbols-rounded">precision_manufacturing</span>
+                Dettaglio Scheda Tecnica
+            </h3>
+            <button class="btn-icon-small" onclick="chiudiModaleScheda()">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+        </div>
+        <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+            <div id="dettaglio-scheda-content">
+                <!-- Contenuto dinamico -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="chiudiModaleScheda()">Chiudi</button>
+            <button class="btn btn-primary" onclick="modificaSchedaCorrente()">Modifica</button>
+        </div>
+    </div>
+</div>
 
+<!-- MODALE VISUALIZZATORE FOTO A SCHERMO INTERO -->
+<div class="modal" id="modal-foto-fullscreen">
+    <div class="modal-content" style="max-width: 90%; width: auto; background: black; padding: 0;">
+        <div style="position: relative;">
+            <img id="foto-fullscreen-img" style="width: 100%; max-height: 80vh; object-fit: contain;">
+            <button onclick="chiudiFotoFullscreen()" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer;">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+            <button onclick="fotoPrecedente()" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer;">
+                <span class="material-symbols-rounded">chevron_left</span>
+            </button>
+            <button onclick="fotoSuccessiva()" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer;">
+                <span class="material-symbols-rounded">chevron_right</span>
+            </button>
+            <div style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.5); color: white; padding: 5px 10px; border-radius: 20px; font-size: 0.9rem;" id="foto-counter"></div>
+        </div>
+    </div>
+</div>
+</div>
 
 <!-- MODALE NUOVO UTENTE -->
 
@@ -3505,6 +3693,7 @@ window.logout = async function() {
 <script src="admin_foglio.js"></script>
 <script src="admin_users.js"></script>
 <script src="admin_lavori.js"></script>
+<script src="admin_schede_tecniche.js"></script>
 
 </body>
 </html>

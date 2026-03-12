@@ -20,6 +20,19 @@
             window.location.href = 'index.html';
         }
     })();
+
+function vaiASchedaTecnica() {
+        const impianto = document.getElementById('det-impianto').textContent;
+        if (impianto && impianto !== '-') {
+            window.location.href = `dettaglio_tecnico_impianto.html?id=${impianto}`;
+        } else {
+            alert('Impianto non valido');
+        }
+    }
+
+
+
+
 </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
@@ -28,8 +41,8 @@
 
     <div class="app-container">
         <header class="app-header" style="display: flex; align-items: center; gap: 15px; position: relative;">
-         <button onclick="window.history.back()" class="btn-scheda" style="height: 40px; width: 40px;">
-    <span class="material-symbols-rounded">arrow_back</span>
+         <button onclick="window.location.href='menu.html'" class="btn-scheda" style="height: 40px; width: 40px; background: var(--primary); display: flex; align-items: center; justify-content: center; border-radius: 8px; border: none; cursor: pointer;">
+    <span class="material-symbols-rounded" style="color: white;">arrow_back</span>
 </button>
             <h1 style="font-size: 1.1rem; font-weight: 800; margin: 0;">Scheda Impianto</h1>
             
@@ -39,14 +52,26 @@
 
         <main id="dettaglio-content" style="padding: 1rem; display: none;">
             
-            <section class="section-card">
-                <h1 id="det-impianto" style="font-size: 2rem; font-weight: 900; color: var(--primary); margin: 0;">-</h1>
-                <p id="det-localita" style="font-size: 1rem; color: var(--text-muted); margin-bottom: 1rem;">-</p>
-                <div style="display: flex; gap: 8px;">
-                    <span id="badge-manut" class="badge"></span>
-                    <span id="badge-tipo" class="badge secondary"></span>
-                </div>
-            </section>
+          <section class="section-card">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <!-- PARTE SINISTRA: IMPIANTO E BADGE -->
+        <div style="flex: 1;">
+            <h1 id="det-impianto" style="font-size: 2rem; font-weight: 900; color: var(--primary); margin: 0;">-</h1>
+            <p id="det-localita" style="font-size: 1rem; color: var(--text-muted); margin-bottom: 1rem;">-</p>
+            <div style="display: flex; gap: 8px;">
+                <span id="badge-manut" class="badge"></span>
+                <span id="badge-tipo" class="badge secondary"></span>
+            </div>
+        </div>
+        
+        <!-- PARTE DESTRA: PULSANTE SCHEDA TECNICA -->
+        <button onclick="vaiASchedaTecnica()" 
+                style="width: 48px; height: 48px; border-radius: 12px; background: var(--primary-light); display: flex; align-items: center; justify-content: center; margin-left: 10px; border: none; cursor: pointer; flex-shrink: 0;"
+                title="Scheda tecnica completa">
+            <span class="material-symbols-rounded" style="color: var(--primary); font-size: 28px;">fact_check</span>
+        </button>
+    </div>
+</section>
 
             <section class="section-card">
                 <h3 class="section-title">DATI TECNICI</h3>

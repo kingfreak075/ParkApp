@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ParkApp - Scheda Tecnica Impianto</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db-config.js"></script>
+    <script src="check-db-config.js"></script>
+    <script src="auth.js"></script>
+    
+    <script>
+        (function() {
+            const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+            if (!utente) {
+                window.location.href = 'index.html';
+            }
+        })();
+    </script>
+    
+    <script>
+        window.FOOTER_CONFIG = {
+            testo: "EDIT BY KINGFREAK Version 1.0 | Scheda Tecnica"
+        };
+    </script>
+    
+    <style>
+        .app-container { max-width: 450px; margin: 0 auto; min-height: 100vh; padding-bottom: 5rem; }
+        
+        /* Intestazione impianto */
+        .impianto-header {
+            background: white;
+            border-radius: 16px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border);
+            border-left: 6px solid var(--primary);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        
+        .impianto-codice {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--primary);
+            margin-bottom: 0.25rem;
+        }
+        
+        .impianto-indirizzo {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+        
+        /* Sezioni */
+        .section-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin: 0 0 1rem 0;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border);
+        }
+        
+        .section-title .material-symbols-rounded {
+            font-size: 1.2rem;
+            color: var(--primary);
+        }
+        
+        /* Griglia informazioni */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem 1rem;
+        }
+        
+        .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .info-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 0.2rem;
+        }
+        
+        .info-value {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+        
+        .info-full {
+            grid-column: span 2;
+        }
+        
+        /* Accessori cabina */
+        .accessori-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+        }
+        
+        .accessorio-item {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.4rem 0.8rem;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 30px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .accessorio-item.presente {
+            background: #22c55e20;
+            border-color: #22c55e;
+            color: #166534;
+        }
+        
+        .accessorio-item .material-symbols-rounded {
+            font-size: 1rem;
+        }
+        
+        /* Contatti */
+        .contatto-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: #f8fafc;
+            border-radius: 12px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .contatto-icona {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: var(--primary-light);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .contatto-dettagli {
+            flex: 1;
+        }
+        
+        .contatto-nome {
+            font-weight: 700;
+            color: var(--text-main);
+            font-size: 0.9rem;
+            margin-bottom: 0.2rem;
+        }
+        
+        .contatto-telefono {
+            font-size: 0.8rem;
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .contatto-indirizzo {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        
+        /* Foto grid */
+        .foto-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+        
+        .foto-item {
+            aspect-ratio: 1;
+            border-radius: 12px;
+            background: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            border: 2px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .foto-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .foto-placeholder {
+            aspect-ratio: 1;
+            background: #f1f5f9;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed var(--border);
+            color: #94a3b8;
+        }
+        
+        /* Stato vuoto */
+        .vuoto-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-muted);
+        }
+        
+        .vuoto-state .material-symbols-rounded {
+            font-size: 4rem;
+            opacity: 0.3;
+            margin-bottom: 1rem;
+        }
+        
+        /* Bottoni */
+        .btn-primario {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 0.875rem;
+            font-weight: 700;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+        
+        .btn-secondario {
+            background: white;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            padding: 0.875rem;
+            font-weight: 700;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+        
+        .btn-elimina {
+            background: white;
+            color: #ef4444;
+            border: 2px solid #ef4444;
+            border-radius: 12px;
+            padding: 0.875rem;
+            font-weight: 700;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        
+        .notifica {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 2000;
+            font-size: 0.7rem;
+            font-weight: 500;
+            height: 28px;
+            animation: slideUp 0.2s ease;
+        }
+        
+        .notifica.successo { background: #22c55e; }
+        .notifica.errore { background: #ef4444; }
+        .notifica.info { background: #334155; }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translate(-50%, 20px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
+        
+        .app-footer {
+            background: var(--white);
+            padding: 1rem;
+            text-align: center;
+            border-top: 1px solid var(--border);
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            max-width: 450px;
+            margin: 0 auto;
+        }
+        
+        hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body class="bg-app">
+    <div class="app-container">
+        <header class="app-header" style="position: relative;">
+            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+               <button onclick="tornaADettaglio()" class="btn-scheda" style="height: 40px; width: 40px; background: var(--primary); display: flex; align-items: center; justify-content: center; border-radius: 8px; border: none; cursor: pointer;">
+    <span class="material-symbols-rounded" style="color: white;">arrow_back</span>
+</button>
+                <div style="flex-grow: 1;">
+                    <h1 style="font-size: 1.25rem; font-weight: 800; color: var(--primary); margin: 0;">Scheda Tecnica</h1>
+                    <p id="tecnico-display" style="margin: 0; font-size: 0.85rem; color: var(--text-muted); font-weight: 600;"></p>
+                </div>
+                <div id="db-status-dot" style="position: absolute; top: 15px; right: 15px; width: 14px; height: 14px; background: #22c55e; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2); z-index: 10;"></div>
+            </div>
+        </header>
+        <!-- INTESTAZIONE IMPIANTO -->
+<div class="impianto-header" style="background: white; border-radius: 16px; padding: 1rem; margin-bottom: 1.5rem; border-left: 6px solid var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+            <div style="font-size: 1.5rem; font-weight: 900; color: var(--primary);" id="dettaglio-impianto-codice">-</div>
+            <div style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.25rem;" id="dettaglio-impianto-indirizzo">Caricamento...</div>
+        </div>
+        <div style="background: var(--primary-light); color: var(--primary); padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.7rem; font-weight: 800;">
+            Scheda Tecnica
+        </div>
+    </div>
+</div>
+        <main style="padding: 1rem;">
+            <!-- INTESTAZIONE IMPIANTO (caricata dinamicamente) -->
+            <div class="impianto-header" id="impianto-header" style="display: none;">
+                <div class="impianto-codice" id="impianto-codice"></div>
+                <div class="impianto-indirizzo" id="impianto-indirizzo"></div>
+            </div>
+            
+            <!-- CONTENITORE SCHEDA (mostrato se esistono dati) -->
+            <div id="scheda-contenitore" style="display: none;">
+                <!-- DATI TECNICI -->
+                <div class="section-card" id="sezione-dati-tecnici">
+                    <h3 class="section-title">
+                        <span class="material-symbols-rounded">description</span>
+                        Dati Tecnici
+                    </h3>
+                    <div class="info-grid" id="dati-tecnici-content"></div>
+                </div>
+                
+                <!-- PARTE MECCANICA -->
+                <div class="section-card" id="sezione-meccanica">
+                    <h3 class="section-title">
+                        <span class="material-symbols-rounded">precision_manufacturing</span>
+                        Parte Meccanica
+                    </h3>
+                    <div class="info-grid" id="meccanica-content"></div>
+                </div>
+                
+                <!-- FUNI / CINGHIE -->
+                <div class="section-card" id="sezione-funi">
+                    <h3 class="section-title">
+                        <span class="material-symbols-rounded">settings</span>
+                        Funi / Cinghie
+                    </h3>
+                    <div class="info-grid" id="funi-content"></div>
+                </div>
+                
+                <!-- LIMITATORE VELOCITÀ -->
+                <div class="section-card" id="sezione-limitatore">
+                    <h3 class="section-title">
+                        <span class="material-symbols-rounded">speed</span>
+                        Limitatore Velocità
+                    </h3>
+                    <div class="info-grid" id="limitatore-content"></div>
+                </div>
+                
+                <!-- PARTE ELETTRICA -->
+                <div class="section-card" id="sezione-elettrica">
+                    <h3 class="section-title">
+                        <span class="material-symbols-rounded">electrical_services</span>
+                        Parte Elettrica
+                    </h3>
+                    <div class="info-grid" id="elettrica-content"></div>
+                </div>
+                
+                <!-- PORTE E CABINA -->
+                <div class="section-card" id="sezione-porte">
+                    <h3 class="section-title">
+                        <span class="material-symbols-rounded">door_front</span>
+                        Porte e Cabina
+                    </h3>
+                    <div class="info-grid" id="porte-content"></div>
+                </div>
+                
+                <!-- ACCESSORI CABINA -->
+                <div class="section-card" id="sezione-accessori">
+                    <h3 class="section-title">
+                        <span class="material-symbols-rounded">checklist</span>
+                        Accessori Cabina
+                    </h3>
+                    <div id="accessori-content"></div>
+                </div>
+                
+                <!-- ACCESSO E CHIAVI -->
+                <div class="section-card" id="sezione-accesso">
+                    <h3 class="section-title">
+                        <span class="material-symbols-rounded">key</span>
+                        Accesso e Chiavi
+                    </h3>
+                    <div id="accesso-content"></div>
+                </div>
+                
+                <!-- ENTI NOTIFICATI -->
+                <div class="section-card" id="sezione-enti">
+                    <h3 class="section-title">
+                        <span class="material-symbols-rounded">account_balance</span>
+                        Enti Notificati
+                    </h3>
+                    <div class="info-grid" id="enti-content"></div>
+                </div>
+                
+                <!-- FOTO TECNICHE -->
+                <div class="section-card" id="sezione-foto">
+                    <h3 class="section-title">
+                        <span class="material-symbols-rounded">photo_camera</span>
+                        Foto Tecniche
+                    </h3>
+                    <div class="foto-grid" id="foto-content"></div>
+                </div>
+                
+                <!-- NOTE GENERALI -->
+                <div class="section-card" id="sezione-note">
+                    <h3 class="section-title">
+                        <span class="material-symbols-rounded">notes</span>
+                        Note Generali
+                    </h3>
+                    <div id="note-content" style="background: #f8fafc; padding: 1rem; border-radius: 12px; font-size: 0.9rem;"></div>
+                </div>
+                
+                <!-- ULTIMA MODIFICA -->
+                <div style="margin: 1rem 0; padding: 0.5rem; text-align: center; font-size: 0.75rem; color: var(--text-muted); border-top: 1px solid var(--border);" id="ultima-modifica"></div>
+                
+                <!-- BOTTONI AZIONE -->
+                <div class="action-buttons">
+                    <button id="btn-modifica" class="btn-secondario" style="display: none;" onclick="vaiAModifica()">
+                        <span class="material-symbols-rounded">edit</span>
+                        MODIFICA
+                    </button>
+                    <button id="btn-elimina" class="btn-elimina" style="display: none;" onclick="eliminaScheda()">
+                        <span class="material-symbols-rounded">delete</span>
+                        ELIMINA
+                    </button>
+                </div>
+            </div>
+            
+            <!-- STATO VUOTO (nessuna scheda) -->
+            <div id="stato-vuoto" class="vuoto-state">
+                <span class="material-symbols-rounded">database</span>
+                <h3>Nessuna scheda tecnica</h3>
+                <p style="margin-bottom: 2rem;">Non sono ancora stati inseriti dati tecnici per questo impianto.</p>
+                <button onclick="vaiACreazione()" class="btn-primario">
+                    <span class="material-symbols-rounded">add</span>
+                    CREA SCHEDA TECNICA
+                </button>
+            </div>
+        </main>
+        
+        <footer class="app-footer">
+            <span class="footer-text" id="footer-text"></span>
+        </footer>
+    </div>
+    
+    <script src="dettaglio_impianto.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async function() {
+        const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
+        const display = document.getElementById('tecnico-display');
+        if (utente && utente.nome_completo && display) {
+            display.innerText = `Tecnico: ${utente.nome_completo}`;
+        }
+        
+        const footerEl = document.getElementById('footer-text');
+        if (footerEl && window.FOOTER_CONFIG) {
+            footerEl.innerText = window.FOOTER_CONFIG.testo;
+        }
+        
+        const configInfo = getDbConfigInfo();
+        const dot = document.getElementById('db-status-dot');
+        if (dot) {
+            dot.style.background = configInfo.configured ? '#22c55e' : '#f59e0b';
+        }
+        
+        // Recupera ID impianto dall'URL
+        const urlParams = new URLSearchParams(window.location.search);
+        impiantoId = urlParams.get('id');
+        
+        if (!impiantoId) {
+            mostraNotifica('ID impianto non specificato', 'errore');
+            setTimeout(() => window.history.back(), 2000);
+            return;
+        }
+        
+        // Carica dati impianto da Parco_app
+        await caricaDatiImpianto();
+        
+        // Carica scheda tecnica
+        await caricaEGestisciScheda();
+    });
+    
+async function caricaDatiImpianto() {
+    try {
+        const { data, error } = await supabaseClient
+            .from('Parco_app')
+            .select('impianto, Indirizzo, localit, prov')
+            .eq('impianto', impiantoId)
+            .single();
+        
+        if (error) throw error;
+        
+        document.getElementById('dettaglio-impianto-codice').textContent = data.impianto;
+        
+        let indirizzo = '';
+        if (data.Indirizzo) indirizzo += data.Indirizzo;
+        if (data.localit) indirizzo += (indirizzo ? ' - ' : '') + data.localit;
+        if (data.prov) indirizzo += (indirizzo ? ' (' : '') + data.prov + (indirizzo ? ')' : '');
+        
+        document.getElementById('dettaglio-impianto-indirizzo').textContent = indirizzo || 'Indirizzo non disponibile';
+        
+    } catch (error) {
+        console.error('Errore caricamento impianto:', error);
+        document.getElementById('dettaglio-impianto-codice').textContent = impiantoId;
+        document.getElementById('dettaglio-impianto-indirizzo').textContent = 'Impianto non trovato in anagrafica';
+    }
+}
+    async function caricaEGestisciScheda() {
+        const scheda = await caricaSchedaTecnica();
+        
+        if (scheda) {
+            // SCHEDA ESISTE - mostrala
+            document.getElementById('scheda-contenitore').style.display = 'block';
+            document.getElementById('stato-vuoto').style.display = 'none';
+            
+            // Popola tutti i campi
+            popolaDatiTecnici(scheda);
+            popolaMeccanica(scheda);
+            popolaFuni(scheda);
+            popolaLimitatore(scheda);
+            popolaElettrica(scheda);
+            popolaPorte(scheda);
+            popolaAccessori(scheda);
+            popolaAccesso(scheda);
+            popolaEnti(scheda);
+            popolaFoto(scheda);
+            popolaNote(scheda);
+            popolaUltimaModifica(scheda);
+            
+            // Mostra bottoni (solo supervisori/admin vedono elimina)
+            document.getElementById('btn-modifica').style.display = 'flex';
+            if (ruolo === 'supervisore' || ruolo === 'admin') {
+                document.getElementById('btn-elimina').style.display = 'flex';
+            }
+            
+        } else {
+            // SCHEDA NON ESISTE - mostra stato vuoto
+            document.getElementById('scheda-contenitore').style.display = 'none';
+            document.getElementById('stato-vuoto').style.display = 'block';
+        }
+    }
+    
+    function vaiACreazione() {
+        window.location.href = `modifica_tecnico_impianto.html?id=${impiantoId}`;
+    }
+    
+    function vaiAModifica() {
+        window.location.href = `modifica_tecnico_impianto.html?id=${impiantoId}`;
+    }
+    
+    async function eliminaScheda() {
+        if (ruolo !== 'supervisore' && ruolo !== 'admin') {
+            mostraNotifica('Non hai i permessi per eliminare', 'errore');
+            return;
+        }
+        
+        if (!confirm('Eliminare definitivamente questa scheda tecnica?')) return;
+        
+        try {
+            const { error } = await supabaseClient
+                .from('dettaglio_tecnico_impianto')
+                .delete()
+                .eq('id', schedaCorrente.id);
+            
+            if (error) throw error;
+            
+            mostraNotifica('Scheda eliminata', 'successo');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+            
+        } catch (error) {
+            console.error('❌ Errore eliminazione:', error);
+            mostraNotifica('Errore nell\'eliminazione', 'errore');
+        }
+    }
+    
+    function popolaDatiTecnici(scheda) {
+        const content = document.getElementById('dati-tecnici-content');
+        if (!content) return;
+        
+        content.innerHTML = `
+            <div class="info-item">
+                <span class="info-label">Costruttore</span>
+                <span class="info-value">${scheda.costruttore || '-'}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Modello</span>
+                <span class="info-value">${scheda.modello_impianto || '-'}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Anno installazione</span>
+                <span class="info-value">${scheda.anno_installazione || '-'}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Piani serviti</span>
+                <span class="info-value">${scheda.piani_serviti || '-'}</span>
+            </div>
+        `;
+    }
+    
+    function popolaMeccanica(scheda) {
+        const content = document.getElementById('meccanica-content');
+        if (!content) return;
+        
+        let tipoMeccanico = scheda.tipo_meccanico || '-';
+        if (scheda.tipo_meccanico === 'altro' && scheda.tipo_meccanico_altro) {
+            tipoMeccanico = scheda.tipo_meccanico_altro;
+        }
+        
+        content.innerHTML = `
+            <div class="info-item">
+                <span class="info-label">Tipo</span>
+                <span class="info-value">${tipoMeccanico}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Produttore</span>
+                <span class="info-value">${scheda.produttore_meccanico || '-'}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Modello</span>
+                <span class="info-value">${scheda.modello_meccanico || '-'}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Potenza</span>
+                <span class="info-value">${scheda.potenza_kw ? scheda.potenza_kw + ' kW' : '-'}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Anno installazione</span>
+                <span class="info-value">${scheda.anno_meccanico || '-'}</span>
+            </div>
+        `;
+    }
+    
+    function popolaFuni(scheda) {
+        const content = document.getElementById('funi-content');
+        if (!content) return;
+        
+        content.innerHTML = `
+            <div class="info-item">
+                <span class="info-label">Tipo</span>
+                <span class="info-value">${scheda.tipo_funi || '-'}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Numero</span>
+                <span class="info-value">${scheda.numero_funi || '-'}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Diametro</span>
+                <span class="info-value">${scheda.diametro_funi ? scheda.diametro_funi + ' mm' : '-'}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Anno installazione</span>
+                <span class="info-value">${scheda.anno_funi || '-'}</span>
+            </div>
+        `;
+    }
+    
+    function popolaLimitatore(scheda) {
+        const content = document.getElementById('limitatore-content');
+        if (!content) return;
+        
+        content.innerHTML = `
+            <div class="info-item">
+                <span class="info-label">Produttore</span>
+                <span class="info-value">${scheda.produttore_limitatore || '-'}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Modello</span>
+                <span class="info-value">${scheda.modello_limitatore || '-'}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Matricola</span>
+                <span class="info-value">${scheda.matricola_limitatore || '-'}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Anno installazione</span>
+                <span class="info-value">${scheda.anno_limitatore || '-'}</span>
+            </div>
+        `;
+    }
+    
+    function popolaElettrica(scheda) {
+        const content = document.getElementById('elettrica-content');
+        if (!content) return;
+        
+        content.innerHTML = `
+            <div class="info-item">
+                <span class="info-label">Quadro</span>
+                <span class="info-value">${scheda.quadro || '-'}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Marca</span>
+                <span class="info-value">${scheda.marca_quadro || '-'}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Modello</span>
+                <span class="info-value">${scheda.modello_quadro || '-'}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Anno installazione</span>
+                <span class="info-value">${scheda.anno_quadro || '-'}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Bottoniere</span>
+                <span class="info-value">${scheda.bottoniere || '-'}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Emergenza</span>
+                <span class="info-value">${scheda.emergenza || '-'}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Combinatore</span>
+                <span class="info-value">${scheda.combinatore || '-'}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Batterie</span>
+                <span class="info-value">${scheda.batterie || '-'}</span>
+            </div>
+        `;
+    }
+    
+    function popolaPorte(scheda) {
+        const content = document.getElementById('porte-content');
+        if (!content) return;
+        
+        content.innerHTML = `
+            <div class="info-item">
+                <span class="info-label">Tipo Porte</span>
+                <span class="info-value">${scheda.tipo_porte || '-'}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Apertura</span>
+                <span class="info-value">${scheda.apertura_porte || '-'}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Luce Cabina</span>
+                <span class="info-value">${scheda.luce_cabina || '-'}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Luce Emergenza</span>
+                <span class="info-value">${scheda.luce_emergenza || '-'}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Bottoniera</span>
+                <span class="info-value">${scheda.bottoniera_cabina || '-'}</span>
+            </div>
+        `;
+    }
+    
+    function popolaAccessori(scheda) {
+        const content = document.getElementById('accessori-content');
+        if (!content) return;
+        
+        let html = '<div class="accessori-grid">';
+        
+        if (scheda.specchio) {
+            html += '<span class="accessorio-item presente"><span class="material-symbols-rounded">check</span> Specchio</span>';
+        }
+        if (scheda.tappeto) {
+            html += '<span class="accessorio-item presente"><span class="material-symbols-rounded">check</span> Tappeto</span>';
+        }
+        if (scheda.telefono) {
+            html += '<span class="accessorio-item presente"><span class="material-symbols-rounded">check</span> Telefono</span>';
+        }
+        
+        html += '</div>';
+        
+        if (scheda.altri_accessori) {
+            html += `<div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">
+                <strong>Altri accessori:</strong> ${scheda.altri_accessori}
+            </div>`;
+        }
+        
+        content.innerHTML = html || '<p class="info-value">Nessun accessorio registrato</p>';
+    }
+    
+    function popolaAccesso(scheda) {
+        const content = document.getElementById('accesso-content');
+        if (!content) return;
+        
+        let html = '';
+        
+        if (scheda.locale_macchina) {
+            html += `
+                <div class="contatto-item">
+                    <div class="contatto-icona"><span class="material-symbols-rounded">location_on</span></div>
+                    <div class="contatto-dettagli">
+                        <div class="contatto-nome">Locale Macchina</div>
+                        <div class="contatto-indirizzo">${scheda.locale_macchina}</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        if (scheda.ubicazione_chiavi) {
+            html += `
+                <div class="contatto-item">
+                    <div class="contatto-icona"><span class="material-symbols-rounded">vpn_key</span></div>
+                    <div class="contatto-dettagli">
+                        <div class="contatto-nome">Ubicazione chiavi</div>
+                        <div class="contatto-indirizzo">${scheda.ubicazione_chiavi}</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        if (scheda.referente) {
+            html += `
+                <div class="contatto-item">
+                    <div class="contatto-icona"><span class="material-symbols-rounded">person</span></div>
+                    <div class="contatto-dettagli">
+                        <div class="contatto-nome">${scheda.referente}</div>
+                        ${scheda.telefono_referente ? `<div class="contatto-telefono">${scheda.telefono_referente}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+        
+        content.innerHTML = html || '<p class="info-value">Nessuna informazione su accesso e chiavi</p>';
+    }
+    
+    function popolaEnti(scheda) {
+        const content = document.getElementById('enti-content');
+        if (!content) return;
+        
+        content.innerHTML = `
+            <div class="info-item info-full">
+                <span class="info-label">Ente</span>
+                <span class="info-value">${scheda.ente || '-'}</span>
+            </div>
+            <div class="info-item info-full">
+                <span class="info-label">Ultima verifica</span>
+                <span class="info-value">${scheda.ultima_verifica ? new Date(scheda.ultima_verifica).toLocaleDateString('it-IT') : '-'}</span>
+            </div>
+        `;
+    }
+    
+    function popolaFoto(scheda) {
+        const content = document.getElementById('foto-content');
+        if (!content) return;
+        
+        const fotoUrls = scheda.foto_urls || [];
+        
+        if (fotoUrls.length === 0) {
+            content.innerHTML = Array(6).fill(0).map(() => `
+                <div class="foto-placeholder">
+                    <span class="material-symbols-rounded">image</span>
+                </div>
+            `).join('');
+            return;
+        }
+        
+        let html = '';
+        for (let i = 0; i < 6; i++) {
+            if (i < fotoUrls.length) {
+                html += `
+                    <div class="foto-item">
+                        <img src="${fotoUrls[i]}" alt="Foto tecnica" onclick="window.open('${fotoUrls[i]}', '_blank')">
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="foto-placeholder">
+                        <span class="material-symbols-rounded">image</span>
+                    </div>
+                `;
+            }
+        }
+        
+        content.innerHTML = html;
+    }
+    
+    function popolaNote(scheda) {
+        const content = document.getElementById('note-content');
+        if (!content) return;
+        
+        content.innerHTML = scheda.note_generali || 'Nessuna nota presente';
+    }
+    
+    function popolaUltimaModifica(scheda) {
+        const content = document.getElementById('ultima-modifica');
+        if (!content) return;
+        
+        const dataModifica = scheda.aggiornato_il ? new Date(scheda.aggiornato_il).toLocaleDateString('it-IT') : '-';
+        const tecnico = scheda.aggiornato_da || '-';
+        
+        content.innerHTML = `
+            <span class="material-symbols-rounded" style="font-size: 0.8rem;">history</span>
+            Ultima modifica: ${dataModifica} - 
+            <span class="material-symbols-rounded" style="font-size: 0.8rem;">person</span>
+            ${tecnico}
+        `;
+    }
+
+function tornaADettaglio() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get('id');
+    if (id) {
+        window.location.href = `dettaglio.html?id=${id}`;
+    } else {
+        window.history.back();
+    }
+}
+
+</script>
+</body>
+</html>
