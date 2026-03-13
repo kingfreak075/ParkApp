@@ -206,9 +206,6 @@ function checkLimiti(input, min, max) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Salvataggio (merge): payload ricco + modalità edit + regole commessa + redirect parco.html
-// ─────────────────────────────────────────────────────────────────────────────
 async function salvaIntervento() {
   // ✅ AGGIUNTO CONTROLLO CLIENT
   if (!supabaseClient) {
@@ -227,20 +224,14 @@ async function salvaIntervento() {
   const mode = new URLSearchParams(window.location.search).get('mode');
   const datiEdit = mode === 'edit' ? JSON.parse(localStorage.getItem('edit_intervento') || '{}') : null;
   
-// Dopo il salvataggio riuscito
-if (mode === 'edit') {
-    // Se veniamo dal calendario, torniamo al calendario
-    const urlParams = new URLSearchParams(window.location.search);
-    const from = urlParams.get('from');
-    
-    if (from === 'calendario') {
-        window.location.href = 'calendario.html';
-    } else {
-        window.location.href = 'parco.html';
-    }
-} else {
-    window.location.href = 'parco.html';
-}
+  // ✅ FIX: Assegna l'indirizzo corretto
+  if (mode === 'edit' && datiEdit && datiEdit.indirizzo) {
+    // In modalità edit, usa l'indirizzo dell'intervento originale
+    indirizzoFinale = datiEdit.indirizzo;
+  } else if (impiantoCorrente && impiantoCorrente.indirizzo) {
+    // In modalità nuovo, usa l'indirizzo dall'impianto corrente
+    indirizzoFinale = impiantoCorrente.indirizzo;
+  }
 
   // CALCOLO ORE
   let oreOrd = 0, oreStra = 0;
@@ -316,7 +307,7 @@ if (mode === 'edit') {
     // campo impianto: coerente con la visualizzazione e con le regole commessa
     impianto: impiantoDB,
 
-    // INDIRIZZO: usa quello determinato sopra
+    // INDIRIZZO: ora valorizzato correttamente
     indirizzo: indirizzoFinale,
     
     ch_rep: tipo,
@@ -335,21 +326,37 @@ if (mode === 'edit') {
   };
 
   try {
+    let messaggio = '';
+    
     if (mode === 'edit' && datiEdit) {
       const { error } = await supabaseClient
         .from('fogliolavoro')
         .update(payload)
         .eq('ID', datiEdit.ID);
       if (error) throw error;
-      alert('Intervento aggiornato!');
+      messaggio = 'Intervento aggiornato!';
     } else {
       const { error } = await supabaseClient.from('fogliolavoro').insert([payload]);
       if (error) throw error;
-      alert('Intervento salvato con successo!');
+      messaggio = 'Intervento salvato con successo!';
     }
     
+    alert(messaggio); // ✅ Mostra il messaggio di conferma
     localStorage.removeItem('edit_intervento');
-    window.location.href = 'parco.html'; // redirect unificato
+    
+    // ✅ Redirect dopo il salvataggio riuscito
+    if (mode === 'edit') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const from = urlParams.get('from');
+        
+        if (from === 'calendario') {
+            window.location.href = 'calendario.html';
+        } else {
+            window.location.href = 'parco.html';
+        }
+    } else {
+        window.location.href = 'parco.html';
+    }
     
   } catch (err) {
     alert('Errore durante il salvataggio: ' + err.message);
