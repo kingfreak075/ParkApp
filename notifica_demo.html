@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo Notifiche ParkApp</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db-config.js"></script>
+    <script src="auth.js"></script>
+    
+    <style>
+        /* STILE INVARIATO - lo lascio uguale al tuo */
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f1f5f9;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container-demo {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #2563eb;
+            font-size: 1.8rem;
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .card {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .label {
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: #64748b;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            display: block;
+        }
+        
+        select, input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: 'Inter', sans-serif;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+        }
+        
+        select:focus, input:focus, textarea:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+        
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 10px;
+            font-weight: 800;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.2s;
+        }
+        
+        .btn:hover {
+            background: #1d4ed8;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(37,99,235,0.3);
+        }
+        
+        .btn:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .btn-secondary {
+            background: white;
+            color: #2563eb;
+            border: 2px solid #2563eb;
+        }
+        
+        .btn-secondary:hover {
+            background: #eff6ff;
+        }
+        
+        .tecnico-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: white;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            border: 1px solid #e2e8f0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .tecnico-item:hover {
+            background: #f1f5f9;
+            border-color: #2563eb;
+        }
+        
+        .tecnico-item.selected {
+            background: #eff6ff;
+            border-color: #2563eb;
+            border-width: 2px;
+        }
+        
+        .tecnico-avatar {
+            width: 40px;
+            height: 40px;
+            background: #2563eb;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            margin-right: 12px;
+        }
+        
+        .tecnico-info {
+            flex-grow: 1;
+        }
+        
+        .tecnico-nome {
+            font-weight: 700;
+            color: #1e293b;
+        }
+        
+        .tecnico-status {
+            font-size: 0.75rem;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        
+        .status-dot.active {
+            background: #22c55e;
+        }
+        
+        .status-dot.inactive {
+            background: #94a3b8;
+        }
+        
+        .filter-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .filter-tab {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .filter-tab.active {
+            background: #2563eb;
+            color: white;
+            border-color: #2563eb;
+        }
+        
+        .stats-card {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: #0369a1;
+        }
+        
+        .stat-label {
+            font-size: 0.7rem;
+            color: #64748b;
+        }
+        
+        .message-preview {
+            background: #f1f5f9;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid #2563eb;
+        }
+        
+        .log-container {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #0f172a;
+            color: #e2e8f0;
+            font-family: monospace;
+            font-size: 0.8rem;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 5px;
+        }
+        
+        .log-success { color: #4ade80; }
+        .log-error { color: #f87171; }
+        .log-info { color: #60a5fa; }
+    </style>
+</head>
+<body>
+    <div class="container-demo">
+        <h1>
+            <span class="material-symbols-rounded" style="font-size: 36px;">notifications_active</span>
+            Demo Notifiche Push
+        </h1>
+        
+        <!-- Stats -->
+        <div class="stats-card">
+            <div class="stat-item">
+                <div class="stat-value" id="totale-tecnici">0</div>
+                <div class="stat-label">Tecnici Totali</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="tecnici-attivi">0</div>
+                <div class="stat-label">Con notifiche attive</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="tecnici-online">0</div>
+                <div class="stat-label">Online ora</div>
+            </div>
+        </div>
+        
+        <!-- Filtri -->
+        <div class="filter-tabs">
+            <div class="filter-tab active" onclick="filtraTecnici('tutti')">Tutti</div>
+            <div class="filter-tab" onclick="filtraTecnici('attivi')">Con notifiche</div>
+            <div class="filter-tab" onclick="filtraTecnici('online')">Online</div>
+        </div>
+        
+        <!-- Lista tecnici -->
+        <div class="card">
+            <span class="label">👥 Seleziona destinatari</span>
+            
+            <!-- Pulsanti selezione rapida -->
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <button onclick="selezionaTutti()" class="btn-secondary" style="padding: 8px; font-size: 0.8rem;">Seleziona tutti</button>
+                <button onclick="deselezionaTutti()" class="btn-secondary" style="padding: 8px; font-size: 0.8rem;">Deseleziona tutti</button>
+            </div>
+            
+            <!-- Lista dinamica tecnici -->
+            <div id="lista-tecnici">
+                <div style="text-align: center; padding: 20px; color: #64748b;">
+                    Caricamento tecnici...
+                </div>
+            </div>
+            
+            <div style="margin-top: 10px; font-size: 0.8rem; color: #64748b;" id="selected-count">
+                Nessun tecnico selezionato
+            </div>
+        </div>
+        
+        <!-- Composizione messaggio -->
+        <div class="card">
+            <span class="label">✏️ Componi messaggio</span>
+            
+            <input type="text" id="titolo-notifica" placeholder="Titolo (es. Nuovo intervento)" value="ParkApp Notifica">
+            
+            <textarea id="messaggio-notifica" placeholder="Scrivi il messaggio...">Hai un nuovo messaggio da ParkApp</textarea>
+            
+            <!-- Anteprima -->
+            <div class="message-preview">
+                <div style="font-weight: 800; color: #2563eb;">📱 Anteprima:</div>
+                <div style="font-weight: 700;" id="preview-titolo">ParkApp Notifica</div>
+                <div style="color: #475569;" id="preview-messaggio">Hai un nuovo messaggio da ParkApp</div>
+            </div>
+            
+            <!-- Opzioni aggiuntive -->
+            <details style="margin: 15px 0;">
+                <summary style="color: #2563eb; font-weight: 600; cursor: pointer;">Opzioni avanzate</summary>
+                <div style="margin-top: 10px;">
+                    <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                        <input type="checkbox" id="apri-link" checked>
+                        <span style="font-size: 0.9rem;">Apri ParkApp quando cliccano</span>
+                    </label>
+                    
+                    <label style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="vibrazione" checked>
+                        <span style="font-size: 0.9rem;">Attiva vibrazione</span>
+                    </label>
+                </div>
+            </details>
+        </div>
+        
+        <!-- Pulsanti invio -->
+        <button class="btn" onclick="inviaNotifica()" id="btn-invia">
+            <span class="material-symbols-rounded" style="vertical-align: middle;">send</span>
+            INVIA NOTIFICA
+        </button>
+        
+        <button class="btn-secondary" onclick="testNotifica()" style="margin-top: 10px;">
+            <span class="material-symbols-rounded" style="vertical-align: middle;">notifications</span>
+            TEST NOTIFICA LOCALE
+        </button>
+        
+        <!-- Log degli invii -->
+        <div style="margin-top: 30px;">
+            <span class="label">📋 Log invii</span>
+            <div class="log-container" id="log-container">
+                <div class="log-entry log-info">Pronto per inviare notifiche...</div>
+            </div>
+            <button onclick="pulisciLog()" style="margin-top: 5px; font-size: 0.7rem; background: none; border: none; color: #64748b; cursor: pointer;">
+                Pulisci log
+            </button>
+        </div>
+    </div>
+    
+    <!-- UNICO SCRIPT - HO RIMOSSO I DOPPIONI -->
+    <script>
+        // ============================================
+        // VARIABILI GLOBALI
+        // ============================================
+        let tecniciLista = [];
+        let tecniciSelezionati = [];
+        let filtroCorrente = 'tutti';
+        let supabaseClient;
+        
+        // ============================================
+        // INIZIALIZZAZIONE
+        // ============================================
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 Inizializzazione demo notifiche...');
+            
+            await initSupabase();
+            await caricaTecnici();
+            setupPreview();
+            
+            logMessage('✅ Demo notifiche pronta', 'success');
+        });
+        
+        // ============================================
+        // SUPABASE
+        // ============================================
+        async function initSupabase() {
+            try {
+                if (typeof getSupabaseClient === 'function') {
+                    supabaseClient = getSupabaseClient();
+                    logMessage('✅ Connesso a Supabase', 'success');
+                    console.log('✅ Supabase inizializzato');
+                } else {
+                    logMessage('⚠️ Usando dati di esempio', 'info');
+                    supabaseClient = null;
+                }
+            } catch (error) {
+                console.error('Errore Supabase:', error);
+                supabaseClient = null;
+            }
+        }
+        
+        // ============================================
+        // CARICAMENTO TECNICI
+        // ============================================
+        async function caricaTecnici() {
+            try {
+                // Prova a caricare da Supabase
+                if (supabaseClient) {
+                    logMessage('📡 Caricamento tecnici da Supabase...', 'info');
+                    
+                    const { data: iscrizioni, error } = await supabaseClient
+                        .from('push_iscrizioni')
+                        .select('*')
+                        .order('tecnico_nome');
+                    
+                    if (!error && iscrizioni && iscrizioni.length > 0) {
+                        // Raggruppa per tecnico
+                        const tecniciMap = new Map();
+                        
+                        iscrizioni.forEach(iscr => {
+                            if (!tecniciMap.has(iscr.tecnico_id)) {
+                                tecniciMap.set(iscr.tecnico_id, {
+                                    id: iscr.tecnico_id,
+                                    nome: iscr.tecnico_nome,
+                                    dispositivi: [],
+                                    ultimoAccesso: iscr.ultimo_accesso,
+                                    attivo: iscr.attivo
+                                });
+                            }
+                            
+                            tecniciMap.get(iscr.tecnico_id).dispositivi.push({
+                                browser: iscr.browser || 'Sconosciuto'
+                            });
+                        });
+                        
+                        tecniciLista = Array.from(tecniciMap.values());
+                        logMessage(`✅ Caricati ${tecniciLista.length} tecnici da Supabase`, 'success');
+                    } else {
+                        logMessage('⚠️ Tabella push_iscrizioni vuota, uso dati esempio', 'info');
+                        caricaDatiEsempio();
+                    }
+                } else {
+                    logMessage('⚠️ Supabase non disponibile, uso dati esempio', 'info');
+                    caricaDatiEsempio();
+                }
+            } catch (error) {
+                console.error('Errore caricamento:', error);
+                logMessage('⚠️ Errore caricamento, uso dati esempio', 'info');
+                caricaDatiEsempio();
+            }
+            
+            aggiornaStatistiche();
+            renderTecnici();
+        }
+        
+        function caricaDatiEsempio() {
+            tecniciLista = [
+                { 
+                    id: '1', 
+                    nome: 'Mario Rossi', 
+                    dispositivi: [{ browser: 'Chrome' }], 
+                    attivo: true, 
+                    ultimoAccesso: new Date().toISOString() 
+                },
+                { 
+                    id: '2', 
+                    nome: 'Luigi Verdi', 
+                    dispositivi: [{ browser: 'Safari' }], 
+                    attivo: true, 
+                    ultimoAccesso: new Date().toISOString() 
+                },
+                { 
+                    id: '3', 
+                    nome: 'Giovanni Bianchi', 
+                    dispositivi: [{ browser: 'Firefox' }], 
+                    attivo: false, 
+                    ultimoAccesso: new Date(Date.now() - 86400000).toISOString() 
+                },
+                { 
+                    id: '4', 
+                    nome: 'Paolo Neri', 
+                    dispositivi: [{ browser: 'Edge' }], 
+                    attivo: true, 
+                    ultimoAccesso: new Date(Date.now() - 3600000).toISOString() 
+                },
+            ];
+            logMessage(`📋 Usando ${tecniciLista.length} tecnici di esempio`, 'info');
+        }
+        
+        // ============================================
+        // STATISTICHE
+        // ============================================
+        function aggiornaStatistiche() {
+            const totale = tecniciLista.length;
+            const attivi = tecniciLista.filter(t => t.attivo).length;
+            const online = tecniciLista.filter(t => {
+                if (!t.ultimoAccesso) return false;
+                const ultimo = new Date(t.ultimoAccesso);
+                const ora = new Date();
+                return (ora - ultimo) < 300000; // 5 minuti
+            }).length;
+            
+            document.getElementById('totale-tecnici').textContent = totale;
+            document.getElementById('tecnici-attivi').textContent = attivi;
+            document.getElementById('tecnici-online').textContent = online;
+        }
+        
+        // ============================================
+        // RENDERING LISTA
+        // ============================================
+        function renderTecnici() {
+            const container = document.getElementById('lista-tecnici');
+            
+            let listaFiltrata = tecniciLista;
+            
+            if (filtroCorrente === 'attivi') {
+                listaFiltrata = tecniciLista.filter(t => t.attivo);
+            } else if (filtroCorrente === 'online') {
+                listaFiltrata = tecniciLista.filter(t => {
+                    if (!t.ultimoAccesso) return false;
+                    const ultimo = new Date(t.ultimoAccesso);
+                    const ora = new Date();
+                    return (ora - ultimo) < 300000;
+                });
+            }
+            
+            if (listaFiltrata.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 20px; color: #64748b;">Nessun tecnico trovato</div>';
+                return;
+            }
+            
+            let html = '';
+            listaFiltrata.forEach(tecnico => {
+                const isSelected = tecniciSelezionati.includes(tecnico.id);
+                const isOnline = tecnico.ultimoAccesso && 
+                    (new Date() - new Date(tecnico.ultimoAccesso)) < 300000;
+                
+                html += `
+                    <div class="tecnico-item ${isSelected ? 'selected' : ''}" onclick="toggleTecnico('${tecnico.id}')">
+                        <div class="tecnico-avatar">${tecnico.nome.charAt(0)}</div>
+                        <div class="tecnico-info">
+                            <div class="tecnico-nome">${tecnico.nome}</div>
+                            <div class="tecnico-status">
+                                <span class="status-dot ${tecnico.attivo ? 'active' : 'inactive'}"></span>
+                                ${tecnico.attivo ? 'Notifiche attive' : 'Notifiche disattivate'}
+                                ${isOnline ? ' · 🟢 Online ora' : ''}
+                                <span style="margin-left: auto; font-size: 0.7rem;">
+                                    ${tecnico.dispositivi.length} disp.
+                                </span>
+                            </div>
+                        </div>
+                        ${isSelected ? '<span class="material-symbols-rounded" style="color: #2563eb;">check_circle</span>' : ''}
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+            aggiornaConteggioSelezionati();
+        }
+        
+        // ============================================
+        // GESTIONE SELEZIONE
+        // ============================================
+        window.toggleTecnico = function(id) {
+            if (tecniciSelezionati.includes(id)) {
+                tecniciSelezionati = tecniciSelezionati.filter(t => t !== id);
+            } else {
+                tecniciSelezionati.push(id);
+            }
+            renderTecnici();
+        };
+        
+        window.selezionaTutti = function() {
+            tecniciSelezionati = tecniciLista.map(t => t.id);
+            renderTecnici();
+        };
+        
+        window.deselezionaTutti = function() {
+            tecniciSelezionati = [];
+            renderTecnici();
+        };
+        
+        window.filtraTecnici = function(filtro) {
+            filtroCorrente = filtro;
+            
+            document.querySelectorAll('.filter-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            const index = filtro === 'tutti' ? 0 : filtro === 'attivi' ? 1 : 2;
+            document.querySelectorAll('.filter-tab')[index].classList.add('active');
+            
+            renderTecnici();
+        };
+        
+        function aggiornaConteggioSelezionati() {
+            const count = tecniciSelezionati.length;
+            const el = document.getElementById('selected-count');
+            
+            if (count === 0) {
+                el.textContent = 'Nessun tecnico selezionato';
+            } else if (count === 1) {
+                el.textContent = '1 tecnico selezionato';
+            } else {
+                el.textContent = `${count} tecnici selezionati`;
+            }
+        }
+        
+        // ============================================
+        // PREVIEW MESSAGGIO
+        // ============================================
+        function setupPreview() {
+            document.getElementById('titolo-notifica').addEventListener('input', updatePreview);
+            document.getElementById('messaggio-notifica').addEventListener('input', updatePreview);
+        }
+        
+        function updatePreview() {
+            document.getElementById('preview-titolo').textContent = 
+                document.getElementById('titolo-notifica').value || 'ParkApp Notifica';
+            document.getElementById('preview-messaggio').textContent = 
+                document.getElementById('messaggio-notifica').value || 'Hai un nuovo messaggio';
+        }
+        
+        // ============================================
+        // INVIO NOTIFICHE
+        // ============================================
+        window.inviaNotifica = async function() {
+            const btn = document.getElementById('btn-invia');
+            btn.disabled = true;
+            btn.innerHTML = '⏳ INVIO IN CORSO...';
+            
+            try {
+                if (tecniciSelezionati.length === 0) {
+                    alert('❌ Seleziona almeno un tecnico');
+                    btn.disabled = false;
+                    btn.innerHTML = 'INVIA NOTIFICA';
+                    return;
+                }
+                
+                const titolo = document.getElementById('titolo-notifica').value || 'ParkApp';
+                const messaggio = document.getElementById('messaggio-notifica').value;
+                
+                if (!messaggio) {
+                    alert('❌ Inserisci un messaggio');
+                    btn.disabled = false;
+                    btn.innerHTML = 'INVIA NOTIFICA';
+                    return;
+                }
+                
+                logMessage(`📤 Invio notifica a ${tecniciSelezionati.length} tecnici...`, 'info');
+                
+                // Per OGNI tecnico selezionato, mostra una notifica
+                let successi = 0;
+                
+                for (const tecnicoId of tecniciSelezionati) {
+                    const tecnico = tecniciLista.find(t => t.id === tecnicoId);
+                    
+                    if (tecnico && Notification.permission === 'granted') {
+                        try {
+                            // Crea e mostra notifica
+                            const notifica = new Notification(titolo, {
+                                body: `${messaggio}\n\nA: ${tecnico.nome}`,
+                                icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%232563eb" d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>',
+                                tag: `notifica-${Date.now()}`,
+                                vibrate: [200, 100, 200],
+                                requireInteraction: true
+                            });
+                            
+                            // Chiudi dopo 5 secondi
+                            setTimeout(() => notifica.close(), 5000);
+                            
+                            successi++;
+                            logMessage(`✅ Notifica inviata a ${tecnico.nome}`, 'success');
+                            
+                            // Piccola pausa tra una notifica e l'altra
+                            await new Promise(r => setTimeout(r, 500));
+                            
+                        } catch (error) {
+                            logMessage(`❌ Errore per ${tecnico.nome}: ${error.message}`, 'error');
+                        }
+                    } else {
+                        logMessage(`⚠️ ${tecnico.nome} non ha notifiche attive`, 'info');
+                    }
+                }
+                
+                if (successi > 0) {
+                    logMessage(`✅ COMPLETATO: ${successi} notifiche inviate!`, 'success');
+                    alert(`✅ ${successi} notifiche inviate! Controlla lo schermo.`);
+                } else {
+                    logMessage(`❌ Nessuna notifica inviata`, 'error');
+                    alert('❌ Nessuna notifica inviata. Hai attivato le notifiche? Clicca sulla campanella in menu.html');
+                }
+                
+            } catch (error) {
+                console.error('Errore invio:', error);
+                logMessage('❌ Errore: ' + error.message, 'error');
+                alert('Errore: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'INVIA NOTIFICA';
+            }
+        };
+        
+        // ============================================
+        // TEST NOTIFICA LOCALE
+        // ============================================
+        window.testNotifica = function() {
+            if (Notification.permission === 'granted') {
+                try {
+                    const titolo = document.getElementById('titolo-notifica').value || 'Test ParkApp';
+                    const msg = document.getElementById('messaggio-notifica').value || 'Questo è un test';
+                    
+                    const notifica = new Notification('🔔 TEST: ' + titolo, {
+                        body: msg,
+                        icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%2322c55e" d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>',
+                        vibrate: [200, 100, 200],
+                        requireInteraction: true
+                    });
+                    
+                    setTimeout(() => notifica.close(), 4000);
+                    logMessage('✅ Notifica di test inviata', 'success');
+                    
+                } catch (error) {
+                    logMessage('❌ Errore test: ' + error.message, 'error');
+                }
+            } else {
+                alert('❌ Notifiche non attive. Vai su menu.html e clicca sulla campanella per attivarle.');
+            }
+        };
+        
+        // ============================================
+        // LOG
+        // ============================================
+        window.pulisciLog = function() {
+            const container = document.getElementById('log-container');
+            container.innerHTML = '<div class="log-entry log-info">Log pulito</div>';
+        };
+        
+        function logMessage(msg, tipo = 'info') {
+            const container = document.getElementById('log-container');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${tipo}`;
+            
+            const time = new Date().toLocaleTimeString();
+            entry.textContent = `[${time}] ${msg}`;
+            
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+            
+            if (container.children.length > 50) {
+                container.removeChild(container.children[0]);
+            }
+        }
+
+
+        async function inviaNotifica() {
+    const titolo = document.getElementById('titolo-notifica').value;
+    const messaggio = document.getElementById('messaggio-notifica').value;
+    const tecnicoSelezionato = tecniciSelezionati[0]; // esempio
+    
+    // Trova la subscription del tecnico
+    const { data } = await client
+        .from('push_iscrizioni')
+        .select('subscription_data')
+        .eq('tecnico_nome', tecnicoSelezionato);
+    
+    if (data && data[0]) {
+        // Qui andrebbe la chiamata al server per inviare la notifica
+        // Per ora usiamo notifica locale per test
+        mostraNotificaLocale(titolo, messaggio);
+    }
+}
+    </script>
+</body>
+</html>
