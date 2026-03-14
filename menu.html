@@ -382,6 +382,40 @@ window.testNotifica = function() {
 };
 
 console.log('✅ Gestione notifiche integrata caricata');
+
+// Controlla browser all'avvio
+document.addEventListener('DOMContentLoaded', function() {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+    const isChrome = /Chrome/.test(navigator.userAgent) && !/Edg/.test(navigator.userAgent);
+    
+    if (isIOS && !isSafari) {
+        // Mostra avviso
+        const avviso = document.createElement('div');
+        avviso.style.cssText = `
+            background: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 0.8rem;
+            border: 1px solid #ffeeba;
+        `;
+        avviso.innerHTML = `
+            <strong>⚠️ Attenzione:</strong> Su iPhone usa <strong>Safari</strong> per le notifiche.<br>
+            <small>Chrome su iPhone non supporta le notifiche push.</small>
+        `;
+        
+        // Inserisci prima della campanella
+        const btn = document.getElementById('notifica-btn');
+        if (btn) {
+            btn.parentNode.insertBefore(avviso, btn);
+        }
+    }
+});
+
+
+
 </script>
 
 
