@@ -12,7 +12,6 @@
     <script src="db-config.js"></script>
     <script src="auth.js"></script>
     <script src="check-db-config.js"></script>
-    <script src="push-service.js"></script>
 </head>
 <body class="bg-app">
     <div class="app-container">
@@ -28,32 +27,18 @@
                         -
                     </div>
 
-             <!-- 🔔 PULSANTE CAMPANELLA (sostituisci quello esistente) -->
-<button onclick="window.location.href='profilo.html'" 
-        id="profile-icon"
-        style="background: none; border: none; color: var(--primary); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 4px; border-radius: 50%; transition: background 0.2s;">
-    <span class="material-symbols-rounded" style="font-size: 2.2rem;">account_circle</span>
-</button>
-
-<!-- 🔔 PULSANTE NOTIFICHE (NUOVO) -->
-<button onclick="gestisciNotifiche()" 
-        id="notifica-btn"
-        style="background: none; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; transition: all 0.2s; margin: 0 5px;">
-    <span class="material-symbols-rounded" style="font-size: 1.8rem; color: #64748b;" id="icona-campana">notifications_none</span>
-</button>
-
-<button onclick="eseguiLogout()" 
-        style="background: #fee2e2; color: #ef4444; border: none; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; margin-left: 5px;">
-    <span class="material-symbols-rounded" style="font-size: 1.3rem;">logout</span>
-</button>
-
+                    <button onclick="window.location.href='profilo.html'" 
+                            id="profile-icon"
+                            style="background: none; border: none; color: var(--primary); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 4px; border-radius: 50%; transition: background 0.2s;">
+                        <span class="material-symbols-rounded" style="font-size: 2.2rem;">account_circle</span>
+                    </button>
+                    
+                    <button onclick="eseguiLogout()" style="background: #fee2e2; color: #ef4444; border: none; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; margin-left: 5px;">
+                        <span class="material-symbols-rounded" style="font-size: 1.3rem;">logout</span>
+                    </button>
                 </div>
-                
             </div>
-
-            
         </header>
-        
 
         <main style="padding: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
             <button onclick="window.location.href='parco.html'" class="menu-item-v2">
@@ -112,10 +97,6 @@
             AGENDA ADMIN
         </button>
         <!-- Aggiungi altri bottoni admin qui se necessario -->
-
-
-
-        
     </div>
 </div>
         </main>
@@ -135,73 +116,6 @@
     </div>
 
     <script>
-
-// Gestione notifiche
-async function gestisciNotifiche() {
-    if (!window.pushService) {
-        alert('Servizio notifiche non disponibile');
-        return;
-    }
-    
-    const stato = await pushService.getStato();
-    
-    if (stato.attivo) {
-        // Se già attivo, chiedi se disattivare
-        if (confirm('Notifiche attualmente ATTIVE. Vuoi disattivarle?')) {
-            await pushService.disattiva();
-            aggiornaIconaNotifiche(false);
-        }
-    } else {
-        // Se non attivo, attiva
-        const attivato = await pushService.attiva();
-        aggiornaIconaNotifiche(attivato);
-    }
-}
-
-// Aggiorna icona in base allo stato
-function aggiornaIconaNotifiche(attivo) {
-    const icona = document.getElementById('icona-campana');
-    const btn = document.getElementById('notifica-btn');
-    
-    if (attivo) {
-        icona.textContent = 'notifications_active';
-        icona.style.color = '#22c55e';
-        btn.style.color = '#22c55e';
-    } else {
-        icona.textContent = 'notifications_none';
-        icona.style.color = '#64748b';
-        btn.style.color = '#64748b';
-    }
-}
-
-// Controlla stato all'avvio
-document.addEventListener('DOMContentLoaded', async () => {
-    if (window.pushService) {
-        await pushService.init();
-        const stato = await pushService.getStato();
-        aggiornaIconaNotifiche(stato.attivo);
-    }
-});
-
-// Funzione per mostrare badge con numero (opzionale)
-function mostraBadge(numero) {
-    const badge = document.getElementById('notifica-badge');
-    if (numero > 0) {
-        badge.textContent = numero > 9 ? '9+' : numero;
-        badge.style.display = 'flex';
-    } else {
-        badge.style.display = 'none';
-    }
-}
-// All'avvio, controlla stato
-document.addEventListener('DOMContentLoaded', async () => {
-    if (window.pushService) {
-        await pushService.init();
-    }
-});
-
-
-
         document.addEventListener('DOMContentLoaded', function() {
             const utente = typeof authGetUtente === 'function' ? authGetUtente() : null;
             
@@ -284,141 +198,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         .app-header { padding: 1.2rem; background: white; border-bottom: 1px solid #f1f5f9; }
     </style>
-<!-- ✅ SCRIPT COMPLETO PER NOTIFICHE (aggiungi prima di chiudere il body) -->
-<script>
-// ============================================
-// GESTIONE NOTIFICHE PUSH - VERSIONE INTEGRATA
-// ============================================
-
-// Variabili di stato
-let notificheAttive = false;
-
-// Controlla stato notifiche all'avvio
-document.addEventListener('DOMContentLoaded', function() {
-    aggiornaIconaNotifiche();
-});
-
-// Aggiorna icona in base al permesso
-function aggiornaIconaNotifiche() {
-    const icona = document.getElementById('icona-campana');
-    if (!icona) return;
-    
-    if (Notification.permission === 'granted') {
-        icona.textContent = 'notifications_active';
-        icona.style.color = '#22c55e';
-        notificheAttive = true;
-    } else {
-        icona.textContent = 'notifications_none';
-        icona.style.color = '#64748b';
-        notificheAttive = false;
-    }
-}
-
-// Funzione principale per gestire le notifiche
-window.gestisciNotifiche = async function() {
-    try {
-        // 1. Controlla se il browser supporta le notifiche
-        if (!('Notification' in window)) {
-            alert('❌ Il tuo browser non supporta le notifiche push');
-            return;
-        }
-        
-        // 2. Se già attive, chiedi se disattivare
-        if (Notification.permission === 'granted') {
-            if (confirm('✅ Notifiche attualmente ATTIVE. Vuoi disattivarle?')) {
-                // Non possiamo veramente disattivare, ma possiamo cambiare icona
-                aggiornaIconaNotifiche();
-                alert('Le notifiche rimarranno attive nel browser. Per disattivarle completamente, vai nelle impostazioni del browser.');
-            }
-            return;
-        }
-        
-        // 3. Se non attive, richiedi permesso
-        if (Notification.permission === 'default' || Notification.permission === 'denied') {
-            const permesso = await Notification.requestPermission();
-            
-            if (permesso === 'granted') {
-                // ✅ ATTIVATE!
-                aggiornaIconaNotifiche();
-                
-                // Mostra notifica di benvenuto
-                try {
-                    const notifica = new Notification('🔔 ParkApp', {
-                        body: 'Notifiche attivate con successo! Riceverai aggiornamenti in tempo reale.',
-                        icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%232563eb" d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>',
-                        vibrate: [200, 100, 200]
-                    });
-                    
-                    setTimeout(() => notifica.close(), 5000);
-                } catch (e) {
-                    console.log('Notifica di benvenuto non mostrata');
-                }
-                
-                alert('✅ Notifiche attivate con successo!');
-                
-            } else if (permesso === 'denied') {
-                alert('❌ Hai bloccato le notifiche. Per riattivarle, vai nelle impostazioni del browser e sblocca le notifiche per questo sito.');
-            } else {
-                alert('❌ Permesso non concesso');
-            }
-        }
-        
-    } catch (error) {
-        console.error('Errore notifiche:', error);
-        alert('Errore durante l\'attivazione delle notifiche: ' + error.message);
-    }
-};
-
-// Funzione per testare le notifiche (chiamabile dalla console)
-window.testNotifica = function() {
-    if (Notification.permission === 'granted') {
-        new Notification('🔔 TEST ParkApp', {
-            body: 'Se vedi questo, le notifiche funzionano!',
-            icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%2322c55e" d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>'
-        });
-    } else {
-        alert('Notifiche non attive');
-    }
-};
-
-console.log('✅ Gestione notifiche integrata caricata');
-
-// Controlla browser all'avvio
-document.addEventListener('DOMContentLoaded', function() {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
-    const isChrome = /Chrome/.test(navigator.userAgent) && !/Edg/.test(navigator.userAgent);
-    
-    if (isIOS && !isSafari) {
-        // Mostra avviso
-        const avviso = document.createElement('div');
-        avviso.style.cssText = `
-            background: #fff3cd;
-            color: #856404;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            font-size: 0.8rem;
-            border: 1px solid #ffeeba;
-        `;
-        avviso.innerHTML = `
-            <strong>⚠️ Attenzione:</strong> Su iPhone usa <strong>Safari</strong> per le notifiche.<br>
-            <small>Chrome su iPhone non supporta le notifiche push.</small>
-        `;
-        
-        // Inserisci prima della campanella
-        const btn = document.getElementById('notifica-btn');
-        if (btn) {
-            btn.parentNode.insertBefore(avviso, btn);
-        }
-    }
-});
-
-
-
-</script>
-
-
-
 </body>
 </html>
